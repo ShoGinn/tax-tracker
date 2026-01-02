@@ -134,12 +134,8 @@ class TestIncomeAPIFiltering:
         from taxtracker.models.database import Retirement1099R
 
         # Create pension payments
-        pension_2024 = Retirement1099R(
-            pay_date=date(2024, 12, 1), gross_amount=Decimal("3000")
-        )
-        pension_2025 = Retirement1099R(
-            pay_date=date(2025, 1, 1), gross_amount=Decimal("3200")
-        )
+        pension_2024 = Retirement1099R(pay_date=date(2024, 12, 1), gross_amount=Decimal("3000"))
+        pension_2025 = Retirement1099R(pay_date=date(2025, 1, 1), gross_amount=Decimal("3200"))
         db_session.add_all([pension_2024, pension_2025])
         db_session.commit()
 

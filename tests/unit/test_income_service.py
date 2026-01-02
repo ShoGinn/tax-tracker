@@ -227,7 +227,6 @@ class TestPaycheckService:
                 employer_id=employer.id,
                 pay_date=date(2024, 6, 1),
                 gross_wages=Decimal("4000"),
-
             ),
         )
         income_service.create_paycheck(
@@ -316,9 +315,7 @@ class TestRetirement1099RService:
         """Test retrieving 1099-R income."""
         created = income_service.create_retirement_1099r(
             db_session,
-            Retirement1099RCreate(
-                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")
-            ),
+            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")),
         )
 
         retrieved = income_service.get_retirement_1099r(db_session, created.id)
@@ -344,15 +341,11 @@ class TestRetirement1099RService:
         """Test filtering 1099-R by year."""
         income_service.create_retirement_1099r(
             db_session,
-            Retirement1099RCreate(
-                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")
-            ),
+            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")),
         )
         income_service.create_retirement_1099r(
             db_session,
-            Retirement1099RCreate(
-                pay_date=date(2025, 6, 1), gross_amount=Decimal("5500")
-            ),
+            Retirement1099RCreate(pay_date=date(2025, 6, 1), gross_amount=Decimal("5500")),
         )
 
         entries_2024 = income_service.get_retirement_1099rs(db_session, year=2024)
@@ -363,9 +356,7 @@ class TestRetirement1099RService:
         """Test updating 1099-R income."""
         created = income_service.create_retirement_1099r(
             db_session,
-            Retirement1099RCreate(
-                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")
-            ),
+            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")),
         )
 
         update_data = Retirement1099RUpdate(gross_amount=Decimal("5500"), notes="Updated")
@@ -379,9 +370,7 @@ class TestRetirement1099RService:
         """Test deleting 1099-R income."""
         created = income_service.create_retirement_1099r(
             db_session,
-            Retirement1099RCreate(
-                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")
-            ),
+            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")),
         )
 
         result = income_service.delete_retirement_1099r(db_session, created.id)
