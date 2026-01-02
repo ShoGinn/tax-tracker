@@ -39,7 +39,7 @@ def get_tax_data(year: int) -> dict[str, Any]:
         fica_data = load_fica_limits(year)
         return {"tax_brackets": tax_data, "fica_limits": fica_data}
     except DataLoadError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.post("/tax-data/upload/{year}")
@@ -83,6 +83,6 @@ async def _handle_json_upload(
             "message": success_message.format(year=year),
         }
     except json.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}") from e
     except DataLoadError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

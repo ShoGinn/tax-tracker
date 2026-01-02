@@ -42,9 +42,9 @@ def calculate_taxes(
     try:
         return calculator.calculate_taxes(request)
     except TaxCalculationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Tax calculation failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Tax calculation failed: {e!s}") from e
 
 
 @router.post("/calculate-from-db/{year}", response_model=dict)
@@ -93,9 +93,11 @@ def calculate_from_database(
         # Convert to dict for API response
         return result.to_dict()
     except TaxCalculationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database tax calculation failed: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Database tax calculation failed: {e!s}"
+        ) from e
 
 
 @router.get("/fica/{year}")
@@ -117,7 +119,7 @@ def get_fica_info(year: int) -> dict[str, Any]:
             "medicare": data["medicare"],
         }
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"FICA data not found for {year}: {e!s}")
+        raise HTTPException(status_code=404, detail=f"FICA data not found for {year}: {e!s}") from e
 
 
 @router.get("/brackets/{year}")
@@ -150,4 +152,6 @@ def get_tax_brackets(year: int, filing_status: str | None = None) -> dict[str, A
             "child_tax_credit": data.get("child_tax_credit"),
         }
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Tax bracket data not found for {year}: {e!s}")
+        raise HTTPException(
+            status_code=404, detail=f"Tax bracket data not found for {year}: {e!s}"
+        ) from e

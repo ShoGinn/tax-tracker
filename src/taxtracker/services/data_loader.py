@@ -37,7 +37,7 @@ def _load_json_file(file_type: DataFileType, year: int) -> dict[str, Any]:
         raise DataLoadError(
             f"Invalid JSON in {file_type.value} file for {year}",
             details={"year": year, "error": str(e)},
-        )
+        ) from e
 
 
 def _validate_and_save_json(
@@ -84,7 +84,10 @@ def _validate_and_save_json(
             json.dump(data, f, indent=2)
         return filepath
     except Exception as e:
-        raise DataLoadError(f"Failed to save {file_type.value} file: {e}", details={"year": year})
+        raise DataLoadError(
+            f"Failed to save {file_type.value} file: {e}",
+            details={"year": year},
+        ) from e
 
 
 def load_tax_brackets(year: int) -> dict[str, Any]:
