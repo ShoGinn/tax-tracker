@@ -1,0 +1,36 @@
+{
+  "tax_year": 2025,
+  "last_updated": "2025-12-29",
+  "source": "IRS Topic 751 + Social Security Administration",
+  "social_security": {
+    "employee_rate": 0.062,
+    "employer_rate": 0.062,
+    "total_rate": 0.124,
+    "wage_base_limit": 176100,
+    "max_employee_tax": 10918.20,
+    "max_employer_tax": 10918.20,
+    "max_combined_tax": 21836.40
+  },
+  "medicare": {
+    "employee_rate": 0.0145,
+    "employer_rate": 0.0145,
+    "total_rate": 0.029,
+    "wage_base_limit": null,
+    "note": "No wage base limit - applies to all wages"
+  },
+  "additional_medicare": {
+    "rate": 0.009,
+    "employer_match": false,
+    "thresholds": {
+      "single": 200000,
+      "married_filing_jointly": 250000,
+      "married_filing_separately": 125000
+    },
+    "note": "Applies to wages above threshold, no employer match"
+  },
+  "combined_rates": {
+    "below_ss_wage_base": 0.0765,
+    "above_ss_wage_base": 0.0145,
+    "above_additional_medicare_threshold": 0.0235
+  }
+}

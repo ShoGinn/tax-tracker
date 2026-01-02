@@ -1,0 +1,318 @@
+"""Pytest configuration and fixtures."""
+
+import json
+
+# Import IRS test data
+import sys
+import tempfile
+from collections.abc import Generator
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+from fixtures.irs_test_data import (
+    IRS_2024_FICA_LIMITS,
+    IRS_2024_TAX_BRACKETS,
+    SIMPLE_TEST_FICA_LIMITS,
+    SIMPLE_TEST_TAX_BRACKETS,
+    get_irs_test_data,
+)
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from taxtracker.cli.app import create_app
+from taxtracker.models.database import Base
+from taxtracker.services.tax_calculator import TaxCalculator
+
+tests_dir = Path(__file__).parent
+sys.path.insert(0, str(tests_dir))
+
+
+@pytest.fixture(scope="session")
+def temp_tax_data_dir():
+    """Create temporary directory with IRS test data JSON files.
+
+    This allows integration tests to use the API with real file loading,
+    but pointing at IRS-verified test data instead of production files.
+    """
+    from decimal import Decimal
+
+    def decimal_to_float(obj):
+        """Convert Decimals to float for JSON serialization."""
+        if isinstance(obj, Decimal):
+            return float(obj)
+        elif isinstance(obj, dict):
+            return {k: decimal_to_float(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [decimal_to_float(item) for item in obj]
+        return obj
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_path = Path(tmpdir)
+
+        # Convert IRS 2024 data to JSON format (for year 2024)
+        tax_brackets_2024 = {
+            "tax_year": IRS_2024_TAX_BRACKETS.tax_year,
+            "last_updated": IRS_2024_TAX_BRACKETS.last_updated,
+            "source": IRS_2024_TAX_BRACKETS.source + " (Test Data)",
+            "notes": "IRS-verified test data for integration tests",
+            "tax_brackets": {},
+            "standard_deductions": {},
+            "child_tax_credit": {},
+        }
+
+        # Convert brackets
+        for filing_status, brackets in IRS_2024_TAX_BRACKETS.tax_brackets.items():
+            tax_brackets_2024["tax_brackets"][filing_status] = [
+                {
+                    "min": decimal_to_float(b.min),
+                    "max": decimal_to_float(b.max),
+                    "rate": decimal_to_float(b.rate),
+                }
+                for b in brackets
+            ]
+
+        # Convert standard deductions
+        std_ded = IRS_2024_TAX_BRACKETS.standard_deductions
+        tax_brackets_2024["standard_deductions"] = decimal_to_float(
+            {
+                "single": std_ded.single,
+                "married_filing_jointly": std_ded.married_filing_jointly,
+                "married_filing_separately": std_ded.married_filing_separately,
+                "head_of_household": std_ded.head_of_household,
+                "additional_age_65_plus": std_ded.additional_age_65_plus,
+            }
+        )
+
+        # Convert child tax credit
+        ctc = IRS_2024_TAX_BRACKETS.child_tax_credit
+        tax_brackets_2024["child_tax_credit"] = decimal_to_float(
+            {
+                "amount_per_child": ctc.amount_per_child,
+                "refundable_portion": ctc.refundable_portion,
+                "phase_out_threshold": dict(ctc.phase_out_threshold),
+            }
+        )
+
+        # Write tax brackets JSON
+        with open(temp_path / "tax_brackets_2024.json", "w") as f:
+            json.dump(tax_brackets_2024, f, indent=2)
+
+        # Convert FICA data to JSON format
+        fica_2024 = decimal_to_float(
+            {
+                "tax_year": IRS_2024_FICA_LIMITS.tax_year,
+                "last_updated": IRS_2024_FICA_LIMITS.last_updated,
+                "source": IRS_2024_FICA_LIMITS.source + " (Test Data)",
+                "social_security": {
+                    "employee_rate": IRS_2024_FICA_LIMITS.social_security.employee_rate,
+                    "employer_rate": IRS_2024_FICA_LIMITS.social_security.employer_rate,
+                    "total_rate": IRS_2024_FICA_LIMITS.social_security.total_rate,
+                    "wage_base_limit": IRS_2024_FICA_LIMITS.social_security.wage_base_limit,
+                    "max_employee_tax": IRS_2024_FICA_LIMITS.social_security.max_employee_tax,
+                    "max_employer_tax": IRS_2024_FICA_LIMITS.social_security.max_employer_tax,
+                    "max_combined_tax": IRS_2024_FICA_LIMITS.social_security.max_combined_tax,
+                },
+                "medicare": {
+                    "employee_rate": IRS_2024_FICA_LIMITS.medicare.employee_rate,
+                    "employer_rate": IRS_2024_FICA_LIMITS.medicare.employer_rate,
+                    "total_rate": IRS_2024_FICA_LIMITS.medicare.total_rate,
+                    "wage_base_limit": IRS_2024_FICA_LIMITS.medicare.wage_base_limit,
+                    "note": IRS_2024_FICA_LIMITS.medicare.note,
+                },
+                "additional_medicare": {
+                    "rate": IRS_2024_FICA_LIMITS.additional_medicare.rate,
+                    "employer_match": IRS_2024_FICA_LIMITS.additional_medicare.employer_match,
+                    "thresholds": dict(IRS_2024_FICA_LIMITS.additional_medicare.thresholds),
+                    "note": IRS_2024_FICA_LIMITS.additional_medicare.note,
+                },
+                "combined_rates": dict(IRS_2024_FICA_LIMITS.combined_rates),
+            }
+        )
+
+        # Write FICA JSON
+        with open(temp_path / "fica_limits_2024.json", "w") as f:
+            json.dump(fica_2024, f, indent=2)
+
+        # Also create 2030 (simplified test data) for consistency
+        tax_brackets_2030 = {
+            "tax_year": SIMPLE_TEST_TAX_BRACKETS.tax_year,
+            "last_updated": SIMPLE_TEST_TAX_BRACKETS.last_updated,
+            "source": SIMPLE_TEST_TAX_BRACKETS.source,
+            "notes": "Simplified test data with round numbers",
+            "tax_brackets": {},
+            "standard_deductions": {},
+            "child_tax_credit": {},
+        }
+
+        for filing_status, brackets in SIMPLE_TEST_TAX_BRACKETS.tax_brackets.items():
+            tax_brackets_2030["tax_brackets"][filing_status] = [
+                {
+                    "min": decimal_to_float(b.min),
+                    "max": decimal_to_float(b.max),
+                    "rate": decimal_to_float(b.rate),
+                }
+                for b in brackets
+            ]
+
+        std_ded = SIMPLE_TEST_TAX_BRACKETS.standard_deductions
+        tax_brackets_2030["standard_deductions"] = decimal_to_float(
+            {
+                "single": std_ded.single,
+                "married_filing_jointly": std_ded.married_filing_jointly,
+                "married_filing_separately": std_ded.married_filing_separately,
+                "head_of_household": std_ded.head_of_household,
+                "additional_age_65_plus": std_ded.additional_age_65_plus,
+            }
+        )
+
+        ctc = SIMPLE_TEST_TAX_BRACKETS.child_tax_credit
+        tax_brackets_2030["child_tax_credit"] = decimal_to_float(
+            {
+                "amount_per_child": ctc.amount_per_child,
+                "refundable_portion": ctc.refundable_portion,
+                "phase_out_threshold": dict(ctc.phase_out_threshold),
+            }
+        )
+
+        with open(temp_path / "tax_brackets_2030.json", "w") as f:
+            json.dump(tax_brackets_2030, f, indent=2)
+
+        # Use 2024 FICA for 2030 as well
+        fica_2030 = fica_2024.copy()
+        fica_2030["tax_year"] = 2030
+        with open(temp_path / "fica_limits_2030.json", "w") as f:
+            json.dump(fica_2030, f, indent=2)
+
+        yield temp_path
+        # Cleanup happens automatically when context exits
+
+
+@pytest.fixture(scope="function")
+def test_calculator() -> TaxCalculator:
+    """Get a TaxCalculator with IRS-verified test data.
+
+    Uses simplified test data (year 2030) with known values for easy verification.
+    Tests can verify calculations without depending on external JSON files.
+    """
+    calculator = TaxCalculator()
+    # Inject simplified test data
+    calculator.set_test_data(
+        year=2030, tax_brackets=SIMPLE_TEST_TAX_BRACKETS, fica_limits=SIMPLE_TEST_FICA_LIMITS
+    )
+    return calculator
+
+
+@pytest.fixture(scope="function")
+def irs_2024_calculator() -> TaxCalculator:
+    """Get a TaxCalculator with actual IRS 2024 data.
+
+    Uses real IRS Publication 17 data for integration testing.
+    """
+    calculator = TaxCalculator()
+    brackets, fica = get_irs_test_data(2024)
+    calculator.set_test_data(year=2024, tax_brackets=brackets, fica_limits=fica)
+    return calculator
+
+
+@pytest.fixture(scope="function")
+def test_engine() -> Generator[Engine, None, None]:
+    """Create a test database engine with proper SQLite configuration.
+
+    Uses StaticPool to ensure the in-memory database persists across connections.
+    This is critical for FastAPI's dependency injection which creates new sessions.
+    """
+    # Use StaticPool to maintain single connection to in-memory DB
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,  # Critical: keeps single connection alive
+    )
+
+    # Enable foreign keys for SQLite
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+
+    yield engine
+
+    # Cleanup
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+
+
+@pytest.fixture(scope="function")
+def db_session(test_engine: Engine) -> Generator[Session, None, None]:
+    """Create a test database session.
+
+    This session shares the same engine as the client, allowing tests
+    to set up data that the API can see.
+    """
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    session = SessionLocal()
+
+    yield session
+
+    session.close()
+
+    # Clean up all data after test for isolation
+    # (But don't rollback since API needs to see committed data)
+    for table in reversed(Base.metadata.sorted_tables):
+        session.execute(table.delete())
+    session.commit()
+
+
+@pytest.fixture(scope="function")
+def client(test_engine: Engine, temp_tax_data_dir: Path) -> Generator[TestClient, None, None]:
+    """Create a test client with test database and temp IRS data files.
+
+    The client uses:
+    1. Same engine as other test fixtures (for database)
+    2. Temp directory with IRS test data (for tax calculations)
+
+    This ensures integration tests use IRS-verified data without
+    depending on production JSON files.
+    """
+    # Override settings data_dir to use temp directory
+    from taxtracker.core.config import settings
+
+    original_data_dir = settings.data_dir
+    settings.data_dir = temp_tax_data_dir
+
+    try:
+        # Create app
+        app = create_app(skip_db_init=True)
+
+        # Override database dependency to use test engine
+        def override_get_db() -> Generator[Session, None, None]:
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+            session = SessionLocal()
+            try:
+                yield session
+            finally:
+                session.close()
+
+        # Override tax calculator to use temp test data directory
+        def override_get_tax_calculator() -> TaxCalculator:
+            return TaxCalculator(data_dir=temp_tax_data_dir)
+
+        from taxtracker.api.dependencies import get_db, get_tax_calculator
+
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_tax_calculator] = override_get_tax_calculator
+
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        # Restore original data_dir
+        settings.data_dir = original_data_dir
+
+    # Clean up
+    app.dependency_overrides.clear()
