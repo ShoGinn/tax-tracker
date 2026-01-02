@@ -1,0 +1,281 @@
+{
+  "test_scenarios": {
+    "2025": {
+      "withholding_tests": [
+        {
+          "name": "Single filer biweekly",
+          "description": "IRS Pub 15-T style - Single filer with standard settings",
+          "inputs": {
+            "gross_pay_per_paycheck": 2000,
+            "pay_frequency": "biweekly",
+            "filing_status": "single",
+            "multiple_jobs_checkbox": false,
+            "dependents_amount": 0,
+            "other_income_annual": 0,
+            "deductions_annual": 0,
+            "extra_withholding": 0
+          },
+          "expected": {
+            "annual_wages": 52000,
+            "standard_deduction": 15750,
+            "taxable_income": 36250,
+            "annual_withholding": 4111,
+            "withholding_per_paycheck": 158,
+            "tolerance": 5
+          }
+        },
+        {
+          "name": "Married with dependents",
+          "description": "Married filing jointly with 2 children",
+          "inputs": {
+            "gross_pay_per_paycheck": 3000,
+            "pay_frequency": "biweekly",
+            "filing_status": "married_filing_jointly",
+            "multiple_jobs_checkbox": false,
+            "dependents_amount": 4000,
+            "other_income_annual": 0,
+            "deductions_annual": 0,
+            "extra_withholding": 0
+          },
+          "expected": {
+            "annual_wages": 78000,
+            "standard_deduction": 31500,
+            "taxable_income": 46500,
+            "annual_withholding": 1103,
+            "withholding_per_paycheck": 42,
+            "tolerance": 10
+          }
+        },
+        {
+          "name": "With other income",
+          "description": "Married with pension/investment income",
+          "inputs": {
+            "gross_pay_per_paycheck": 4000,
+            "pay_frequency": "biweekly",
+            "filing_status": "married_filing_jointly",
+            "multiple_jobs_checkbox": false,
+            "dependents_amount": 0,
+            "other_income_annual": 10000,
+            "deductions_annual": 0,
+            "extra_withholding": 0
+          },
+          "expected": {
+            "annual_wages": 104000,
+            "standard_deduction": 31500,
+            "taxable_income": 82500,
+            "annual_withholding": 9423,
+            "withholding_per_paycheck": 362,
+            "tolerance": 10
+          }
+        }
+      ],
+      "tax_liability_tests": [
+        {
+          "name": "Single standard deduction",
+          "description": "Single filer with wages only",
+          "inputs": {
+            "gross_income": 50000,
+            "filing_status": "single",
+            "num_children": 0,
+            "use_standard_deduction": true
+          },
+          "expected": {
+            "taxable_income": 34250,
+            "federal_tax_owed": 3871,
+            "child_tax_credits": 0,
+            "total_tax_liability": 3871,
+            "tolerance": 5
+          }
+        },
+        {
+          "name": "Married with children",
+          "description": "Married filing jointly with 2 kids",
+          "inputs": {
+            "gross_income": 120000,
+            "filing_status": "married_filing_jointly",
+            "num_children": 2,
+            "use_standard_deduction": true
+          },
+          "expected": {
+            "taxable_income": 88500,
+            "federal_tax_owed": 10143,
+            "child_tax_credits": 4400,
+            "total_tax_liability": 5743,
+            "tolerance": 10
+          }
+        },
+        {
+          "name": "High income multiple brackets",
+          "description": "High earner spanning multiple tax brackets",
+          "inputs": {
+            "gross_income": 250000,
+            "filing_status": "married_filing_jointly",
+            "num_children": 0,
+            "use_standard_deduction": true
+          },
+          "expected": {
+            "taxable_income": 218500,
+            "federal_tax_owed": 38123,
+            "marginal_rate": 24.0,
+            "tolerance": 50
+          }
+        },
+        {
+          "name": "Itemized deductions",
+          "description": "Single filer with itemized deductions",
+          "inputs": {
+            "gross_income": 80000,
+            "filing_status": "single",
+            "num_children": 0,
+            "use_standard_deduction": false,
+            "itemized_deduction_amount": 20000
+          },
+          "expected": {
+            "taxable_income": 60000,
+            "federal_tax_owed": 8113,
+            "deduction_type": "Itemized Deduction",
+            "tolerance": 10
+          }
+        }
+      ],
+      "fica_tests": [
+        {
+          "name": "Below SS wage base",
+          "description": "FICA on wages below Social Security cap",
+          "inputs": {
+            "gross_wages": 100000,
+            "filing_status": "single"
+          },
+          "expected": {
+            "social_security": 6200,
+            "medicare": 1450,
+            "additional_medicare": 0,
+            "total_fica": 7650,
+            "tolerance": 1
+          }
+        },
+        {
+          "name": "Above SS wage base",
+          "description": "FICA with SS capped at wage base",
+          "inputs": {
+            "gross_wages": 200000,
+            "filing_status": "single"
+          },
+          "expected": {
+            "social_security": 10918,
+            "medicare": 2900,
+            "additional_medicare": 0,
+            "total_fica": 13818,
+            "tolerance": 10
+          }
+        },
+        {
+          "name": "With additional Medicare",
+          "description": "Additional 0.9% Medicare over threshold",
+          "inputs": {
+            "gross_wages": 300000,
+            "filing_status": "single"
+          },
+          "expected": {
+            "social_security": 10918,
+            "medicare": 4350,
+            "additional_medicare": 900,
+            "total_fica": 16168,
+            "tolerance": 10
+          }
+        }
+      ],
+      "integration_tests": [
+        {
+          "name": "Synthetic mixed-income household",
+          "description": "W-2 wages, a taxable pension, and other non-taxable income",
+          "inputs": {
+            "w2_income": 100000,
+            "pension_taxable": 30000,
+            "va_disability": 20000,
+            "filing_status": "married_filing_jointly",
+            "num_children": 2
+          },
+          "expected": {
+            "total_taxable_income": 130000,
+            "taxable_income": 98500,
+            "child_tax_credits": 4400,
+            "total_tax_liability": 7087,
+            "w2_fica": 7650,
+            "tolerance": 50
+          }
+        }
+      ]
+    },
+    "2026": {
+      "withholding_tests": [
+        {
+          "name": "Single filer biweekly",
+          "description": "2026 brackets with inflation adjustments",
+          "inputs": {
+            "gross_pay_per_paycheck": 2000,
+            "pay_frequency": "biweekly",
+            "filing_status": "single",
+            "multiple_jobs_checkbox": false,
+            "dependents_amount": 0,
+            "other_income_annual": 0,
+            "deductions_annual": 0,
+            "extra_withholding": 0
+          },
+          "expected": {
+            "annual_wages": 52000,
+            "standard_deduction": 16100,
+            "taxable_income": 35900,
+            "annual_withholding": 4059,
+            "withholding_per_paycheck": 156,
+            "tolerance": 5
+          }
+        }
+      ],
+      "tax_liability_tests": [
+        {
+          "name": "Single standard deduction",
+          "description": "2026 standard deduction increased",
+          "inputs": {
+            "gross_income": 50000,
+            "filing_status": "single",
+            "num_children": 0,
+            "use_standard_deduction": true
+          },
+          "expected": {
+            "taxable_income": 33900,
+            "federal_tax_owed": 3829,
+            "tolerance": 5
+          }
+        }
+      ],
+      "fica_tests": [
+        {
+          "name": "Below SS wage base 2026",
+          "description": "FICA with 2026 wage base",
+          "inputs": {
+            "gross_wages": 100000,
+            "filing_status": "single"
+          },
+          "expected": {
+            "social_security": 6200,
+            "medicare": 1450,
+            "total_fica": 7650,
+            "tolerance": 1
+          }
+        }
+      ]
+    }
+  },
+  "_metadata": {
+    "version": "1.0",
+    "last_updated": "2025-12-29",
+    "description": "Test scenarios for tax calculations based on IRS publications",
+    "sources": [
+      "IRS Publication 15-T (Withholding)",
+      "IRS Form 1040 Instructions",
+      "IRS Revenue Procedures"
+    ],
+    "notes": "Expected values calculated using official IRS tax brackets and formulas for each year"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "tax_year": 2026,
+  "tax_brackets": {
+    "single": [
+      {
+        "min": 0,
+        "max": 11925,
+        "rate": 0.1
+      }
+    ]
+  },
+  "standard_deductions": {
+    "single": 15750
+  }
+}
