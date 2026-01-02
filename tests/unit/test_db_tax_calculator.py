@@ -207,8 +207,7 @@ class TestCalculateTaxesFromDatabase:
             deduction_401k=Decimal("500"),
             federal_withholding=Decimal("600"),
             social_security=Decimal("310"),
-            medicare=Decimal("72.50"),
-            net_pay=Decimal("3517.50")
+            medicare=Decimal("72.50")
         )
         db_session.add(paycheck)
         db_session.commit()
@@ -243,8 +242,7 @@ class TestCalculateTaxesFromDatabase:
             pay_date=date(2030, 1, 1),
             gross_amount=Decimal("3000"),
             pretax_deductions=Decimal("300"),
-            federal_withholding=Decimal("350"),
-            net_amount=Decimal("2350")
+            federal_withholding=Decimal("350")
         )
         db_session.add(pension)
         db_session.commit()
@@ -276,8 +274,7 @@ class TestCalculateTaxesFromDatabase:
         paycheck = Paycheck(
             employer_id=employer.id,
             pay_date=date(2030, 6, 15),
-            gross_wages=Decimal("3000"),
-            net_pay=Decimal("2500")
+            gross_wages=Decimal("3000")
         )
         db_session.add(paycheck)
         
@@ -317,8 +314,7 @@ class TestCalculateTaxesFromDatabase:
             gross_wages=Decimal("8000"),
             federal_withholding=Decimal("1000"),
             social_security=Decimal("496"),
-            medicare=Decimal("116"),
-            net_pay=Decimal("6388")
+            medicare=Decimal("116")
         )
         db_session.add(paycheck)
         db_session.commit()
@@ -352,8 +348,7 @@ class TestCalculateTaxesFromDatabase:
             gross_wages=Decimal("12000"),
             federal_withholding=Decimal("1800"),
             social_security=Decimal("744"),
-            medicare=Decimal("174"),
-            net_pay=Decimal("9282")
+            medicare=Decimal("174")
         )
         db_session.add(paycheck)
         db_session.commit()
@@ -392,8 +387,7 @@ class TestCalculateTaxesFromDatabase:
                 deduction_401k=Decimal("500"),
                 federal_withholding=Decimal("600"),
                 social_security=Decimal("310"),
-                medicare=Decimal("72.50"),
-                net_pay=Decimal("3517.50")
+                medicare=Decimal("72.50")
             )
             db_session.add(paycheck)
         db_session.commit()

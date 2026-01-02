@@ -26,7 +26,6 @@ class TestIncomeAPICreate:
                 "employer_id": employer.id,
                 "pay_date": "2025-01-15",
                 "gross_wages": 5000.0,
-                "net_pay": 3825.0,
             },
         )
 
@@ -55,7 +54,6 @@ class TestIncomeAPICreate:
                 "federal_withholding": 800.0,
                 "social_security": 372.0,
                 "medicare": 87.0,
-                "net_pay": 5041.0,
                 "notes": "Test paycheck with all fields",
             },
         )
@@ -75,7 +73,6 @@ class TestIncomeAPICreate:
                 "gross_amount": 3500.0,
                 "pretax_deductions": 350.0,
                 "federal_withholding": 400.0,
-                "net_amount": 2750.0,
             },
         )
 
@@ -115,13 +112,11 @@ class TestIncomeAPIFiltering:
             employer_id=employer.id,
             pay_date=date(2024, 6, 15),
             gross_wages=Decimal("5000"),
-            net_pay=Decimal("3825"),
         )
         paycheck_2025 = Paycheck(
             employer_id=employer.id,
             pay_date=date(2025, 1, 15),
             gross_wages=Decimal("5500"),
-            net_pay=Decimal("4200"),
         )
         db_session.add_all([paycheck_2024, paycheck_2025])
         db_session.commit()
@@ -140,10 +135,10 @@ class TestIncomeAPIFiltering:
 
         # Create pension payments
         pension_2024 = Retirement1099R(
-            pay_date=date(2024, 12, 1), gross_amount=Decimal("3000"), net_amount=Decimal("2600")
+            pay_date=date(2024, 12, 1), gross_amount=Decimal("3000")
         )
         pension_2025 = Retirement1099R(
-            pay_date=date(2025, 1, 1), gross_amount=Decimal("3200"), net_amount=Decimal("2800")
+            pay_date=date(2025, 1, 1), gross_amount=Decimal("3200")
         )
         db_session.add_all([pension_2024, pension_2025])
         db_session.commit()
@@ -175,7 +170,6 @@ class TestIncomeAPIValidation:
                 "employer_id": employer.id,
                 "pay_date": "invalid-date",
                 "gross_wages": 5000.0,
-                "net_pay": 3825.0,
             },
         )
 

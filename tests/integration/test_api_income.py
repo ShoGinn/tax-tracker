@@ -63,7 +63,6 @@ class TestIncomeAPICreation:
         payload = {
             "pay_date": "2025-01-15",
             "gross_wages": 5000,
-            "net_pay": 3867.50,
             "federal_withholding": 750,
             "social_security": 310,
             "medicare": 72.50,
@@ -76,7 +75,7 @@ class TestIncomeAPICreation:
 
     def test_create_1099r_invalid_date(self, client: TestClient):
         """Test creating pension with invalid date fails."""
-        payload = {"pay_date": "invalid-date", "gross_amount": 2000, "net_amount": 1800}
+        payload = {"pay_date": "invalid-date", "gross_amount": 2000}
 
         response = client.post("/income/1099r", json=payload)
 

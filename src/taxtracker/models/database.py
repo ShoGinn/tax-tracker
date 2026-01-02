@@ -85,9 +85,6 @@ class Paycheck(Base):
     state_withholding: Mapped[Decimal] = mapped_column(default=Decimal(0))
     local_withholding: Mapped[Decimal] = mapped_column(default=Decimal(0))
 
-    # Net pay (take-home)
-    net_pay: Mapped[Decimal] = mapped_column()
-
     # Metadata
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     pay_period_start: Mapped[date | None] = mapped_column(nullable=True)
@@ -137,9 +134,9 @@ class Paycheck(Base):
         return self.gross_wages + self.bonus + self.taxable_benefit - self.total_pretax_deductions
 
     @property
-    def calculated_net_pay(self) -> Decimal:
+    def net_pay(self) -> Decimal:
         """
-        Calculate what net pay should be based on deductions and taxes.
+        Calculate net pay (take-home) based on deductions and taxes.
         Note: taxable_benefit is NOT included because it's imputed income (not actually received).
         """
         return (
@@ -150,17 +147,6 @@ class Paycheck(Base):
             - self.total_taxes_withheld
             - self.total_posttax_deductions
         )
-
-    @property
-    def net_pay_matches(self) -> bool | None:
-        """Check if provided net_pay matches calculated net_pay.
-
-        Returns:
-            True if they match within $0.01, False if they don't, None if net_pay is 0
-        """
-        if self.net_pay == Decimal(0):
-            return None
-        return abs(self.net_pay - self.calculated_net_pay) < Decimal("0.01")
 
     def __repr__(self) -> str:
         return f"<Paycheck(date={self.pay_date}, gross=${self.gross_wages})>"
@@ -193,9 +179,6 @@ class Retirement1099R(Base):
     federal_withholding: Mapped[Decimal] = mapped_column(default=Decimal(0))
     state_withholding: Mapped[Decimal] = mapped_column(default=Decimal(0))
 
-    # Net payment received
-    net_amount: Mapped[Decimal] = mapped_column()
-
     # Source description (e.g., "Retirement distribution", "401k Distribution")
     source_description: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
@@ -220,25 +203,14 @@ class Retirement1099R(Base):
         return self.federal_withholding + self.state_withholding
 
     @property
-    def calculated_net_amount(self) -> Decimal:
-        """Calculate expected net amount based on deductions and taxes."""
+    def net_amount(self) -> Decimal:
+        """Calculate net payment received based on deductions and taxes."""
         return (
             self.gross_amount
             - self.pretax_deductions
             - self.total_taxes_withheld
             - self.posttax_deductions
         )
-
-    @property
-    def net_amount_matches(self) -> bool | None:
-        """Check if provided net_amount matches calculated value.
-
-        Returns:
-            True if within $0.01, False if doesn't match, None if net_amount is 0
-        """
-        if self.net_amount == Decimal(0):
-            return None
-        return abs(self.net_amount - self.calculated_net_amount) < Decimal("0.01")
 
     def __repr__(self) -> str:
         return (
