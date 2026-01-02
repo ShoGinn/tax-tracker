@@ -19,7 +19,7 @@ router = APIRouter(prefix="/w4", tags=["W-4"])
 
 
 @router.post("/optimize")
-def optimize_w4_settings(
+async def optimize_w4_settings(
     total_annual_w2_income: float,
     paychecks_per_year: int,
     filing_status: str,
@@ -119,7 +119,7 @@ def optimize_w4_settings(
 
 
 @router.post("/calculate-withholding")
-def calculate_withholding(
+async def calculate_withholding(
     gross_pay_per_paycheck: float,
     pay_frequency: str,
     filing_status: str,
@@ -170,7 +170,7 @@ def calculate_withholding(
 
 
 @router.post("/estimate-annual-withholding")
-def estimate_withholding(
+async def estimate_withholding(
     annual_gross: float,
     pay_frequency: str,
     filing_status: str,

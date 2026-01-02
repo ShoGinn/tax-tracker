@@ -4,7 +4,8 @@ import csv
 from io import StringIO
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.models.database import Employer
 from taxtracker.models.schemas import (
@@ -53,14 +54,14 @@ def _prepare_row_for_schema(row: dict[str, Any], column_mapping: dict[str, str])
     return mapped_data
 
 
-def import_paychecks_csv(
-    db: Session, csv_content: str, column_mapping: dict[str, str] | None = None
+async def import_paychecks_csv(
+    db: AsyncSession, csv_content: str, column_mapping: dict[str, str] | None = None
 ) -> dict[str, Any]:
     """
     Import paychecks from CSV.
 
     Args:
-        db: Database session
+        db: Async database session
         csv_content: CSV file content as string
         column_mapping: Optional mapping of CSV column names to our field names.
             If None or empty, uses CSV column names as-is (identity mapping).
@@ -99,11 +100,13 @@ def import_paychecks_csv(
             elif "employer_name" in mapped_data and mapped_data["employer_name"].strip():
                 # Find or create employer by name
                 employer_name = mapped_data["employer_name"].strip()
-                employer = db.query(Employer).filter(Employer.name == employer_name).first()
+                result_query = await db.execute(
+                    select(Employer).filter(Employer.name == employer_name)
+                )
+                employer = result_query.scalar_one_or_none()
                 if not employer:
                     # Create employer with start date from first paycheck
-                    # Let Pydantic parse the date
-                    employer = income_service.create_employer(
+                    employer = await income_service.create_employer(
                         db,
                         EmployerCreate(
                             name=employer_name,
@@ -125,7 +128,7 @@ def import_paychecks_csv(
 
             # Let Pydantic handle all type conversions (date, Decimal, etc.)
             paycheck = PaycheckCreate(**paycheck_data)
-            income_service.create_paycheck(db, paycheck)
+            await income_service.create_paycheck(db, paycheck)
             result.add_success()
 
         except Exception as e:
@@ -134,14 +137,14 @@ def import_paychecks_csv(
     return result.to_dict()
 
 
-def import_pension_csv(
-    db: Session, csv_content: str, column_mapping: dict[str, str] | None = None
+async def import_pension_csv(
+    db: AsyncSession, csv_content: str, column_mapping: dict[str, str] | None = None
 ) -> dict[str, Any]:
     """
     Import 1099-R retirement income from CSV.
 
     Args:
-        db: Database session
+        db: Async database session
         csv_content: CSV file content as string
         column_mapping: Maps CSV column names to our field names.
             If empty, assumes CSV uses our exact field names (no mapping needed).
@@ -179,7 +182,7 @@ def import_pension_csv(
 
             # Let Pydantic handle all type conversions
             payment = Retirement1099RCreate(**mapped_data)
-            income_service.create_retirement_1099r(db, payment)
+            await income_service.create_retirement_1099r(db, payment)
             result.add_success()
 
         except Exception as e:
@@ -188,14 +191,14 @@ def import_pension_csv(
     return result.to_dict()
 
 
-def import_va_csv(
-    db: Session, csv_content: str, column_mapping: dict[str, str] | None = None
+async def import_va_csv(
+    db: AsyncSession, csv_content: str, column_mapping: dict[str, str] | None = None
 ) -> dict[str, Any]:
     """
     Import non-taxable benefit payments from CSV.
 
     Args:
-        db: Database session
+        db: Async database session
         csv_content: CSV file content as string
         column_mapping: Maps CSV column names to our field names.
             If empty, assumes CSV uses our exact field names (no mapping needed).
@@ -229,7 +232,7 @@ def import_va_csv(
                 notes=mapped_data.get("notes"),
             )
 
-            income_service.create_non_taxable_payment(db, payment)
+            await income_service.create_non_taxable_payment(db, payment)
             result.add_success()
 
         except Exception as e:

@@ -3,7 +3,7 @@
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.core.config import settings
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
@@ -160,8 +160,8 @@ class DatabaseTaxCalculation:
         return "Perfect! Your withholdings are spot-on."
 
 
-def calculate_taxes_from_database(
-    db: Session,
+async def calculate_taxes_from_database(
+    db: AsyncSession,
     year: int,
     tax_calculator: TaxCalculator,
     filing_status: FilingStatus = FilingStatus.MARRIED_FILING_JOINTLY,
@@ -173,7 +173,7 @@ def calculate_taxes_from_database(
     Calculate taxes from database records.
 
     Args:
-        db: Database session
+        db: Async database session
         year: Tax year
         tax_calculator: TaxCalculator instance
         filing_status: Filing status (default: married filing jointly)
@@ -185,7 +185,7 @@ def calculate_taxes_from_database(
         DatabaseTaxCalculation with full breakdown
     """
     # Get YTD summary from database
-    ytd = get_ytd_summary(db, year)
+    ytd = await get_ytd_summary(db, year)
 
     # Calculate AGI (W-2 taxable + pension taxable)
     # Note: Pre-tax deductions already removed from these amounts

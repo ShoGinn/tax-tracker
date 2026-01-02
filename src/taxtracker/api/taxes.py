@@ -3,7 +3,7 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.api.dependencies import get_db, get_tax_calculator
 from taxtracker.core.exceptions import TaxCalculationError
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/taxes", tags=["Taxes"])
 
 
 @router.post("/calculate")
-def calculate_taxes(
+async def calculate_taxes(
     request: TaxCalculationRequest,
     calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> TaxCalculationResponse:
@@ -48,14 +48,14 @@ def calculate_taxes(
 
 
 @router.post("/calculate-from-db/{year}", response_model=dict)
-def calculate_from_database(
+async def calculate_from_database(
     year: int,
     filing_status: FilingStatus,
     num_children: int = 0,
     use_standard_deduction: bool = True,
     itemized_deduction_amount: float = 0,
     *,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db)],
     calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
@@ -78,7 +78,7 @@ def calculate_from_database(
     """
     try:
         # Call the service function with injected calculator
-        result = calculate_taxes_from_database(
+        result = await calculate_taxes_from_database(
             db=db,
             year=year,
             tax_calculator=calculator,
@@ -99,7 +99,7 @@ def calculate_from_database(
 
 
 @router.get("/fica/{year}")
-def get_fica_info(year: int) -> dict[str, Any]:
+async def get_fica_info(year: int) -> dict[str, Any]:
     """
     Get FICA limits and rates for a given year.
 
@@ -121,7 +121,7 @@ def get_fica_info(year: int) -> dict[str, Any]:
 
 
 @router.get("/brackets/{year}")
-def get_tax_brackets(year: int, filing_status: FilingStatus | None = None) -> dict[str, Any]:
+async def get_tax_brackets(year: int, filing_status: FilingStatus | None = None) -> dict[str, Any]:
     """
     Get tax brackets for a given year.
 

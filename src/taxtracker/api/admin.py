@@ -21,7 +21,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 @router.get("/tax-data/available-years")
-def list_available_years() -> dict[str, Any]:
+async def list_available_years() -> dict[str, Any]:
     """Get list of years with available tax data."""
     years = get_available_years()
     return {
@@ -32,7 +32,7 @@ def list_available_years() -> dict[str, Any]:
 
 
 @router.get("/tax-data/{year}")
-def get_tax_data(year: int) -> dict[str, Any]:
+async def get_tax_data(year: int) -> dict[str, Any]:
     """Get complete tax data for a specific year."""
     try:
         tax_data = load_tax_brackets(year)

@@ -3,14 +3,17 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, String, Text, create_engine, func
+from sqlalchemy import ForeignKey, String, Text, func
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
-    Session,
     mapped_column,
     relationship,
-    sessionmaker,
 )
 
 from taxtracker.core.config import settings
@@ -48,10 +51,11 @@ class Paycheck(Base):
     """W-2 paycheck from employer."""
 
     __tablename__ = "paychecks"
+    __table_args__ = ({"comment": "W-2 paycheck records"},)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    employer_id: Mapped[int] = mapped_column(ForeignKey("employers.id"))
-    pay_date: Mapped[date]
+    employer_id: Mapped[int] = mapped_column(ForeignKey("employers.id"), index=True)
+    pay_date: Mapped[date] = mapped_column(index=True)
 
     # Gross income
     gross_wages: Mapped[Decimal] = mapped_column()
@@ -160,9 +164,10 @@ class Retirement1099R(Base):
     """
 
     __tablename__ = "retirement_1099r"
+    __table_args__ = ({"comment": "1099-R retirement income records"},)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    pay_date: Mapped[date]
+    pay_date: Mapped[date] = mapped_column(index=True)
 
     # Gross amount (Box 1 on 1099-R)
     gross_amount: Mapped[Decimal] = mapped_column()
@@ -229,9 +234,10 @@ class NonTaxableIncome(Base):
     """
 
     __tablename__ = "non_taxable_income"
+    __table_args__ = ({"comment": "Non-taxable income records (VA, SSA, etc.)"},)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    pay_date: Mapped[date]
+    pay_date: Mapped[date] = mapped_column(index=True)
 
     # Amount received (non-taxable)
     amount: Mapped[Decimal] = mapped_column()
@@ -251,21 +257,36 @@ class NonTaxableIncome(Base):
         return f"<NonTaxableIncome(date={self.pay_date}, amount=${self.amount}{source})>"
 
 
-# Database setup - use factory pattern for testability
-def create_session_factory(database_url: str | None = None) -> sessionmaker[Session]:
-    """Create a session factory for the given database URL.
+# Database setup - async engine and session factory
+def create_async_session_factory(
+    database_url: str | None = None,
+) -> async_sessionmaker[AsyncSession]:
+    """Create an async session factory for the given database URL.
 
     Args:
         database_url: Database URL. If None, uses settings.database_url
 
     Returns:
-        Session factory
+        Async session factory
     """
     url = database_url or settings.database_url
-    eng = create_engine(url, echo=False)
-    return sessionmaker(autocommit=False, autoflush=False, bind=eng)
+    eng = create_async_engine(url, echo=False)
+    return async_sessionmaker(
+        eng, class_=AsyncSession, expire_on_commit=False, autocommit=False, autoflush=False
+    )
 
 
-# Default engine and session factory for backwards compatibility
-engine = create_engine(settings.database_url, echo=False)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Default async engine and session factory
+# For SQLite: pool settings are ignored (uses NullPool)
+# For PostgreSQL/MySQL: these settings optimize connection handling
+async_engine = create_async_engine(
+    settings.database_url,
+    echo=settings.db_echo,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
+    pool_timeout=settings.db_pool_timeout,
+    pool_recycle=settings.db_pool_recycle,
+)
+AsyncSessionLocal = async_sessionmaker(
+    async_engine, class_=AsyncSession, expire_on_commit=False, autocommit=False, autoflush=False
+)

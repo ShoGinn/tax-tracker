@@ -1,24 +1,21 @@
 """Shared API dependencies."""
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from taxtracker.models.database import SessionLocal
+from taxtracker.models.database import AsyncSessionLocal
 from taxtracker.services.tax_calculator import TaxCalculator
 
 
-def get_db() -> Generator[Session, None, None]:
-    """Get database session.
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Get async database session.
 
-    Yields database session and ensures cleanup.
+    Yields async database session and ensures cleanup.
     Can be overridden in tests using FastAPI's dependency override.
     """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
 def get_tax_calculator() -> TaxCalculator:

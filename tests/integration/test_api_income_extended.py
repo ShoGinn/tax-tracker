@@ -11,14 +11,14 @@ from fastapi.testclient import TestClient
 class TestIncomeAPICreate:
     """Tests for creating income entries."""
 
-    def test_create_paycheck_minimal(self, client: TestClient, db_session):
+    async def test_create_paycheck_minimal(self, client: TestClient, async_db_session):
         """Test creating paycheck with minimal data."""
         from taxtracker.models.database import Employer
 
         # Create employer first
         employer = Employer(name="Test Corp", ein="12-3456789", start_date=date(2025, 1, 1))
-        db_session.add(employer)
-        db_session.commit()
+        async_db_session.add(employer)
+        await async_db_session.commit()
 
         response = client.post(
             "/income/paychecks",
@@ -34,13 +34,13 @@ class TestIncomeAPICreate:
         assert float(data["gross_wages"]) == 5000.0
         assert data["employer_id"] == employer.id
 
-    def test_create_paycheck_full(self, client: TestClient, db_session):
+    async def test_create_paycheck_full(self, client: TestClient, async_db_session):
         """Test creating paycheck with all fields."""
         from taxtracker.models.database import Employer
 
         employer = Employer(name="Full Test Corp", ein="98-7654321", start_date=date(2025, 1, 1))
-        db_session.add(employer)
-        db_session.commit()
+        async_db_session.add(employer)
+        await async_db_session.commit()
 
         response = client.post(
             "/income/paychecks",
@@ -98,14 +98,14 @@ class TestIncomeAPICreate:
 class TestIncomeAPIFiltering:
     """Tests for filtering income entries."""
 
-    def test_filter_paychecks_by_year(self, client: TestClient, db_session):
+    async def test_filter_paychecks_by_year(self, client: TestClient, async_db_session):
         """Test filtering paychecks by year."""
         from taxtracker.models.database import Employer, Paycheck
 
         # Create employer
         employer = Employer(name="Filter Test Corp", ein="11-2233445", start_date=date(2024, 1, 1))
-        db_session.add(employer)
-        db_session.commit()
+        async_db_session.add(employer)
+        await async_db_session.commit()
 
         # Create paychecks in different years
         paycheck_2024 = Paycheck(
@@ -118,8 +118,8 @@ class TestIncomeAPIFiltering:
             pay_date=date(2025, 1, 15),
             gross_wages=Decimal("5500"),
         )
-        db_session.add_all([paycheck_2024, paycheck_2025])
-        db_session.commit()
+        async_db_session.add_all([paycheck_2024, paycheck_2025])
+        await async_db_session.commit()
 
         # Filter for 2025
         response = client.get("/income/paychecks?year=2025")
@@ -129,15 +129,15 @@ class TestIncomeAPIFiltering:
         assert len(data) == 1
         assert data[0]["pay_date"] == "2025-01-15"
 
-    def test_filter_1099r_by_year(self, client: TestClient, db_session):
+    async def test_filter_1099r_by_year(self, client: TestClient, async_db_session):
         """Test filtering pension by year."""
         from taxtracker.models.database import Retirement1099R
 
         # Create pension payments
         pension_2024 = Retirement1099R(pay_date=date(2024, 12, 1), gross_amount=Decimal("3000"))
         pension_2025 = Retirement1099R(pay_date=date(2025, 1, 1), gross_amount=Decimal("3200"))
-        db_session.add_all([pension_2024, pension_2025])
-        db_session.commit()
+        async_db_session.add_all([pension_2024, pension_2025])
+        await async_db_session.commit()
 
         # Filter for 2025
         response = client.get("/income/1099r?year=2025")

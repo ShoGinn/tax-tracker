@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from sqlalchemy import text
 
 from taxtracker.api.admin import router as admin_router
 from taxtracker.api.income import router as income_router
@@ -12,7 +13,7 @@ from taxtracker.api.projections import router as projections_router
 from taxtracker.api.taxes import router as taxes_router
 from taxtracker.api.w4 import router as w4_router
 from taxtracker.core.config import settings
-from taxtracker.models.database import Base, engine
+from taxtracker.models.database import Base, async_engine
 
 
 def create_app(skip_db_init: bool = False) -> FastAPI:
@@ -29,15 +30,17 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
         # Startup
 
         if not skip_db_init:
-            # Initialize database tables
+            # Initialize database tables asynchronously
 
-            Base.metadata.create_all(bind=engine)
+            async with async_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
         else:
             pass
 
         yield
 
-        # Shutdown
+        # Shutdown - properly dispose of the engine and close connections
+        await async_engine.dispose()
 
     app = FastAPI(
         title="Tax Tracker API",
@@ -64,9 +67,15 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
         }
 
     @app.get("/health")
-    def health() -> dict[str, str]:
-        """Health check endpoint."""
-        return {"status": "healthy"}
+    async def health() -> dict[str, str]:
+        """Health check endpoint with database connectivity test."""
+        try:
+            # Test database connectivity
+            async with async_engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            return {"status": "healthy", "database": "connected"}
+        except Exception as e:
+            return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
     return app
 

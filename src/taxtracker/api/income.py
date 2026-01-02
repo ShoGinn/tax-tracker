@@ -3,7 +3,7 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.api.dependencies import get_db
 from taxtracker.core.exceptions import DatabaseError, ValidationError
@@ -26,12 +26,12 @@ router = APIRouter(prefix="/income", tags=["Income"])
 
 
 @router.post("/paychecks")
-def create_paycheck_entry(
-    paycheck: PaycheckCreate, db: Annotated[Session, Depends(get_db)]
+async def create_paycheck_entry(
+    paycheck: PaycheckCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> PaycheckResponse:
     """Create a new paycheck entry."""
     try:
-        return income_service.create_paycheck(db, paycheck)  # type: ignore[return-value]
+        return await income_service.create_paycheck(db, paycheck)  # type: ignore[return-value]
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
@@ -44,23 +44,23 @@ def create_paycheck_entry(
 
 
 @router.get("/paychecks")
-def list_paychecks(
-    year: int | None = None, *, db: Annotated[Session, Depends(get_db)]
+async def list_paychecks(
+    year: int | None = None, *, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> list[PaycheckResponse]:
     """List all paychecks, optionally filtered by year."""
     try:
-        return income_service.get_paychecks(db, employer_id=None, year=year)  # type: ignore[return-value]
+        return await income_service.get_paychecks(db, employer_id=None, year=year)  # type: ignore[return-value]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/paychecks/{paycheck_id}")
-def delete_paycheck_entry(
-    paycheck_id: int, db: Annotated[Session, Depends(get_db)]
+async def delete_paycheck_entry(
+    paycheck_id: int, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> dict[str, Any]:
     """Delete a paycheck entry."""
     try:
-        deleted = income_service.delete_paycheck(db, paycheck_id)
+        deleted = await income_service.delete_paycheck(db, paycheck_id)
         if not deleted:
             raise HTTPException(status_code=404, detail=f"Paycheck {paycheck_id} not found")
         return {"message": "Paycheck deleted successfully"}
@@ -74,7 +74,7 @@ def delete_paycheck_entry(
 
 @router.post("/paychecks/import-csv")
 async def import_paychecks_csv_endpoint(
-    file: UploadFile, db: Annotated[Session, Depends(get_db)]
+    file: UploadFile, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> dict[str, Any]:
     """
     Import paychecks from CSV file.
@@ -84,7 +84,7 @@ async def import_paychecks_csv_endpoint(
     """
     try:
         content = await file.read()
-        result = csv_import.import_paychecks_csv(db, content.decode("utf-8"))
+        result = await csv_import.import_paychecks_csv(db, content.decode("utf-8"))
 
         # Generate appropriate message
         if result["error_count"] == 0:
@@ -114,12 +114,12 @@ async def import_paychecks_csv_endpoint(
 
 
 @router.post("/1099r")
-def create_pension_entry(
-    pension: Retirement1099RCreate, db: Annotated[Session, Depends(get_db)]
+async def create_pension_entry(
+    pension: Retirement1099RCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> Retirement1099RResponse:
     """Create a new pension entry."""
     try:
-        return income_service.create_retirement_1099r(db, pension)  # type: ignore[return-value]
+        return await income_service.create_retirement_1099r(db, pension)  # type: ignore[return-value]
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
@@ -127,23 +127,23 @@ def create_pension_entry(
 
 
 @router.get("/1099r")
-def list_pension(
-    year: int | None = None, *, db: Annotated[Session, Depends(get_db)]
+async def list_pension(
+    year: int | None = None, *, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> list[Retirement1099RResponse]:
     """List all pension entries, optionally filtered by year."""
     try:
-        return income_service.get_retirement_1099rs(db, year)  # type: ignore[return-value]
+        return await income_service.get_retirement_1099rs(db, year)  # type: ignore[return-value]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/1099r/{retirement_id}")
-def delete_pension_entry(
-    retirement_id: int, db: Annotated[Session, Depends(get_db)]
+async def delete_pension_entry(
+    retirement_id: int, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> dict[str, Any]:
     """Delete a pension entry."""
     try:
-        deleted = income_service.delete_retirement_1099r(db, retirement_id)
+        deleted = await income_service.delete_retirement_1099r(db, retirement_id)
         if not deleted:
             raise HTTPException(status_code=404, detail=f"Pension entry {retirement_id} not found")
         return {"message": "Pension entry deleted successfully"}
@@ -157,12 +157,12 @@ def delete_pension_entry(
 
 @router.post("/1099r/import-csv")
 async def import_pension_csv_endpoint(
-    file: UploadFile, db: Annotated[Session, Depends(get_db)]
+    file: UploadFile, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> dict[str, Any]:
     """Import pension entries from CSV file."""
     try:
         content = await file.read()
-        result = csv_import.import_pension_csv(db, content.decode("utf-8"))
+        result = await csv_import.import_pension_csv(db, content.decode("utf-8"))
 
         # Generate appropriate message
         if result["error_count"] == 0:
@@ -192,12 +192,12 @@ async def import_pension_csv_endpoint(
 
 
 @router.post("/non-taxable")
-def create_va_entry(
-    va: NonTaxableIncomeCreate, db: Annotated[Session, Depends(get_db)]
+async def create_va_entry(
+    va: NonTaxableIncomeCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> NonTaxableIncomeResponse:
     """Create a new non-taxable benefit entry."""
     try:
-        return income_service.create_non_taxable_payment(db, va)  # type: ignore[return-value]
+        return await income_service.create_non_taxable_payment(db, va)  # type: ignore[return-value]
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
@@ -205,21 +205,23 @@ def create_va_entry(
 
 
 @router.get("/non-taxable")
-def list_va_disability(
-    year: int | None = None, *, db: Annotated[Session, Depends(get_db)]
+async def list_va_disability(
+    year: int | None = None, *, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> list[NonTaxableIncomeResponse]:
     """List all non-taxable benefit entries, optionally filtered by year."""
     try:
-        return income_service.get_non_taxable_payments(db, year)  # type: ignore[return-value]
+        return await income_service.get_non_taxable_payments(db, year)  # type: ignore[return-value]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/non-taxable/{non_taxable_id}")
-def delete_va_entry(non_taxable_id: int, db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
+async def delete_va_entry(
+    non_taxable_id: int, db: Annotated[AsyncSession, Depends(get_db)]
+) -> dict[str, Any]:
     """Delete a non-taxable benefit entry."""
     try:
-        deleted = income_service.delete_non_taxable_payment(db, non_taxable_id)
+        deleted = await income_service.delete_non_taxable_payment(db, non_taxable_id)
         if not deleted:
             raise HTTPException(
                 status_code=404, detail=f"Non-taxable entry {non_taxable_id} not found"
@@ -235,12 +237,12 @@ def delete_va_entry(non_taxable_id: int, db: Annotated[Session, Depends(get_db)]
 
 @router.post("/non-taxable/import-csv")
 async def import_va_csv_endpoint(
-    file: UploadFile, db: Annotated[Session, Depends(get_db)]
+    file: UploadFile, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> dict[str, Any]:
     """Import non-taxable income entries from CSV file."""
     try:
         content = await file.read()
-        result = csv_import.import_va_csv(db, content.decode("utf-8"))
+        result = await csv_import.import_va_csv(db, content.decode("utf-8"))
 
         # Generate appropriate message
         if result["error_count"] == 0:

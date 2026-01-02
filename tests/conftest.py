@@ -1,11 +1,12 @@
 """Pytest configuration and fixtures."""
 
+import asyncio
 import json
 
 # Import IRS test data
 import sys
 import tempfile
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,7 @@ from fixtures.irs_test_data import (
     get_irs_test_data,
 )
 from sqlalchemy import create_engine, event
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -218,6 +220,9 @@ def test_engine() -> Generator[Engine, None, None]:
 
     Uses StaticPool to ensure the in-memory database persists across connections.
     This is critical for FastAPI's dependency injection which creates new sessions.
+
+    NOTE: This creates a SYNC engine for unit tests. For integration tests that use
+    the async routes, use the test_async_engine fixture instead.
     """
     # Use StaticPool to maintain single connection to in-memory DB
     engine = create_engine(
@@ -244,8 +249,45 @@ def test_engine() -> Generator[Engine, None, None]:
 
 
 @pytest.fixture(scope="function")
+def test_async_engine():
+    """Create an async test database engine.
+
+    Uses aiosqlite for true async SQLite support, compatible with AsyncSession.
+    Uses in-memory database with check_same_thread=False for test isolation.
+    """
+
+    async def create_test_async_engine():
+        # Create async engine with in-memory SQLite
+        engine = create_async_engine(
+            "sqlite+aiosqlite:///:memory:",
+            echo=False,
+            connect_args={"check_same_thread": False},
+        )
+
+        # Initialize tables
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        return engine
+
+    # Create the engine in the event loop
+    test_engine = asyncio.run(create_test_async_engine())
+
+    yield test_engine
+
+    # Cleanup
+    async def cleanup():
+        await test_engine.dispose()
+
+    try:
+        asyncio.run(cleanup())
+    except RuntimeError:
+        pass
+
+
+@pytest.fixture(scope="function")
 def db_session(test_engine: Engine) -> Generator[Session, None, None]:
-    """Create a test database session.
+    """Create a test database session (SYNC - for unit tests).
 
     This session shares the same engine as the client, allowing tests
     to set up data that the API can see.
@@ -265,36 +307,63 @@ def db_session(test_engine: Engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture(scope="function")
-def client(test_engine: Engine, temp_tax_data_dir: Path) -> Generator[TestClient, None, None]:
-    """Create a test client with test database and temp IRS data files.
+async def async_db_session(test_async_engine):
+    """Create an async test database session.
+
+    This is for integration tests that need to set up data and then test
+    it via async API routes.
+    """
+    from sqlalchemy.orm import sessionmaker
+
+    AsyncSessionLocal = sessionmaker(
+        test_async_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
+    )
+
+    async with AsyncSessionLocal() as session:
+        yield session
+
+        # Clean up all data after test for isolation
+        for table in reversed(Base.metadata.sorted_tables):
+            await session.execute(table.delete())
+        await session.commit()
+
+
+@pytest.fixture(scope="function")
+def client(test_async_engine, temp_tax_data_dir: Path) -> Generator[TestClient, None, None]:
+    """Create a test client with async test database and temp IRS data files.
 
     The client uses:
-    1. Same engine as other test fixtures (for database)
+    1. Shared async engine (test_async_engine) for database
     2. Temp directory with IRS test data (for tax calculations)
 
-    This ensures integration tests use IRS-verified data without
-    depending on production JSON files.
+    This allows integration tests to:
+    - Set up data via async_db_session fixture (same engine)
+    - Make requests via client fixture
+    - See the data in both places since they share the same engine
     """
-    # Override settings data_dir to use temp directory
+    from sqlalchemy.orm import sessionmaker
+
     from taxtracker.core.config import settings
 
+    # Save original settings
     original_data_dir = settings.data_dir
     settings.data_dir = temp_tax_data_dir
 
     try:
-        # Create app
+        # Create app with skip_db_init=True (tables already created by test_async_engine)
         app = create_app(skip_db_init=True)
 
-        # Override database dependency to use test engine
-        def override_get_db() -> Generator[Session, None, None]:
-            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-            session = SessionLocal()
-            try:
-                yield session
-            finally:
-                session.close()
+        # Create AsyncSession maker using the shared test_async_engine
+        AsyncTestSessionLocal = sessionmaker(
+            test_async_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
+        )
 
-        # Override tax calculator - it will use settings to find data files
+        # Override get_db to use the test async session
+        async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+            async with AsyncTestSessionLocal() as session:
+                yield session
+
+        # Override tax calculator
         def override_get_tax_calculator() -> TaxCalculator:
             return TaxCalculator()
 
@@ -303,8 +372,10 @@ def client(test_engine: Engine, temp_tax_data_dir: Path) -> Generator[TestClient
         app.dependency_overrides[get_db] = override_get_db
         app.dependency_overrides[get_tax_calculator] = override_get_tax_calculator
 
+        # TestClient works with async routes
         with TestClient(app) as test_client:
             yield test_client
+
     finally:
         # Restore original data_dir
         settings.data_dir = original_data_dir
