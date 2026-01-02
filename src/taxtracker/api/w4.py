@@ -149,7 +149,7 @@ def calculate_withholding(
         Withholding per paycheck and annual withholding
     """
     try:
-        result = calculate_withholding_per_paycheck(
+        return calculate_withholding_per_paycheck(
             gross_pay=Decimal(str(gross_pay_per_paycheck)),
             pay_frequency=pay_frequency,
             filing_status=FilingStatus(filing_status),
@@ -160,7 +160,6 @@ def calculate_withholding(
             extra_withholding=Decimal(str(extra_withholding)),
             year=year,
         )
-        return result
     except W4CalculationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except ValueError as e:
