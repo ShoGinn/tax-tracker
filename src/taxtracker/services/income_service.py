@@ -70,49 +70,10 @@ def delete_employer(db: Session, employer_id: int) -> bool:
 # Paycheck CRUD
 def create_paycheck(db: Session, paycheck: PaycheckCreate) -> Paycheck:
     """Create a new paycheck."""
-    paycheck_data = paycheck.model_dump()
-
-    # Calculate net_pay if not provided
-    if paycheck_data["net_pay"] is None:
-        gross = paycheck_data["gross_wages"] + paycheck_data.get("bonus", Decimal(0))
-        pretax = sum(
-            [
-                paycheck_data.get("deduction_401k", Decimal(0)),
-                paycheck_data.get("deduction_403b", Decimal(0)),
-                paycheck_data.get("deduction_health_insurance", Decimal(0)),
-                paycheck_data.get("deduction_dental_insurance", Decimal(0)),
-                paycheck_data.get("deduction_vision_insurance", Decimal(0)),
-                paycheck_data.get("deduction_hsa", Decimal(0)),
-                paycheck_data.get("deduction_fsa", Decimal(0)),
-                paycheck_data.get("deduction_dependent_care_fsa", Decimal(0)),
-                paycheck_data.get("deduction_commuter", Decimal(0)),
-                paycheck_data.get("deduction_other_pretax", Decimal(0)),
-            ]
-        )
-        posttax = sum(
-            [
-                paycheck_data.get("deduction_roth_401k", Decimal(0)),
-                paycheck_data.get("deduction_roth_403b", Decimal(0)),
-                paycheck_data.get("deduction_other_posttax", Decimal(0)),
-            ]
-        )
-        taxes = sum(
-            [
-                paycheck_data.get("federal_withholding", Decimal(0)),
-                paycheck_data.get("social_security", Decimal(0)),
-                paycheck_data.get("medicare", Decimal(0)),
-                paycheck_data.get("state_withholding", Decimal(0)),
-                paycheck_data.get("local_withholding", Decimal(0)),
-            ]
-        )
-        paycheck_data["net_pay"] = gross - pretax - posttax - taxes
-
-    db_paycheck = Paycheck(**paycheck_data)
+    db_paycheck = Paycheck(**paycheck.model_dump())
     db.add(db_paycheck)
     db.commit()
     db.refresh(db_paycheck)
-
-    # net_pay_matches is a computed property, no need to set it
     return db_paycheck
 
 
@@ -171,40 +132,10 @@ def delete_paycheck(db: Session, paycheck_id: int) -> bool:
 # Pension Payment CRUD
 def create_retirement_1099r(db: Session, payment: Retirement1099RCreate) -> Retirement1099R:
     """Create a new pension payment."""
-    payment_data = payment.model_dump()
-
-    # Calculate net_amount if not provided
-    if payment_data["net_amount"] is None:
-        gross = payment_data["gross_amount"]
-        pretax = sum(
-            [
-                payment_data.get("pretax_deductions", Decimal(0)),
-                payment_data.get("deduction_health_insurance", Decimal(0)),
-                payment_data.get("deduction_dental_insurance", Decimal(0)),
-                payment_data.get("deduction_life_insurance", Decimal(0)),
-                payment_data.get("deduction_other_pretax", Decimal(0)),
-            ]
-        )
-        posttax = sum(
-            [
-                payment_data.get("deduction_allotment", Decimal(0)),
-                payment_data.get("deduction_other_posttax", Decimal(0)),
-            ]
-        )
-        taxes = sum(
-            [
-                payment_data.get("federal_withholding", Decimal(0)),
-                payment_data.get("state_withholding", Decimal(0)),
-            ]
-        )
-        payment_data["net_amount"] = gross - pretax - posttax - taxes
-
-    db_payment = Retirement1099R(**payment_data)
+    db_payment = Retirement1099R(**payment.model_dump())
     db.add(db_payment)
     db.commit()
     db.refresh(db_payment)
-
-    # net_amount_matches is a computed property, no need to set it
     return db_payment
 
 

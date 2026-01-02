@@ -15,9 +15,9 @@ class TestCSVImportBackwardCompatibility:
 
     def test_import_1099r_with_new_fields(self, db_session: Session):
         """Test importing 1099-R with new simplified field names."""
-        csv_content = """pay_date,gross_amount,pretax_deductions,posttax_deductions,federal_withholding,state_withholding,net_amount,source_description
-2024-06-01,5000.00,500.00,100.00,600.00,50.00,3750.00,Military Pension
-2024-06-15,5000.00,500.00,100.00,600.00,50.00,3750.00,Military Pension"""
+        csv_content = """pay_date,gross_amount,pretax_deductions,posttax_deductions,federal_withholding,state_withholding,source_description
+2024-06-01,5000.00,500.00,100.00,600.00,50.00,Military Pension
+2024-06-15,5000.00,500.00,100.00,600.00,50.00,Military Pension"""
 
         result = csv_import.import_pension_csv(db_session, csv_content)
 
@@ -27,8 +27,8 @@ class TestCSVImportBackwardCompatibility:
 
     def test_import_1099r_missing_required_field(self, db_session: Session):
         """Test that invalid data causes errors."""
-        csv_content = """pay_date,gross_amount,net_amount
-INVALID_DATE,5000.00,4000.00"""
+        csv_content = """pay_date,gross_amount
+INVALID_DATE,5000.00"""
 
         result = csv_import.import_pension_csv(db_session, csv_content)
 

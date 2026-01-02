@@ -126,7 +126,6 @@ class TestPaycheckService:
             social_security=Decimal("310"),
             medicare=Decimal("72.50"),
             state_withholding=Decimal("200"),
-            net_pay=Decimal("3667.50"),
         )
 
         paycheck = income_service.create_paycheck(db_session, paycheck_data)
@@ -147,7 +146,6 @@ class TestPaycheckService:
             employer_id=employer.id,
             pay_date=date(2024, 6, 15),
             gross_wages=Decimal("4000"),
-            net_pay=Decimal("3000"),
         )
         created = income_service.create_paycheck(db_session, paycheck_data)
 
@@ -170,7 +168,6 @@ class TestPaycheckService:
                 employer_id=employer.id,
                 pay_date=date(2024, 6, i + 1),
                 gross_wages=Decimal("4000"),
-                net_pay=Decimal("3000"),
             )
             income_service.create_paycheck(db_session, paycheck_data)
 
@@ -197,7 +194,6 @@ class TestPaycheckService:
                     employer_id=employer1.id,
                     pay_date=date(2024, 6, i + 1),
                     gross_wages=Decimal("4000"),
-                    net_pay=Decimal("3000"),
                 ),
             )
 
@@ -208,7 +204,6 @@ class TestPaycheckService:
                 employer_id=employer2.id,
                 pay_date=date(2024, 6, 1),
                 gross_wages=Decimal("5000"),
-                net_pay=Decimal("4000"),
             ),
         )
 
@@ -232,7 +227,7 @@ class TestPaycheckService:
                 employer_id=employer.id,
                 pay_date=date(2024, 6, 1),
                 gross_wages=Decimal("4000"),
-                net_pay=Decimal("3000"),
+
             ),
         )
         income_service.create_paycheck(
@@ -241,7 +236,6 @@ class TestPaycheckService:
                 employer_id=employer.id,
                 pay_date=date(2025, 6, 1),
                 gross_wages=Decimal("4500"),
-                net_pay=Decimal("3500"),
             ),
         )
 
@@ -263,7 +257,6 @@ class TestPaycheckService:
                 employer_id=employer.id,
                 pay_date=date(2024, 6, 1),
                 gross_wages=Decimal("4000"),
-                net_pay=Decimal("3000"),
             ),
         )
 
@@ -274,7 +267,7 @@ class TestPaycheckService:
         assert updated is not None
         assert updated.gross_wages == Decimal("4500")
         assert updated.notes == "Updated"
-        assert updated.net_pay == Decimal("3000")  # Unchanged
+        assert updated.net_pay == Decimal("4500")  # Automatically computed from new gross_wages
 
     def test_delete_paycheck(self, db_session: Session):
         """Test deleting a paycheck."""
@@ -289,7 +282,6 @@ class TestPaycheckService:
                 employer_id=employer.id,
                 pay_date=date(2024, 6, 1),
                 gross_wages=Decimal("4000"),
-                net_pay=Decimal("3000"),
             ),
         )
 
@@ -310,7 +302,6 @@ class TestRetirement1099RService:
             gross_amount=Decimal("5000"),
             pretax_deductions=Decimal("500"),
             federal_withholding=Decimal("600"),
-            net_amount=Decimal("3900"),
             source_description="Military Pension",
         )
 
@@ -326,7 +317,7 @@ class TestRetirement1099RService:
         created = income_service.create_retirement_1099r(
             db_session,
             Retirement1099RCreate(
-                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000"), net_amount=Decimal("4000")
+                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")
             ),
         )
 
@@ -343,7 +334,6 @@ class TestRetirement1099RService:
                 Retirement1099RCreate(
                     pay_date=date(2024, 6, i + 1),
                     gross_amount=Decimal("5000"),
-                    net_amount=Decimal("4000"),
                 ),
             )
 
@@ -355,13 +345,13 @@ class TestRetirement1099RService:
         income_service.create_retirement_1099r(
             db_session,
             Retirement1099RCreate(
-                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000"), net_amount=Decimal("4000")
+                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")
             ),
         )
         income_service.create_retirement_1099r(
             db_session,
             Retirement1099RCreate(
-                pay_date=date(2025, 6, 1), gross_amount=Decimal("5500"), net_amount=Decimal("4500")
+                pay_date=date(2025, 6, 1), gross_amount=Decimal("5500")
             ),
         )
 
@@ -374,7 +364,7 @@ class TestRetirement1099RService:
         created = income_service.create_retirement_1099r(
             db_session,
             Retirement1099RCreate(
-                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000"), net_amount=Decimal("4000")
+                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")
             ),
         )
 
@@ -390,7 +380,7 @@ class TestRetirement1099RService:
         created = income_service.create_retirement_1099r(
             db_session,
             Retirement1099RCreate(
-                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000"), net_amount=Decimal("4000")
+                pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")
             ),
         )
 
@@ -500,7 +490,6 @@ class TestYTDSummary:
                 federal_withholding=Decimal("750"),
                 social_security=Decimal("310"),
                 medicare=Decimal("72.50"),
-                net_pay=Decimal("3867.50"),
             ),
         )
 
@@ -512,7 +501,6 @@ class TestYTDSummary:
                 gross_amount=Decimal("4000"),
                 pretax_deductions=Decimal("400"),
                 federal_withholding=Decimal("500"),
-                net_amount=Decimal("3100"),
             ),
         )
 

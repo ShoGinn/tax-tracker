@@ -117,10 +117,6 @@ class PaycheckBase(BaseModel):
     state_withholding: CleanDecimal = Field(default=Decimal(0), ge=0)
     local_withholding: CleanDecimal = Field(default=Decimal(0), ge=0)
 
-    net_pay: CleanDecimal | None = Field(
-        default=None, ge=0, description="Net pay (take-home). If not provided, will be calculated."
-    )
-
     notes: str | None = None
     pay_period_start: FlexibleDate | None = None
     pay_period_end: FlexibleDate | None = None
@@ -159,7 +155,6 @@ class PaycheckUpdate(BaseModel):
     state_withholding: CleanDecimal | None = Field(None, ge=0)
     local_withholding: CleanDecimal | None = Field(None, ge=0)
 
-    net_pay: CleanDecimal | None = Field(None, ge=0)
     notes: str | None = None
     pay_period_start: FlexibleDate | None = None
     pay_period_end: FlexibleDate | None = None
@@ -175,11 +170,7 @@ class PaycheckResponse(PaycheckBase):
     total_posttax_deductions: CleanDecimal
     total_taxes_withheld: CleanDecimal
     taxable_wages: CleanDecimal
-    calculated_net_pay: CleanDecimal
-    net_pay_matches: bool | None = Field(
-        default=None,
-        description="True if provided net_pay matches calculated. None if net_pay not provided.",
-    )
+    net_pay: CleanDecimal  # Always computed from deductions and taxes
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -211,10 +202,6 @@ class Retirement1099RBase(BaseModel):
     )
     state_withholding: CleanDecimal = Field(default=Decimal(0), ge=0)
 
-    net_amount: CleanDecimal | None = Field(
-        None, description="Net payment received (if not provided, will be calculated)"
-    )
-
     # Optional categorization
     source_description: str | None = Field(
         default=None, description="Source of income (e.g., 'Military Pension', '401k Distribution')"
@@ -235,7 +222,6 @@ class Retirement1099RUpdate(BaseModel):
     posttax_deductions: CleanDecimal | None = Field(default=None, ge=0)
     federal_withholding: CleanDecimal | None = Field(default=None, ge=0)
     state_withholding: CleanDecimal | None = Field(default=None, ge=0)
-    net_amount: CleanDecimal | None = Field(default=None, ge=0)
     source_description: str | None = None
     notes: str | None = None
 
@@ -245,6 +231,7 @@ class Retirement1099RResponse(Retirement1099RBase):
 
     id: int
     taxable_amount: CleanDecimal = Field(description="Taxable amount (Box 2a)")
+    net_amount: CleanDecimal = Field(description="Net payment received (computed)")
     created_at: datetime
     updated_at: datetime
 
