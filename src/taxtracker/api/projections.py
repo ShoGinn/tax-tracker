@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.api.dependencies import get_db, get_tax_calculator
 from taxtracker.core.exceptions import ProjectionError
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/projections", tags=["Projections"])
 
 
 @router.post("/project-year")
-def project_future_year(
+async def project_future_year(
     projection_year: int,
     filing_status: str,
     num_children: int,
@@ -98,7 +98,7 @@ def project_future_year(
 
 
 @router.post("/compare-years")
-def compare_tax_years(
+async def compare_tax_years(
     base_year: int,
     comparison_year: int,
     filing_status: str,
@@ -171,7 +171,7 @@ def compare_tax_years(
 
 
 @router.post("/from-database")
-def project_from_database(
+async def project_from_database(
     projection_year: int,
     filing_status: str,
     num_children: int,
@@ -179,7 +179,7 @@ def project_from_database(
     use_database_pension: bool = True,
     use_database_va: bool = True,
     *,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db)],
     calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
@@ -206,13 +206,13 @@ def project_from_database(
         va_avg = Decimal("0")
 
         if use_database_pension:
-            pension_entries = get_retirement_1099rs(db)
+            pension_entries = await get_retirement_1099rs(db)
             if pension_entries:
                 total = sum(float(p.gross_amount) for p in pension_entries)
                 pension_avg = Decimal(str(total / len(pension_entries)))
 
         if use_database_va:
-            va_entries = get_non_taxable_payments(db)
+            va_entries = await get_non_taxable_payments(db)
             if va_entries:
                 total = sum(float(v.amount) for v in va_entries)
                 va_avg = Decimal(str(total / len(va_entries)))
