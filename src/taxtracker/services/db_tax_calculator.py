@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from taxtracker.core.config import settings
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
 from taxtracker.services.income_service import get_ytd_summary
 from taxtracker.services.tax_calculator import TaxCalculator
@@ -146,14 +147,14 @@ class DatabaseTaxCalculation:
 
     def _get_result_message(self) -> str:
         """Get human-readable result message."""
-        if self.refund_or_owed > 100:
+        if self.refund_or_owed > settings.w4_threshold:
             pct = self.overpayment_percentage
             amt = self.refund_or_owed
             return (
                 f"You overpaid by ${amt:,.2f} ({pct:.1f}%). "
                 f"Consider adjusting your W-4 to reduce withholding."
             )
-        if self.refund_or_owed < -100:
+        if self.refund_or_owed < -settings.w4_threshold:
             amt = abs(self.refund_or_owed)
             return f"You owe ${amt:,.2f}. Consider increasing your W-4 withholding."
         return "Perfect! Your withholdings are spot-on."

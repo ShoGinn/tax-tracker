@@ -45,7 +45,7 @@ def create_paycheck_entry(
 
 @router.get("/paychecks")
 def list_paychecks(
-    year: int | None = None, db: Session = Depends(get_db)
+    year: int | None = None, *, db: Annotated[Session, Depends(get_db)]
 ) -> list[PaycheckResponse]:
     """List all paychecks, optionally filtered by year."""
     try:
@@ -128,7 +128,7 @@ def create_pension_entry(
 
 @router.get("/1099r")
 def list_pension(
-    year: int | None = None, db: Session = Depends(get_db)
+    year: int | None = None, *, db: Annotated[Session, Depends(get_db)]
 ) -> list[Retirement1099RResponse]:
     """List all pension entries, optionally filtered by year."""
     try:
@@ -206,7 +206,7 @@ def create_va_entry(
 
 @router.get("/non-taxable")
 def list_va_disability(
-    year: int | None = None, db: Session = Depends(get_db)
+    year: int | None = None, *, db: Annotated[Session, Depends(get_db)]
 ) -> list[NonTaxableIncomeResponse]:
     """List all VA disability entries, optionally filtered by year."""
     try:

@@ -1,5 +1,6 @@
 """Application configuration and settings."""
 
+from decimal import Decimal
 from enum import Enum
 from importlib.resources import files
 from pathlib import Path
@@ -55,6 +56,8 @@ class Settings(BaseSettings):
             Path to the data file
         """
         return self.data_dir / f"{file_type.value}_{year}.json"
+
+    w4_threshold: Decimal = Decimal("1000.00")
 
 
 # Global settings instance

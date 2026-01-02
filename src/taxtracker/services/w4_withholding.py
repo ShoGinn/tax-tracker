@@ -69,15 +69,8 @@ def calculate_withholding_per_paycheck(
 
     periods_per_year = pay_periods[pay_frequency]
 
-    # Map FilingStatus to JSON key
-    filing_status_map = {
-        FilingStatus.SINGLE: "single",
-        FilingStatus.MARRIED_FILING_JOINTLY: "married_filing_jointly",
-        FilingStatus.MARRIED_FILING_SEPARATELY: "married_filing_separately",
-        FilingStatus.HEAD_OF_HOUSEHOLD: "head_of_household",
-    }
-
-    filing_key = filing_status_map.get(filing_status, "married_filing_jointly")
+    # Use enum value so bracket key always matches JSON
+    filing_key = filing_status.value
 
     # Step 1: Adjust gross pay based on Step 2(c) checkbox
     # IRS says to divide by 2 if checkbox is checked

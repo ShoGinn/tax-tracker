@@ -15,7 +15,13 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-from taxtracker.models.tax_data import ChildTaxCredit, FICALimits, StandardDeductions, TaxBrackets
+from taxtracker.models.tax_data import (
+    ChildTaxCredit,
+    FICALimits,
+    FilingStatus,
+    StandardDeductions,
+    TaxBrackets,
+)
 
 
 # Helper to load FICA from JSON (since the structure is complex)
@@ -35,7 +41,7 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
     last_updated="2024-11-01",
     source="IRS Publication 17, 2024 Tax Rates",
     tax_brackets={
-        "single": [
+        FilingStatus.SINGLE: [
             {"min": 0, "max": 11600, "rate": 0.10},
             {"min": 11601, "max": 47150, "rate": 0.12},
             {"min": 47151, "max": 100525, "rate": 0.22},
@@ -44,7 +50,7 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
             {"min": 243726, "max": 609350, "rate": 0.35},
             {"min": 609351, "max": 999999999, "rate": 0.37},
         ],
-        "married_filing_jointly": [
+        FilingStatus.MARRIED_FILING_JOINTLY: [
             {"min": 0, "max": 23200, "rate": 0.10},
             {"min": 23201, "max": 94300, "rate": 0.12},
             {"min": 94301, "max": 201050, "rate": 0.22},
@@ -53,7 +59,7 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
             {"min": 487451, "max": 731200, "rate": 0.35},
             {"min": 731201, "max": 999999999, "rate": 0.37},
         ],
-        "married_filing_separately": [
+        FilingStatus.MARRIED_FILING_SEPARATELY: [
             {"min": 0, "max": 11600, "rate": 0.10},
             {"min": 11601, "max": 47150, "rate": 0.12},
             {"min": 47151, "max": 100525, "rate": 0.22},
@@ -62,7 +68,7 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
             {"min": 243726, "max": 365600, "rate": 0.35},
             {"min": 365601, "max": 999999999, "rate": 0.37},
         ],
-        "head_of_household": [
+        FilingStatus.HEAD_OF_HOUSEHOLD: [
             {"min": 0, "max": 16550, "rate": 0.10},
             {"min": 16551, "max": 63100, "rate": 0.12},
             {"min": 63101, "max": 100500, "rate": 0.22},
@@ -73,20 +79,22 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
         ],
     },
     standard_deductions=StandardDeductions(
-        single=Decimal("14600"),
-        married_filing_jointly=Decimal("29200"),
-        married_filing_separately=Decimal("14600"),
-        head_of_household=Decimal("21900"),
+        amounts={
+            FilingStatus.SINGLE: Decimal("14600"),
+            FilingStatus.MARRIED_FILING_JOINTLY: Decimal("29200"),
+            FilingStatus.MARRIED_FILING_SEPARATELY: Decimal("14600"),
+            FilingStatus.HEAD_OF_HOUSEHOLD: Decimal("21900"),
+        },
         additional_age_65_plus={"single": Decimal("1950"), "married": Decimal("1550")},
     ),
     child_tax_credit=ChildTaxCredit(
         amount_per_child=Decimal("2000"),
         refundable_portion=Decimal("1700"),
         phase_out_threshold={
-            "married_filing_jointly": Decimal("400000"),
-            "single": Decimal("200000"),
-            "head_of_household": Decimal("200000"),
-            "married_filing_separately": Decimal("200000"),
+            FilingStatus.MARRIED_FILING_JOINTLY: Decimal("400000"),
+            FilingStatus.SINGLE: Decimal("200000"),
+            FilingStatus.HEAD_OF_HOUSEHOLD: Decimal("200000"),
+            FilingStatus.MARRIED_FILING_SEPARATELY: Decimal("200000"),
         },
     ),
 )
@@ -107,25 +115,25 @@ SIMPLE_TEST_TAX_BRACKETS = TaxBrackets(
     last_updated="2024-01-01",
     source="Test data - simplified for verification",
     tax_brackets={
-        "single": [
+        FilingStatus.SINGLE: [
             {"min": 0, "max": 10000, "rate": 0.10},
             {"min": 10001, "max": 40000, "rate": 0.12},
             {"min": 40001, "max": 100000, "rate": 0.22},
             {"min": 100001, "max": 999999999, "rate": 0.24},
         ],
-        "married_filing_jointly": [
+        FilingStatus.MARRIED_FILING_JOINTLY: [
             {"min": 0, "max": 20000, "rate": 0.10},
             {"min": 20001, "max": 80000, "rate": 0.12},
             {"min": 80001, "max": 200000, "rate": 0.22},
             {"min": 200001, "max": 999999999, "rate": 0.24},
         ],
-        "married_filing_separately": [
+        FilingStatus.MARRIED_FILING_SEPARATELY: [
             {"min": 0, "max": 10000, "rate": 0.10},
             {"min": 10001, "max": 40000, "rate": 0.12},
             {"min": 40001, "max": 100000, "rate": 0.22},
             {"min": 100001, "max": 999999999, "rate": 0.24},
         ],
-        "head_of_household": [
+        FilingStatus.HEAD_OF_HOUSEHOLD: [
             {"min": 0, "max": 15000, "rate": 0.10},
             {"min": 15001, "max": 60000, "rate": 0.12},
             {"min": 60001, "max": 120000, "rate": 0.22},
@@ -133,20 +141,22 @@ SIMPLE_TEST_TAX_BRACKETS = TaxBrackets(
         ],
     },
     standard_deductions=StandardDeductions(
-        single=Decimal("15000"),
-        married_filing_jointly=Decimal("30000"),
-        married_filing_separately=Decimal("15000"),
-        head_of_household=Decimal("22500"),
+        amounts={
+            FilingStatus.SINGLE: Decimal("15000"),
+            FilingStatus.MARRIED_FILING_JOINTLY: Decimal("30000"),
+            FilingStatus.MARRIED_FILING_SEPARATELY: Decimal("15000"),
+            FilingStatus.HEAD_OF_HOUSEHOLD: Decimal("22500"),
+        },
         additional_age_65_plus={"single": Decimal("2000"), "married": Decimal("1600")},
     ),
     child_tax_credit=ChildTaxCredit(
         amount_per_child=Decimal("2000"),
         refundable_portion=Decimal("1600"),
         phase_out_threshold={
-            "married_filing_jointly": Decimal("400000"),
-            "single": Decimal("200000"),
-            "head_of_household": Decimal("200000"),
-            "married_filing_separately": Decimal("200000"),
+            FilingStatus.MARRIED_FILING_JOINTLY: Decimal("400000"),
+            FilingStatus.SINGLE: Decimal("200000"),
+            FilingStatus.HEAD_OF_HOUSEHOLD: Decimal("200000"),
+            FilingStatus.MARRIED_FILING_SEPARATELY: Decimal("200000"),
         },
     ),
 )
@@ -154,13 +164,13 @@ SIMPLE_TEST_TAX_BRACKETS = TaxBrackets(
 
 def get_irs_test_data(year: int = 2024) -> tuple[TaxBrackets, FICALimits]:
     """Get IRS-verified test data for a given year.
-    
+
     Args:
         year: Tax year (2024 is default, 2030 for simplified test data)
-    
+
     Returns:
         Tuple of (TaxBrackets, FICALimits)
-    
+
     Raises:
         ValueError: If year not available
     """

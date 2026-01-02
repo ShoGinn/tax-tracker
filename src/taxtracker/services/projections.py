@@ -176,8 +176,9 @@ def compare_years(projections: list[YearProjection]) -> dict[str, Any]:
     Returns:
         Comparison data showing year-over-year changes
     """
-    if len(projections) < 2:
-        return {"error": "Need at least 2 years to compare"}
+    _min_years = 2
+    if len(projections) < _min_years:
+        return {"error": f"Need at least {_min_years} years to compare"}
 
     comparisons = []
 

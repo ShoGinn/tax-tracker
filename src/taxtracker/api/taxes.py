@@ -50,12 +50,13 @@ def calculate_taxes(
 @router.post("/calculate-from-db/{year}", response_model=dict)
 def calculate_from_database(
     year: int,
-    filing_status: str,
+    filing_status: FilingStatus,
     num_children: int = 0,
     use_standard_deduction: bool = True,
     itemized_deduction_amount: float = 0,
-    db: Session = Depends(get_db),
-    calculator: TaxCalculator = Depends(get_tax_calculator),
+    *,
+    db: Annotated[Session, Depends(get_db)],
+    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Calculate taxes using income data from database.
@@ -76,15 +77,12 @@ def calculate_from_database(
         Tax calculation with breakdown by income source
     """
     try:
-        # Convert string filing status to enum
-        filing_status_enum = FilingStatus(filing_status)
-
         # Call the service function with injected calculator
         result = calculate_taxes_from_database(
             db=db,
             year=year,
             tax_calculator=calculator,
-            filing_status=filing_status_enum,
+            filing_status=filing_status,
             num_children=num_children,
             use_standard_deduction=use_standard_deduction,
             itemized_deductions=itemized_deduction_amount,
@@ -123,7 +121,7 @@ def get_fica_info(year: int) -> dict[str, Any]:
 
 
 @router.get("/brackets/{year}")
-def get_tax_brackets(year: int, filing_status: str | None = None) -> dict[str, Any]:
+def get_tax_brackets(year: int, filing_status: FilingStatus | None = None) -> dict[str, Any]:
     """
     Get tax brackets for a given year.
 
@@ -138,11 +136,12 @@ def get_tax_brackets(year: int, filing_status: str | None = None) -> dict[str, A
         data = load_tax_brackets(year)
 
         if filing_status:
+            status_key = filing_status.value
             return {
                 "year": year,
-                "filing_status": filing_status,
-                "brackets": data["tax_brackets"].get(filing_status, []),
-                "standard_deduction": data["standard_deductions"].get(filing_status),
+                "filing_status": status_key,
+                "brackets": data["tax_brackets"].get(status_key, []),
+                "standard_deduction": data["standard_deductions"].get(status_key),
             }
 
         return {

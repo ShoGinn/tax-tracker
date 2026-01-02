@@ -24,7 +24,7 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
 
     # Create lifespan with conditional DB init
     @asynccontextmanager
-    async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    async def app_lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         """Application lifespan manager."""
         # Startup
 
