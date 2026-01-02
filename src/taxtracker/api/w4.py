@@ -1,7 +1,7 @@
 """W-4 optimization and withholding calculation endpoints."""
 
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -28,7 +28,8 @@ def optimize_w4_settings(
     itemized_deductions: float = 0,
     target_refund: float = 0,
     year: int = 2024,
-    calculator: TaxCalculator = Depends(get_tax_calculator),
+    *,
+    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Optimize W-4 settings to achieve target refund amount.

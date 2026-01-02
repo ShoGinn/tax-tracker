@@ -24,6 +24,7 @@ from sqlalchemy.pool import StaticPool
 
 from taxtracker.cli.app import create_app
 from taxtracker.models.database import Base
+from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.tax_calculator import TaxCalculator
 
 tests_dir = Path(__file__).parent
@@ -65,7 +66,7 @@ def temp_tax_data_dir():
 
         # Convert brackets
         for filing_status, brackets in IRS_2024_TAX_BRACKETS.tax_brackets.items():
-            tax_brackets_2024["tax_brackets"][filing_status] = [
+            tax_brackets_2024["tax_brackets"][filing_status.value] = [
                 {
                     "min": decimal_to_float(b.min),
                     "max": decimal_to_float(b.max),
@@ -77,11 +78,8 @@ def temp_tax_data_dir():
         # Convert standard deductions
         std_ded = IRS_2024_TAX_BRACKETS.standard_deductions
         tax_brackets_2024["standard_deductions"] = decimal_to_float(
-            {
-                "single": std_ded.single,
-                "married_filing_jointly": std_ded.married_filing_jointly,
-                "married_filing_separately": std_ded.married_filing_separately,
-                "head_of_household": std_ded.head_of_household,
+            {status.value: std_ded.for_status(status) for status in FilingStatus}
+            | {
                 "additional_age_65_plus": std_ded.additional_age_65_plus,
             }
         )
@@ -92,7 +90,7 @@ def temp_tax_data_dir():
             {
                 "amount_per_child": ctc.amount_per_child,
                 "refundable_portion": ctc.refundable_portion,
-                "phase_out_threshold": dict(ctc.phase_out_threshold),
+                "phase_out_threshold": {k.value: v for k, v in ctc.phase_out_threshold.items()},
             }
         )
 
@@ -148,7 +146,7 @@ def temp_tax_data_dir():
         }
 
         for filing_status, brackets in SIMPLE_TEST_TAX_BRACKETS.tax_brackets.items():
-            tax_brackets_2030["tax_brackets"][filing_status] = [
+            tax_brackets_2030["tax_brackets"][filing_status.value] = [
                 {
                     "min": decimal_to_float(b.min),
                     "max": decimal_to_float(b.max),
@@ -159,11 +157,8 @@ def temp_tax_data_dir():
 
         std_ded = SIMPLE_TEST_TAX_BRACKETS.standard_deductions
         tax_brackets_2030["standard_deductions"] = decimal_to_float(
-            {
-                "single": std_ded.single,
-                "married_filing_jointly": std_ded.married_filing_jointly,
-                "married_filing_separately": std_ded.married_filing_separately,
-                "head_of_household": std_ded.head_of_household,
+            {status.value: std_ded.for_status(status) for status in FilingStatus}
+            | {
                 "additional_age_65_plus": std_ded.additional_age_65_plus,
             }
         )
@@ -173,7 +168,7 @@ def temp_tax_data_dir():
             {
                 "amount_per_child": ctc.amount_per_child,
                 "refundable_portion": ctc.refundable_portion,
-                "phase_out_threshold": dict(ctc.phase_out_threshold),
+                "phase_out_threshold": {k.value: v for k, v in ctc.phase_out_threshold.items()},
             }
         )
 

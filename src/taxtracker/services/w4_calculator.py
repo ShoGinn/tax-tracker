@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
+from taxtracker.core.config import settings
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
 from taxtracker.services.tax_calculator import TaxCalculator
 
@@ -91,9 +92,9 @@ class W4OptimizationResult:
                 "current_total_withholding": float(self.current_total_withholding),
                 "current_refund_or_owed": float(self.current_refund_or_owed),
                 "status": "OVERPAYING"
-                if self.current_refund_or_owed > 100
+                if self.current_refund_or_owed > settings.w4_threshold
                 else "UNDERPAYING"
-                if self.current_refund_or_owed < -100
+                if self.current_refund_or_owed < -settings.w4_threshold
                 else "PERFECT",
             },
             "w4_recommendations": [
@@ -327,13 +328,13 @@ def optimize_w4(
 
     # Generate notes
     notes = []
-    if current_refund > 1000:
+    if current_refund > settings.w4_threshold:
         per_check = abs(adjustment_needed / 26)
         notes.append(
             f"⚠️ You're currently overpaying by ${current_refund:,.0f}. "
             f"These W-4 changes will give you ${per_check:,.2f} more per paycheck."
         )
-    elif current_refund < -1000:
+    elif current_refund < -settings.w4_threshold:
         per_check = adjustment_needed / 26
         notes.append(
             f"⚠️ You're currently underpaying by ${abs(current_refund):,.0f}. "

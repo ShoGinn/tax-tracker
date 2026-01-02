@@ -4,7 +4,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 
 class FilingStatus(str, Enum):
@@ -27,7 +27,7 @@ class TaxBracket(BaseModel):
 
     @field_validator("max")
     @classmethod
-    def validate_max(cls, v: Decimal | None, info: Any) -> Decimal | None:
+    def validate_max(cls, v: Decimal | None, info: ValidationInfo) -> Decimal | None:
         """Ensure max is greater than min if provided."""
         if v is not None and "min" in info.data and v <= info.data["min"]:
             raise ValueError("max must be greater than min")
@@ -37,11 +37,39 @@ class TaxBracket(BaseModel):
 class StandardDeductions(BaseModel):
     """Standard deduction amounts by filing status."""
 
-    married_filing_jointly: Decimal
-    single: Decimal
-    married_filing_separately: Decimal
-    head_of_household: Decimal
+    amounts: dict[FilingStatus, Decimal]
     additional_age_65_plus: dict[str, Decimal]
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_input(cls, value: dict[str, Any]) -> dict[str, Any]:
+        """Allow legacy flat dicts by folding into amounts."""
+
+        if "amounts" not in value:
+            amounts = {k: v for k, v in value.items() if k != "additional_age_65_plus"}
+            return {
+                "amounts": amounts,
+                "additional_age_65_plus": value.get("additional_age_65_plus", {}),
+            }
+        return value
+
+    @field_validator("amounts", mode="after")
+    @classmethod
+    def validate_amount_keys(
+        cls, value: dict[FilingStatus, Decimal]
+    ) -> dict[FilingStatus, Decimal]:
+        """Ensure every filing status has a standard deduction."""
+
+        missing_statuses = [status for status in FilingStatus if status not in value]
+        if missing_statuses:
+            missing_labels = ", ".join(status.value for status in missing_statuses)
+            raise ValueError(f"Missing standard deductions for filing statuses: {missing_labels}")
+        return value
+
+    def for_status(self, filing_status: FilingStatus) -> Decimal:
+        """Return the standard deduction for the given status."""
+
+        return self.amounts[filing_status]
 
 
 class ChildTaxCredit(BaseModel):
@@ -49,7 +77,17 @@ class ChildTaxCredit(BaseModel):
 
     amount_per_child: Decimal
     refundable_portion: Decimal
-    phase_out_threshold: dict[str, Decimal]
+    phase_out_threshold: dict[FilingStatus, Decimal]
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_thresholds(cls, value: dict[str, Any]) -> dict[str, Any]:
+        """Allow legacy string-keyed thresholds."""
+
+        if "phase_out_threshold" in value:
+            thresholds = value.get("phase_out_threshold", {})
+            value = {**value, "phase_out_threshold": thresholds}
+        return value
 
 
 class TaxBrackets(BaseModel):
@@ -59,9 +97,32 @@ class TaxBrackets(BaseModel):
     last_updated: str
     source: str
     notes: str | None = None
-    tax_brackets: dict[str, list[TaxBracket]]
+    tax_brackets: dict[FilingStatus, list[TaxBracket]]
     standard_deductions: StandardDeductions
     child_tax_credit: ChildTaxCredit
+
+    @field_validator("tax_brackets", mode="after")
+    @classmethod
+    def validate_bracket_keys(
+        cls, value: dict[FilingStatus, list[TaxBracket]]
+    ) -> dict[FilingStatus, list[TaxBracket]]:
+        """Ensure every filing status has a bracket set."""
+
+        missing_statuses = [status for status in FilingStatus if status not in value]
+        if missing_statuses:
+            missing_labels = ", ".join(status.value for status in missing_statuses)
+            raise ValueError(f"Missing tax brackets for filing statuses: {missing_labels}")
+        return value
+
+    def brackets_for_status(self, filing_status: FilingStatus) -> list[TaxBracket]:
+        """Return tax brackets for a given filing status."""
+
+        try:
+            return self.tax_brackets[filing_status]
+        except KeyError as exc:  # pragma: no cover - guardrail for bad data
+            raise KeyError(
+                f"No tax brackets found for filing status '{filing_status.value}'"
+            ) from exc
 
 
 class SocialSecurityTax(BaseModel):

@@ -1,13 +1,15 @@
 """Tax projection API endpoints."""
 
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from taxtracker.api.dependencies import get_db, get_tax_calculator
 from taxtracker.core.exceptions import ProjectionError
+from taxtracker.models.tax_data import FilingStatus
+from taxtracker.services.income_service import get_non_taxable_payments, get_retirement_1099rs
 from taxtracker.services.projections import compare_years, project_year
 from taxtracker.services.tax_calculator import TaxCalculator
 
@@ -26,7 +28,8 @@ def project_future_year(
     va_disability: float = 0,
     use_standard_deduction: bool = True,
     itemized_deduction_amount: float = 0,
-    calculator: TaxCalculator = Depends(get_tax_calculator),
+    *,
+    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Project taxes for a future year based on expected income.
@@ -47,8 +50,6 @@ def project_future_year(
         Tax projection with breakdown
     """
     try:
-        from taxtracker.models.tax_data import FilingStatus
-
         # Create calculator instance
 
         # Convert filing status string to enum
@@ -106,7 +107,8 @@ def compare_tax_years(
     comparison_w2_gross: float,
     base_pension: float = 0,
     comparison_pension: float = 0,
-    calculator: TaxCalculator = Depends(get_tax_calculator),
+    *,
+    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Compare taxes between two years.
@@ -127,8 +129,6 @@ def compare_tax_years(
         Year-over-year comparison with differences
     """
     try:
-        from taxtracker.models.tax_data import FilingStatus
-
         # Create calculator instance
         filing_status_enum = FilingStatus(filing_status)
 
@@ -176,11 +176,11 @@ def project_from_database(
     filing_status: str,
     num_children: int,
     expected_w2_gross: float,
-    paychecks_per_year: int = 26,
     use_database_pension: bool = True,
     use_database_va: bool = True,
-    db: Session = Depends(get_db),
-    calculator: TaxCalculator = Depends(get_tax_calculator),
+    *,
+    db: Annotated[Session, Depends(get_db)],
+    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Project future year using historical data from database.
@@ -206,22 +206,16 @@ def project_from_database(
         va_avg = Decimal("0")
 
         if use_database_pension:
-            from taxtracker.services.income_service import get_retirement_1099rs
-
             pension_entries = get_retirement_1099rs(db)
             if pension_entries:
                 total = sum(float(p.gross_amount) for p in pension_entries)
                 pension_avg = Decimal(str(total / len(pension_entries)))
 
         if use_database_va:
-            from taxtracker.services.income_service import get_non_taxable_payments
-
             va_entries = get_non_taxable_payments(db)
             if va_entries:
                 total = sum(float(v.amount) for v in va_entries)
                 va_avg = Decimal(str(total / len(va_entries)))
-
-        from taxtracker.models.tax_data import FilingStatus
 
         filing_status_enum = FilingStatus(filing_status)
         estimated_withholding = Decimal(str(expected_w2_gross)) * Decimal("0.15")

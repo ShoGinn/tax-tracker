@@ -78,7 +78,7 @@ class TaxCalculator:
             tuple: (total_tax, marginal_rate, breakdown_by_bracket)
         """
         tax_data = self.load_tax_brackets(year)
-        brackets = tax_data.tax_brackets[filing_status.value]
+        brackets = tax_data.brackets_for_status(filing_status)
 
         total_tax = Decimal(0)
         marginal_rate = Decimal(0)
@@ -178,7 +178,7 @@ class TaxCalculator:
 
         # Step 2: Determine deduction
         if request.use_standard_deduction:
-            deduction = tax_data.standard_deductions.__dict__[request.filing_status.value]
+            deduction = tax_data.standard_deductions.for_status(request.filing_status)
             deduction_type = "Standard Deduction"
         else:
             if request.itemized_deduction_amount is None:

@@ -95,7 +95,7 @@ class TestDatabaseTaxCalculation:
             federal_withheld=Decimal("9000"),
             fica_withheld=Decimal("5738"),
             total_withheld=Decimal("14738"),
-            refund_or_owed=Decimal("1000"),  # Overpaid by $1000
+            refund_or_owed=Decimal("1001"),  # Overpaid by $1000
             overpayment_percentage=Decimal("7.3"),
             federal_tax_breakdown=[],
             fica_breakdown={},
@@ -107,7 +107,7 @@ class TestDatabaseTaxCalculation:
         message = result["result"]["message"]
 
         assert "overpaid" in message.lower()
-        assert "1,000" in message
+        assert "1,001" in message
         assert "7.3%" in message
 
     def test_result_message_underpayment(self):
@@ -135,7 +135,7 @@ class TestDatabaseTaxCalculation:
             federal_withheld=Decimal("7000"),
             fica_withheld=Decimal("5738"),
             total_withheld=Decimal("12738"),
-            refund_or_owed=Decimal("-1000"),  # Owe $1000
+            refund_or_owed=Decimal("-1001"),  # Owe $1000
             overpayment_percentage=Decimal("0"),
             federal_tax_breakdown=[],
             fica_breakdown={},
@@ -147,7 +147,7 @@ class TestDatabaseTaxCalculation:
         message = result["result"]["message"]
 
         assert "owe" in message.lower()
-        assert "1,000" in message
+        assert "1,001" in message
 
     def test_result_message_perfect(self):
         """Test result message for perfect withholding."""
