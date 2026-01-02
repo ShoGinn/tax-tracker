@@ -211,7 +211,9 @@ class Retirement1099RBase(BaseModel):
     )
     state_withholding: CleanDecimal = Field(default=Decimal(0), ge=0)
 
-    net_amount: CleanDecimal = Field(..., ge=0, description="Net payment received")
+    net_amount: CleanDecimal | None = Field(
+        None, description="Net payment received (if not provided, will be calculated)"
+    )
 
     # Optional categorization
     source_description: str | None = Field(
