@@ -294,9 +294,9 @@ def client(test_engine: Engine, temp_tax_data_dir: Path) -> Generator[TestClient
             finally:
                 session.close()
 
-        # Override tax calculator to use temp test data directory
+        # Override tax calculator - it will use settings to find data files
         def override_get_tax_calculator() -> TaxCalculator:
-            return TaxCalculator(data_dir=temp_tax_data_dir)
+            return TaxCalculator()
 
         from taxtracker.api.dependencies import get_db, get_tax_calculator
 

@@ -2,7 +2,6 @@
 
 import json
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
 from taxtracker.core.config import DataFileType, settings
@@ -18,8 +17,8 @@ from taxtracker.models.tax_data import (
 class TaxCalculator:
     """Calculate federal taxes and FICA based on IRS rules."""
 
-    def __init__(self, data_dir: Path | None = None) -> None:
-        """Initialize with path to data directory."""
+    def __init__(self) -> None:
+        """Initialize tax calculator with caches for tax data."""
         self._tax_brackets_cache: dict[int, TaxBrackets] = {}
         self._fica_cache: dict[int, FICALimits] = {}
 
