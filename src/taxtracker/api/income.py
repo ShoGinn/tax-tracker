@@ -33,13 +33,13 @@ def create_paycheck_entry(
     try:
         return income_service.create_paycheck(db, paycheck)  # type: ignore[return-value]
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         # Check for foreign key constraint errors
         if "FOREIGN KEY constraint failed" in str(e) or "IntegrityError" in str(type(e).__name__):
-            raise HTTPException(status_code=404, detail="Referenced employer not found")
+            raise HTTPException(status_code=404, detail="Referenced employer not found") from e
         if isinstance(e, DatabaseError):
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
         raise
 
 
@@ -51,11 +51,13 @@ def list_paychecks(
     try:
         return income_service.get_paychecks(db, employer_id=None, year=year)  # type: ignore[return-value]
     except DatabaseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/paychecks/{paycheck_id}")
-def delete_paycheck_entry(paycheck_id: int, db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
+def delete_paycheck_entry(
+    paycheck_id: int, db: Annotated[Session, Depends(get_db)]
+) -> dict[str, Any]:
     """Delete a paycheck entry."""
     try:
         deleted = income_service.delete_paycheck(db, paycheck_id)
@@ -65,9 +67,9 @@ def delete_paycheck_entry(paycheck_id: int, db: Annotated[Session, Depends(get_d
     except HTTPException:
         raise
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/paychecks/import-csv")
@@ -103,7 +105,7 @@ async def import_paychecks_csv_endpoint(
             "errors": result["errors"],
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}")
+        raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}") from e
 
 
 # ============================================================================
@@ -119,9 +121,9 @@ def create_pension_entry(
     try:
         return income_service.create_retirement_1099r(db, pension)  # type: ignore[return-value]
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/1099r")
@@ -132,11 +134,13 @@ def list_pension(
     try:
         return income_service.get_retirement_1099rs(db, year)  # type: ignore[return-value]
     except DatabaseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/1099r/{retirement_id}")
-def delete_pension_entry(retirement_id: int, db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
+def delete_pension_entry(
+    retirement_id: int, db: Annotated[Session, Depends(get_db)]
+) -> dict[str, Any]:
     """Delete a pension entry."""
     try:
         deleted = income_service.delete_retirement_1099r(db, retirement_id)
@@ -146,9 +150,9 @@ def delete_pension_entry(retirement_id: int, db: Annotated[Session, Depends(get_
     except HTTPException:
         raise
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/1099r/import-csv")
@@ -179,7 +183,7 @@ async def import_pension_csv_endpoint(
             "errors": result.get("errors", []),
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}")
+        raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}") from e
 
 
 # ============================================================================
@@ -195,9 +199,9 @@ def create_va_entry(
     try:
         return income_service.create_non_taxable_payment(db, va)  # type: ignore[return-value]
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/non-taxable")
@@ -208,7 +212,7 @@ def list_va_disability(
     try:
         return income_service.get_non_taxable_payments(db, year)  # type: ignore[return-value]
     except DatabaseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/non-taxable/{non_taxable_id}")
@@ -224,13 +228,15 @@ def delete_va_entry(non_taxable_id: int, db: Annotated[Session, Depends(get_db)]
     except HTTPException:
         raise
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/non-taxable/import-csv")
-async def import_va_csv_endpoint(file: UploadFile, db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
+async def import_va_csv_endpoint(
+    file: UploadFile, db: Annotated[Session, Depends(get_db)]
+) -> dict[str, Any]:
     """Import non-taxable income entries from CSV file."""
     try:
         content = await file.read()
@@ -255,4 +261,4 @@ async def import_va_csv_endpoint(file: UploadFile, db: Annotated[Session, Depend
             "errors": result.get("errors", []),
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}")
+        raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}") from e

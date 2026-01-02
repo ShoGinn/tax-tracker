@@ -91,9 +91,9 @@ def project_future_year(
             "marginal_rate": str(result.marginal_rate),
         }
     except ProjectionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Projection failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Projection failed: {e!s}") from e
 
 
 @router.post("/compare-years")
@@ -165,9 +165,9 @@ def compare_tax_years(
         # Compare the projections
         return compare_years([base_projection, comp_projection])
     except ProjectionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Comparison failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Comparison failed: {e!s}") from e
 
 
 @router.post("/from-database")
@@ -265,6 +265,6 @@ def project_from_database(
         }
 
     except ProjectionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database projection failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Database projection failed: {e!s}") from e

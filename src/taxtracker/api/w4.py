@@ -110,11 +110,11 @@ def optimize_w4_settings(
             "notes": result.notes,
         }
     except W4CalculationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}")
+        raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"W-4 optimization failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"W-4 optimization failed: {e!s}") from e
 
 
 @router.post("/calculate-withholding")
@@ -161,11 +161,11 @@ def calculate_withholding(
             year=year,
         )
     except W4CalculationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}")
+        raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Withholding calculation failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Withholding calculation failed: {e!s}") from e
 
 
 @router.post("/estimate-annual-withholding")
@@ -218,8 +218,8 @@ def estimate_withholding(
             "year": year,
         }
     except W4CalculationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}")
+        raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Withholding estimation failed: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Withholding estimation failed: {e!s}") from e
