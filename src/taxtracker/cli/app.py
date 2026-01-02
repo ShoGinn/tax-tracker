@@ -27,20 +27,17 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
     async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Application lifespan manager."""
         # Startup
-        print("🚀 Tax Tracker starting up...")
 
         if not skip_db_init:
             # Initialize database tables
 
             Base.metadata.create_all(bind=engine)
-            print("✅ Database initialized")
         else:
-            print("⏭️  Skipping database initialization (test mode)")
+            pass
 
         yield
 
         # Shutdown
-        print("👋 Tax Tracker shutting down...")
 
     app = FastAPI(
         title="Tax Tracker API",

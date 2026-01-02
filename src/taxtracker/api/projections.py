@@ -242,7 +242,7 @@ def project_from_database(
         )
 
         # Convert to dict and add data sources
-        result_dict = {
+        return {
             "year": result.year,
             "filing_status": result.filing_status,
             "w2_gross": str(result.w2_gross),
@@ -264,7 +264,6 @@ def project_from_database(
             },
         }
 
-        return result_dict
     except ProjectionError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

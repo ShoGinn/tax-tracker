@@ -1,6 +1,6 @@
 """Tax calculation API endpoints."""
 
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -15,10 +15,10 @@ from taxtracker.services.tax_calculator import TaxCalculator
 router = APIRouter(prefix="/taxes", tags=["Taxes"])
 
 
-@router.post("/calculate", response_model=TaxCalculationResponse)
+@router.post("/calculate")
 def calculate_taxes(
     request: TaxCalculationRequest,
-    calculator: TaxCalculator = Depends(get_tax_calculator),
+    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> TaxCalculationResponse:
     """
     Calculate federal taxes for a given income and filing status.

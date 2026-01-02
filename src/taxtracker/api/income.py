@@ -1,6 +1,6 @@
 """Income tracking API endpoints."""
 
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -25,9 +25,9 @@ router = APIRouter(prefix="/income", tags=["Income"])
 # ============================================================================
 
 
-@router.post("/paychecks", response_model=PaycheckResponse)
+@router.post("/paychecks")
 def create_paycheck_entry(
-    paycheck: PaycheckCreate, db: Session = Depends(get_db)
+    paycheck: PaycheckCreate, db: Annotated[Session, Depends(get_db)]
 ) -> PaycheckResponse:
     """Create a new paycheck entry."""
     try:
@@ -43,7 +43,7 @@ def create_paycheck_entry(
         raise
 
 
-@router.get("/paychecks", response_model=list[PaycheckResponse])
+@router.get("/paychecks")
 def list_paychecks(
     year: int | None = None, db: Session = Depends(get_db)
 ) -> list[PaycheckResponse]:
@@ -55,7 +55,7 @@ def list_paychecks(
 
 
 @router.delete("/paychecks/{paycheck_id}")
-def delete_paycheck_entry(paycheck_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+def delete_paycheck_entry(paycheck_id: int, db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
     """Delete a paycheck entry."""
     try:
         deleted = income_service.delete_paycheck(db, paycheck_id)
@@ -72,7 +72,7 @@ def delete_paycheck_entry(paycheck_id: int, db: Session = Depends(get_db)) -> di
 
 @router.post("/paychecks/import-csv")
 async def import_paychecks_csv_endpoint(
-    file: UploadFile, db: Session = Depends(get_db)
+    file: UploadFile, db: Annotated[Session, Depends(get_db)]
 ) -> dict[str, Any]:
     """
     Import paychecks from CSV file.
@@ -111,9 +111,9 @@ async def import_paychecks_csv_endpoint(
 # ============================================================================
 
 
-@router.post("/1099r", response_model=Retirement1099RResponse)
+@router.post("/1099r")
 def create_pension_entry(
-    pension: Retirement1099RCreate, db: Session = Depends(get_db)
+    pension: Retirement1099RCreate, db: Annotated[Session, Depends(get_db)]
 ) -> Retirement1099RResponse:
     """Create a new pension entry."""
     try:
@@ -124,7 +124,7 @@ def create_pension_entry(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/1099r", response_model=list[Retirement1099RResponse])
+@router.get("/1099r")
 def list_pension(
     year: int | None = None, db: Session = Depends(get_db)
 ) -> list[Retirement1099RResponse]:
@@ -136,7 +136,7 @@ def list_pension(
 
 
 @router.delete("/1099r/{retirement_id}")
-def delete_pension_entry(retirement_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+def delete_pension_entry(retirement_id: int, db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
     """Delete a pension entry."""
     try:
         deleted = income_service.delete_retirement_1099r(db, retirement_id)
@@ -153,7 +153,7 @@ def delete_pension_entry(retirement_id: int, db: Session = Depends(get_db)) -> d
 
 @router.post("/1099r/import-csv")
 async def import_pension_csv_endpoint(
-    file: UploadFile, db: Session = Depends(get_db)
+    file: UploadFile, db: Annotated[Session, Depends(get_db)]
 ) -> dict[str, Any]:
     """Import pension entries from CSV file."""
     try:
@@ -187,9 +187,9 @@ async def import_pension_csv_endpoint(
 # ============================================================================
 
 
-@router.post("/non-taxable", response_model=NonTaxableIncomeResponse)
+@router.post("/non-taxable")
 def create_va_entry(
-    va: NonTaxableIncomeCreate, db: Session = Depends(get_db)
+    va: NonTaxableIncomeCreate, db: Annotated[Session, Depends(get_db)]
 ) -> NonTaxableIncomeResponse:
     """Create a new VA disability entry."""
     try:
@@ -200,7 +200,7 @@ def create_va_entry(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/non-taxable", response_model=list[NonTaxableIncomeResponse])
+@router.get("/non-taxable")
 def list_va_disability(
     year: int | None = None, db: Session = Depends(get_db)
 ) -> list[NonTaxableIncomeResponse]:
@@ -212,7 +212,7 @@ def list_va_disability(
 
 
 @router.delete("/non-taxable/{non_taxable_id}")
-def delete_va_entry(non_taxable_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+def delete_va_entry(non_taxable_id: int, db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
     """Delete a VA disability entry."""
     try:
         deleted = income_service.delete_non_taxable_payment(db, non_taxable_id)
@@ -230,7 +230,7 @@ def delete_va_entry(non_taxable_id: int, db: Session = Depends(get_db)) -> dict[
 
 
 @router.post("/non-taxable/import-csv")
-async def import_va_csv_endpoint(file: UploadFile, db: Session = Depends(get_db)) -> dict[str, Any]:
+async def import_va_csv_endpoint(file: UploadFile, db: Annotated[Session, Depends(get_db)]) -> dict[str, Any]:
     """Import non-taxable income entries from CSV file."""
     try:
         content = await file.read()

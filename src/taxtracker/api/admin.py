@@ -3,7 +3,7 @@
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
@@ -43,7 +43,7 @@ def get_tax_data(year: int) -> dict[str, Any]:
 
 
 @router.post("/tax-data/upload/{year}")
-async def upload_tax_data(year: int, file: UploadFile = File(...)) -> dict[str, Any]:
+async def upload_tax_data(year: int, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
     return await _handle_json_upload(
         year,
         file,
@@ -53,7 +53,7 @@ async def upload_tax_data(year: int, file: UploadFile = File(...)) -> dict[str, 
 
 
 @router.post("/fica-data/upload/{year}")
-async def upload_fica_data(year: int, file: UploadFile = File(...)) -> dict[str, Any]:
+async def upload_fica_data(year: int, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
     return await _handle_json_upload(
         year,
         file,
