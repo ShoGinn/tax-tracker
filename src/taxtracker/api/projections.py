@@ -58,7 +58,7 @@ async def project_future_year(
 
         # Call service with correct parameters
         result = project_year(
-            tax_calculator=TaxCalculator(),
+            tax_calculator=TaxCalculator(tax_year=projection_year),
             year=projection_year,
             filing_status=filing_status_enum,
             num_children=num_children,
@@ -131,7 +131,7 @@ async def compare_tax_years(
         # Project base year
         base_withholding = Decimal(str(base_w2_gross)) * Decimal("0.15")
         base_projection = project_year(
-            tax_calculator=TaxCalculator(),
+            tax_calculator=TaxCalculator(tax_year=base_year),
             year=base_year,
             filing_status=filing_status_enum,
             num_children=num_children,
@@ -146,7 +146,7 @@ async def compare_tax_years(
         # Project comparison year
         comp_withholding = Decimal(str(comparison_w2_gross)) * Decimal("0.15")
         comp_projection = project_year(
-            tax_calculator=TaxCalculator(),
+            tax_calculator=TaxCalculator(tax_year=comparison_year),
             year=comparison_year,
             filing_status=filing_status_enum,
             num_children=num_children,
@@ -216,7 +216,7 @@ async def project_from_database(
         estimated_withholding = Decimal(str(expected_w2_gross)) * Decimal("0.15")
 
         result = project_year(
-            tax_calculator=TaxCalculator(),
+            tax_calculator=TaxCalculator(tax_year=projection_year),
             year=projection_year,
             filing_status=filing_status_enum,
             num_children=num_children,

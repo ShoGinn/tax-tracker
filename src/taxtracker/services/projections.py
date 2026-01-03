@@ -132,7 +132,7 @@ def project_year(
     tax_result = tax_calculator.calculate_taxes(tax_request)
 
     # Calculate FICA (only on W-2 income)
-    fica_result = tax_calculator.calculate_fica(w2_gross, filing_status, year)
+    fica_result = tax_calculator.calculate_fica(w2_gross, filing_status)
 
     # Total tax liability
     federal_liability = Decimal(str(tax_result.total_tax_liability))

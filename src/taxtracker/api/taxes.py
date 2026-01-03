@@ -39,7 +39,8 @@ async def calculate_taxes(
         HTTPException: If calculation fails
     """
     try:
-        return TaxCalculator().calculate_taxes(request)
+        calculator = TaxCalculator(tax_year=request.tax_year)
+        return calculator.calculate_taxes(request)
     except TaxCalculationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
@@ -79,7 +80,7 @@ async def calculate_from_database(
         result = await calculate_taxes_from_database(
             db=db,
             year=year,
-            tax_calculator=TaxCalculator(),
+            tax_calculator=TaxCalculator(tax_year=year),
             filing_status=filing_status,
             num_children=num_children,
             use_standard_deduction=use_standard_deduction,

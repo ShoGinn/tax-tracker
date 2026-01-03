@@ -59,7 +59,7 @@ async def optimize_w4_settings(
 
         # Call the service function with proper parameters
         result = optimize_w4(
-            tax_calculator=TaxCalculator(),
+            tax_calculator=TaxCalculator(tax_year=year),
             year=year,
             filing_status=FilingStatus(filing_status),
             num_children=num_children,
