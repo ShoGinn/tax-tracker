@@ -1,11 +1,10 @@
 """W-4 optimization and withholding calculation endpoints."""
 
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
-from taxtracker.api.dependencies import get_tax_calculator
 from taxtracker.core.exceptions import W4CalculationError
 from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.tax_calculator import TaxCalculator
@@ -28,8 +27,6 @@ async def optimize_w4_settings(
     itemized_deductions: float = 0,
     target_refund: float = 0,
     year: int = 2024,
-    *,
-    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Optimize W-4 settings to achieve target refund amount.
@@ -62,7 +59,7 @@ async def optimize_w4_settings(
 
         # Call the service function with proper parameters
         result = optimize_w4(
-            tax_calculator=calculator,
+            tax_calculator=TaxCalculator(),
             year=year,
             filing_status=FilingStatus(filing_status),
             num_children=num_children,

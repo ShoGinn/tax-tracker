@@ -363,14 +363,9 @@ def client(test_async_engine, temp_tax_data_dir: Path) -> Generator[TestClient, 
             async with AsyncTestSessionLocal() as session:
                 yield session
 
-        # Override tax calculator
-        def override_get_tax_calculator() -> TaxCalculator:
-            return TaxCalculator()
-
-        from taxtracker.api.dependencies import get_db, get_tax_calculator
+        from taxtracker.api.dependencies import get_db
 
         app.dependency_overrides[get_db] = override_get_db
-        app.dependency_overrides[get_tax_calculator] = override_get_tax_calculator
 
         # TestClient works with async routes
         with TestClient(app) as test_client:

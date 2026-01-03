@@ -6,7 +6,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from taxtracker.api.dependencies import get_db, get_tax_calculator
+from taxtracker.api.dependencies import get_db
 from taxtracker.core.exceptions import ProjectionError
 from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.income_service import get_non_taxable_payments, get_retirement_1099rs
@@ -28,8 +28,6 @@ async def project_future_year(
     va_disability: float = 0,
     use_standard_deduction: bool = True,
     itemized_deduction_amount: float = 0,
-    *,
-    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Project taxes for a future year based on expected income.
@@ -60,7 +58,7 @@ async def project_future_year(
 
         # Call service with correct parameters
         result = project_year(
-            tax_calculator=calculator,
+            tax_calculator=TaxCalculator(),
             year=projection_year,
             filing_status=filing_status_enum,
             num_children=num_children,
@@ -107,8 +105,6 @@ async def compare_tax_years(
     comparison_w2_gross: float,
     base_pension: float = 0,
     comparison_pension: float = 0,
-    *,
-    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Compare taxes between two years.
@@ -135,7 +131,7 @@ async def compare_tax_years(
         # Project base year
         base_withholding = Decimal(str(base_w2_gross)) * Decimal("0.15")
         base_projection = project_year(
-            tax_calculator=calculator,
+            tax_calculator=TaxCalculator(),
             year=base_year,
             filing_status=filing_status_enum,
             num_children=num_children,
@@ -150,7 +146,7 @@ async def compare_tax_years(
         # Project comparison year
         comp_withholding = Decimal(str(comparison_w2_gross)) * Decimal("0.15")
         comp_projection = project_year(
-            tax_calculator=calculator,
+            tax_calculator=TaxCalculator(),
             year=comparison_year,
             filing_status=filing_status_enum,
             num_children=num_children,
@@ -180,7 +176,6 @@ async def project_from_database(
     use_database_va: bool = True,
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
-    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Project future year using historical data from database.
@@ -221,7 +216,7 @@ async def project_from_database(
         estimated_withholding = Decimal(str(expected_w2_gross)) * Decimal("0.15")
 
         result = project_year(
-            tax_calculator=calculator,
+            tax_calculator=TaxCalculator(),
             year=projection_year,
             filing_status=filing_status_enum,
             num_children=num_children,
