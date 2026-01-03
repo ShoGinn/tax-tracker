@@ -1,10 +1,8 @@
 """Federal tax calculation service."""
 
-import json
 from decimal import Decimal
 from typing import Any
 
-from taxtracker.core.config import DataFileType, settings
 from taxtracker.models.tax_data import (
     FICALimits,
     FilingStatus,
@@ -12,50 +10,7 @@ from taxtracker.models.tax_data import (
     TaxCalculationRequest,
     TaxCalculationResponse,
 )
-
-
-def _load_tax_brackets_from_file(year: int) -> TaxBrackets:
-    """Load tax brackets from JSON file for a given year.
-
-    Args:
-        year: Tax year
-
-    Returns:
-        TaxBrackets object
-
-    Raises:
-        FileNotFoundError: If brackets file doesn't exist
-    """
-    brackets_file = settings.get_data_file(DataFileType.TAX_BRACKETS, year)
-    if not brackets_file.exists():
-        raise FileNotFoundError(f"Tax brackets file not found for year {year}")
-
-    with brackets_file.open() as f:
-        data = json.load(f)
-
-    return TaxBrackets(**data)
-
-
-def _load_fica_limits_from_file(year: int) -> FICALimits:
-    """Load FICA limits from JSON file for a given year.
-
-    Args:
-        year: Tax year
-
-    Returns:
-        FICALimits object
-
-    Raises:
-        FileNotFoundError: If FICA limits file doesn't exist
-    """
-    fica_file = settings.get_data_file(DataFileType.FICA_LIMITS, year)
-    if not fica_file.exists():
-        raise FileNotFoundError(f"FICA limits file not found for year {year}")
-
-    with fica_file.open() as f:
-        data = json.load(f)
-
-    return FICALimits(**data)
+from taxtracker.services.data_loader import load_fica_limits_model, load_tax_brackets_model
 
 
 class TaxCalculator:
@@ -82,8 +37,8 @@ class TaxCalculator:
             FileNotFoundError: If tax data files not found when not injected
         """
         self.tax_year = tax_year
-        self._tax_brackets = tax_brackets or _load_tax_brackets_from_file(tax_year)
-        self._fica_limits = fica_limits or _load_fica_limits_from_file(tax_year)
+        self._tax_brackets = tax_brackets or load_tax_brackets_model(tax_year)
+        self._fica_limits = fica_limits or load_fica_limits_model(tax_year)
 
     def calculate_federal_tax(
         self, taxable_income: Decimal, filing_status: FilingStatus

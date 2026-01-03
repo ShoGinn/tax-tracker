@@ -1,23 +1,43 @@
 """W-4 Withholding Calculator - Simulates federal withholding based on W-4 settings."""
 
-import json
 from decimal import Decimal
 from typing import Any
 
-from taxtracker.core.config import DataFileType, settings
 from taxtracker.models.tax_data import FilingStatus
+from taxtracker.services.data_loader import load_tax_brackets_model
 
 
 def load_tax_data(year: int) -> dict[str, Any]:
-    """Load tax bracket and deduction data from JSON files."""
-    tax_file = settings.get_data_file(DataFileType.TAX_BRACKETS, year)
+    """Load tax bracket and deduction data.
 
-    if not tax_file.exists():
-        raise ValueError(f"Tax data not available for year {year}")
+    This function loads and validates the tax bracket data for the given year,
+    then converts it to the dict format needed for withholding calculations.
 
-    with tax_file.open() as f:
-        data: dict[str, Any] = json.load(f)
-        return data
+    Args:
+        year: Tax year
+
+    Returns:
+        Dictionary with tax brackets and standard deductions
+
+    Raises:
+        DataLoadError: If tax data file cannot be loaded or is invalid
+    """
+    tax_brackets_model = load_tax_brackets_model(year)
+
+    # Convert model back to dict format for compatibility with existing calculations
+    return {
+        "standard_deductions": {
+            status.value: tax_brackets_model.standard_deductions.amounts[status]
+            for status in FilingStatus
+        },
+        "tax_brackets": {
+            status.value: [
+                {"min": bracket.min, "max": bracket.max, "rate": bracket.rate}
+                for bracket in tax_brackets_model.tax_brackets[status]
+            ]
+            for status in FilingStatus
+        },
+    }
 
 
 def calculate_withholding_per_paycheck(
