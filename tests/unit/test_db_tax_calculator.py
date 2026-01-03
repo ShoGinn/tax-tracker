@@ -1,15 +1,16 @@
 """Tests for database tax calculator service."""
 
-import pytest
 from datetime import date
 from decimal import Decimal
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from taxtracker.models.database import Employer, Paycheck, Retirement1099R, NonTaxableIncome
+from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
 from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.db_tax_calculator import (
-    calculate_taxes_from_database,
     DatabaseTaxCalculation,
+    calculate_taxes_from_database,
 )
 from taxtracker.services.tax_calculator import TaxCalculator
 

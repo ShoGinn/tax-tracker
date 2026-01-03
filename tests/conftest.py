@@ -19,8 +19,8 @@ from fixtures.irs_test_data import (
     get_irs_test_data,
 )
 from sqlalchemy import create_engine, event
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.engine import Engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -46,9 +46,9 @@ def temp_tax_data_dir():
         """Convert Decimals to float for JSON serialization."""
         if isinstance(obj, Decimal):
             return float(obj)
-        elif isinstance(obj, dict):
+        if isinstance(obj, dict):
             return {k: decimal_to_float(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
+        if isinstance(obj, list):
             return [decimal_to_float(item) for item in obj]
         return obj
 
