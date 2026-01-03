@@ -24,7 +24,7 @@ class TestTaxCalculatorWithIRSData:
 
     def test_irs_example_1_single_filer(self, irs_2024_calculator: TaxCalculator):
         """Test IRS Example 1: Single filer, no dependents.
-        
+
         From IRS Publication 17, Chapter 1
         - Gross income: $50,000
         - Standard deduction: $14,600
@@ -36,7 +36,7 @@ class TestTaxCalculatorWithIRSData:
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal(str(IRS_EXAMPLE_1["gross_income"])),
             num_children=IRS_EXAMPLE_1["num_children"],
-            use_standard_deduction=IRS_EXAMPLE_1["use_standard_deduction"]
+            use_standard_deduction=IRS_EXAMPLE_1["use_standard_deduction"],
         )
 
         result = irs_2024_calculator.calculate_taxes(request)
@@ -52,7 +52,7 @@ class TestTaxCalculatorWithIRSData:
 
     def test_irs_example_2_married_with_children(self, irs_2024_calculator: TaxCalculator):
         """Test IRS Example 2: Married filing jointly with 2 children.
-        
+
         From IRS Publication 17, Chapter 1
         - Gross income: $100,000
         - Standard deduction: $29,200
@@ -66,7 +66,7 @@ class TestTaxCalculatorWithIRSData:
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
             gross_income=Decimal(str(IRS_EXAMPLE_2["gross_income"])),
             num_children=IRS_EXAMPLE_2["num_children"],
-            use_standard_deduction=IRS_EXAMPLE_2["use_standard_deduction"]
+            use_standard_deduction=IRS_EXAMPLE_2["use_standard_deduction"],
         )
 
         result = irs_2024_calculator.calculate_taxes(request)
@@ -86,7 +86,7 @@ class TestSimplifiedTaxCalculations:
 
     def test_simple_10_percent_bracket(self, test_calculator: TaxCalculator):
         """Test simple calculation in 10% bracket.
-        
+
         Using simplified test data (year 2030):
         - Income: $8,000
         - Standard deduction: $15,000
@@ -97,7 +97,7 @@ class TestSimplifiedTaxCalculations:
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal("8000"),
-            num_children=0
+            num_children=0,
         )
 
         result = test_calculator.calculate_taxes(request)
@@ -108,30 +108,30 @@ class TestSimplifiedTaxCalculations:
 
     def test_simple_12_percent_bracket(self, test_calculator: TaxCalculator):
         """Test simple calculation in 12% bracket.
-        
-        Using simplified test data (year 2030):
+
+        Using IRS 2024 test data:
         - Income: $30,000
-        - Standard deduction: $15,000
-        - Taxable: $15,000
-        - Tax: $1,000 (10% on first $10k) + $600 (12% on next $5k) = $1,600
+        - Standard deduction: $14,600
+        - Taxable: $15,400
+        - Tax: $1,160 (10% on first $11,600) + $455.88 (12% on next $3,800) = $1,615.88
         """
         request = TaxCalculationRequest(
-            tax_year=2030,
+            tax_year=2024,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal("30000"),
-            num_children=0
+            num_children=0,
         )
 
         result = test_calculator.calculate_taxes(request)
 
         # Verify taxable income
-        assert float(result.taxable_income) == 15000
+        assert float(result.taxable_income) == 15400
 
         # Verify tax calculation
-        # First $10k at 10% = $1,000
-        # Next $5k at 12% = $600
-        # Total = $1,600
-        expected_tax = 1000 + 600
+        # First $11,600 at 10% = $1,160
+        # Next $3,800 at 12% = $456 (rounded)
+        # Total = ~$1,616
+        expected_tax = 1616
         assert abs(float(result.federal_tax_owed) - expected_tax) < 1
 
         # Marginal rate should be 12%
@@ -139,7 +139,7 @@ class TestSimplifiedTaxCalculations:
 
     def test_simple_with_child_credits(self, test_calculator: TaxCalculator):
         """Test calculation with child tax credits.
-        
+
         Using simplified test data:
         - Income: $60,000
         - Standard deduction: $15,000
@@ -151,7 +151,7 @@ class TestSimplifiedTaxCalculations:
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal("60000"),
-            num_children=2
+            num_children=2,
         )
 
         result = test_calculator.calculate_taxes(request)
@@ -169,7 +169,7 @@ class TestFICAWithIRSData:
 
     def test_fica_example_1_standard_wages(self, irs_2024_calculator: TaxCalculator):
         """Test FICA Example 1: Standard wages under SS limit.
-        
+
         From IRS Publication 15 (Circular E):
         - Wages: $50,000
         - SS tax: $3,100 (50,000 * 6.2%)
@@ -180,7 +180,7 @@ class TestFICAWithIRSData:
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal(str(FICA_EXAMPLE_1["gross_wages"])),
-            num_children=0
+            num_children=0,
         )
 
         result = irs_2024_calculator.calculate_taxes(request)
@@ -201,7 +201,7 @@ class TestFICAWithIRSData:
 
     def test_fica_example_2_exceeds_ss_limit(self, irs_2024_calculator: TaxCalculator):
         """Test FICA Example 2: Wages exceeding SS limit.
-        
+
         From IRS Publication 15:
         - Wages: $200,000
         - SS tax: CAPPED at wage base limit * 6.2%
@@ -211,7 +211,7 @@ class TestFICAWithIRSData:
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal(str(FICA_EXAMPLE_2["gross_wages"])),
-            num_children=0
+            num_children=0,
         )
 
         result = irs_2024_calculator.calculate_taxes(request)
@@ -237,7 +237,7 @@ class TestDeterministicCalculations:
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal("75000"),
-            num_children=1
+            num_children=1,
         )
 
         # Calculate multiple times
@@ -259,7 +259,7 @@ class TestDeterministicCalculations:
             tax_year=2030,  # Year that doesn't exist in JSON files
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal("50000"),
-            num_children=0
+            num_children=0,
         )
 
         result = test_calculator.calculate_taxes(request)

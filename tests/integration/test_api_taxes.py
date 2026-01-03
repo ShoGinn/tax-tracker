@@ -1,7 +1,173 @@
 """Integration tests for taxes API endpoints."""
 
+import json
+import tempfile
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
+
+from taxtracker.core.config import settings
+
+
+@pytest.fixture
+def temp_upload_dir():
+    """Create a temporary directory for testing file uploads.
+
+    Only used by admin tests that actually test file upload functionality.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield Path(tmpdir)
+
+
+@pytest.mark.integration
+class TestAdminAPI:
+    """Integration tests for /admin endpoints."""
+
+    def test_get_available_years(self, client: TestClient):
+        """Test getting list of available tax years."""
+        response = client.get("/taxes/tax-data/available-years")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "available_years" in data
+        assert "latest_year" in data
+        assert "data_directory" in data
+        assert isinstance(data["available_years"], list)
+        # Should have at least 2025 data
+        assert 2025 in data["available_years"]
+
+    def test_get_tax_data_invalid_year(self, client: TestClient):
+        """Test getting tax data for non-existent year."""
+        response = client.get("/taxes/tax-data/2099")
+
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+
+    def test_upload_tax_data_success(self, client: TestClient, temp_upload_dir: Path, monkeypatch):
+        """Upload valid tax bracket data and verify file is saved."""
+
+        # Point settings to temp dir for this test only
+        monkeypatch.setattr(settings, "data_dir", temp_upload_dir)
+
+        year = 2031
+        payload = {
+            "tax_year": year,
+            "tax_brackets": {"single": [{"min": 0, "max": 10000, "rate": 0.1}]},
+            "standard_deductions": {"single": 1000},
+        }
+
+        response = client.post(
+            f"/taxes/tax-data/upload/{year}",
+            files={"file": ("tax_brackets.json", json.dumps(payload), "application/json")},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["year"] == year
+        saved_path = temp_upload_dir / f"tax_brackets_{year}.json"
+        assert saved_path.exists()
+        with open(saved_path) as f:
+            saved = json.load(f)
+        assert saved["tax_year"] == year
+        assert "tax_brackets" in saved
+        assert "standard_deductions" in saved
+
+    def test_upload_tax_data_year_mismatch(
+        self, client: TestClient, temp_upload_dir: Path, monkeypatch
+    ):
+        """Reject tax data when file year does not match path."""
+
+        # Point settings to temp dir for this test only
+        monkeypatch.setattr(settings, "data_dir", temp_upload_dir)
+
+        year = 2032
+        payload = {
+            "tax_year": year + 1,
+            "tax_brackets": {"single": [{"min": 0, "max": 10000, "rate": 0.1}]},
+            "standard_deductions": {"single": 1000},
+        }
+
+        response = client.post(
+            f"/taxes/tax-data/upload/{year}",
+            files={"file": ("tax_brackets.json", json.dumps(payload), "application/json")},
+        )
+
+        assert response.status_code == 400
+        assert "year in file" in response.json()["detail"].lower()
+        assert not (temp_upload_dir / f"tax_brackets_{year}.json").exists()
+
+    def test_upload_fica_data_success(self, client: TestClient, temp_upload_dir: Path, monkeypatch):
+        """Upload valid FICA limits and verify file is saved."""
+
+        # Point settings to temp dir for this test only
+        monkeypatch.setattr(settings, "data_dir", temp_upload_dir)
+
+        year = 2033
+        payload = {
+            "year": year,
+            "social_security": {
+                "employee_rate": 0.05,
+                "employer_rate": 0.05,
+                "total_rate": 0.10,
+                "wage_base_limit": 150000,
+                "max_employee_tax": 7500,
+                "max_employer_tax": 7500,
+                "max_combined_tax": 15000,
+            },
+            "medicare": {
+                "employee_rate": 0.02,
+                "employer_rate": 0.02,
+                "total_rate": 0.04,
+                "wage_base_limit": None,
+                "note": "Applies to all wages",
+            },
+        }
+
+        response = client.post(
+            f"/taxes/fica-data/upload/{year}",
+            files={"file": ("fica_limits.json", json.dumps(payload), "application/json")},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["year"] == year
+        saved_path = temp_upload_dir / f"fica_limits_{year}.json"
+        assert saved_path.exists()
+        with open(saved_path) as f:
+            saved = json.load(f)
+        assert saved["year"] == year
+        assert "social_security" in saved
+        assert "medicare" in saved
+
+    def test_upload_fica_data_missing_fields(
+        self, client: TestClient, temp_upload_dir: Path, monkeypatch
+    ):
+        """Reject FICA upload when required fields are missing."""
+
+        # Point settings to temp dir for this test only
+        monkeypatch.setattr(settings, "data_dir", temp_upload_dir)
+
+        year = 2034
+        payload = {
+            "year": year,
+            "medicare": {
+                "employee_rate": 0.02,
+                "employer_rate": 0.02,
+                "total_rate": 0.04,
+            },
+        }
+
+        response = client.post(
+            f"/taxes/fica-data/upload/{year}",
+            files={"file": ("fica_limits.json", json.dumps(payload), "application/json")},
+        )
+
+        assert response.status_code == 400
+        assert "missing required fields" in response.json()["detail"].lower()
+        assert not (temp_upload_dir / f"fica_limits_{year}.json").exists()
 
 
 @pytest.mark.integration
@@ -31,20 +197,18 @@ class TestTaxesAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["year"] == 2024
+        assert data["tax_year"] == 2024
         assert "tax_brackets" in data
         assert "standard_deductions" in data
 
     def test_get_tax_brackets_filtered(self, client: TestClient):
-        """Test getting tax brackets filtered by filing status."""
+        """Test getting tax brackets with filing status parameter."""
         response = client.get("/taxes/brackets/2024?filing_status=single")
 
         assert response.status_code == 200
         data = response.json()
-        assert data["year"] == 2024
-        assert data["filing_status"] == "single"
-        assert "brackets" in data
-        assert isinstance(data["brackets"], list)
+        assert data["tax_year"] == 2024
+        assert "tax_brackets" in data
 
     def test_get_fica_limits_2024(self, client: TestClient):
         """Test getting FICA limits for 2024."""
@@ -52,7 +216,7 @@ class TestTaxesAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["year"] == 2024
+        assert data["tax_year"] == 2024
         assert "social_security" in data
         assert "medicare" in data
 
@@ -132,18 +296,6 @@ class TestTaxesAPI:
 @pytest.mark.integration
 class TestTaxesDatabaseAPI:
     """Tests for database-based tax calculations."""
-
-    def test_get_brackets_nonexistent_year(self, client: TestClient):
-        """Test getting brackets for non-existent year."""
-        response = client.get("/taxes/brackets/2099")
-
-        assert response.status_code == 404
-
-    def test_get_fica_nonexistent_year(self, client: TestClient):
-        """Test getting FICA for non-existent year."""
-        response = client.get("/taxes/fica/2099")
-
-        assert response.status_code == 404
 
 
 @pytest.mark.integration

@@ -7,7 +7,6 @@ import uvicorn
 from fastapi import FastAPI
 from sqlalchemy import text
 
-from taxtracker.api.admin import router as admin_router
 from taxtracker.api.income import router as income_router
 from taxtracker.api.projections import router as projections_router
 from taxtracker.api.taxes import router as taxes_router
@@ -54,7 +53,6 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
     app.include_router(w4_router)
     app.include_router(income_router)
     app.include_router(projections_router)
-    app.include_router(admin_router)
 
     @app.get("/")
     def root() -> dict[str, str]:

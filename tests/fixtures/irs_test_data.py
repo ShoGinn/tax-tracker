@@ -14,13 +14,16 @@ All values are from published IRS examples and rate schedules.
 from decimal import Decimal
 
 from taxtracker.models.tax_data import (
+    AdditionalMedicareTax,
     ChildTaxCredit,
     FICALimits,
     FilingStatus,
+    MedicareTax,
+    SocialSecurityTax,
     StandardDeductions,
+    TaxBracket,
     TaxBrackets,
 )
-from taxtracker.services.data_loader import load_fica_limits_model
 
 # IRS 2024 Tax Brackets (from actual IRS Publication 17)
 # https://www.irs.gov/publications/p17
@@ -30,40 +33,40 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
     source="IRS Publication 17, 2024 Tax Rates",
     tax_brackets={
         FilingStatus.SINGLE: [
-            {"min": 0, "max": 11600, "rate": 0.10},
-            {"min": 11601, "max": 47150, "rate": 0.12},
-            {"min": 47151, "max": 100525, "rate": 0.22},
-            {"min": 100526, "max": 191950, "rate": 0.24},
-            {"min": 191951, "max": 243725, "rate": 0.32},
-            {"min": 243726, "max": 609350, "rate": 0.35},
-            {"min": 609351, "max": 999999999, "rate": 0.37},
+            TaxBracket(min=Decimal("0"), max=Decimal("11600"), rate=Decimal("0.10")),
+            TaxBracket(min=Decimal("11601"), max=Decimal("47150"), rate=Decimal("0.12")),
+            TaxBracket(min=Decimal("47151"), max=Decimal("100525"), rate=Decimal("0.22")),
+            TaxBracket(min=Decimal("100526"), max=Decimal("191950"), rate=Decimal("0.24")),
+            TaxBracket(min=Decimal("191951"), max=Decimal("243725"), rate=Decimal("0.32")),
+            TaxBracket(min=Decimal("243726"), max=Decimal("609350"), rate=Decimal("0.35")),
+            TaxBracket(min=Decimal("609351"), max=Decimal("999999999"), rate=Decimal("0.37")),
         ],
         FilingStatus.MARRIED_FILING_JOINTLY: [
-            {"min": 0, "max": 23200, "rate": 0.10},
-            {"min": 23201, "max": 94300, "rate": 0.12},
-            {"min": 94301, "max": 201050, "rate": 0.22},
-            {"min": 201051, "max": 383900, "rate": 0.24},
-            {"min": 383901, "max": 487450, "rate": 0.32},
-            {"min": 487451, "max": 731200, "rate": 0.35},
-            {"min": 731201, "max": 999999999, "rate": 0.37},
+            TaxBracket(min=Decimal("0"), max=Decimal("23200"), rate=Decimal("0.10")),
+            TaxBracket(min=Decimal("23201"), max=Decimal("94300"), rate=Decimal("0.12")),
+            TaxBracket(min=Decimal("94301"), max=Decimal("201050"), rate=Decimal("0.22")),
+            TaxBracket(min=Decimal("201051"), max=Decimal("383900"), rate=Decimal("0.24")),
+            TaxBracket(min=Decimal("383901"), max=Decimal("487450"), rate=Decimal("0.32")),
+            TaxBracket(min=Decimal("487451"), max=Decimal("731200"), rate=Decimal("0.35")),
+            TaxBracket(min=Decimal("731201"), max=Decimal("999999999"), rate=Decimal("0.37")),
         ],
         FilingStatus.MARRIED_FILING_SEPARATELY: [
-            {"min": 0, "max": 11600, "rate": 0.10},
-            {"min": 11601, "max": 47150, "rate": 0.12},
-            {"min": 47151, "max": 100525, "rate": 0.22},
-            {"min": 100526, "max": 191950, "rate": 0.24},
-            {"min": 191951, "max": 243725, "rate": 0.32},
-            {"min": 243726, "max": 365600, "rate": 0.35},
-            {"min": 365601, "max": 999999999, "rate": 0.37},
+            TaxBracket(min=Decimal("0"), max=Decimal("11600"), rate=Decimal("0.10")),
+            TaxBracket(min=Decimal("11601"), max=Decimal("47150"), rate=Decimal("0.12")),
+            TaxBracket(min=Decimal("47151"), max=Decimal("100525"), rate=Decimal("0.22")),
+            TaxBracket(min=Decimal("100526"), max=Decimal("191950"), rate=Decimal("0.24")),
+            TaxBracket(min=Decimal("191951"), max=Decimal("243725"), rate=Decimal("0.32")),
+            TaxBracket(min=Decimal("243726"), max=Decimal("365600"), rate=Decimal("0.35")),
+            TaxBracket(min=Decimal("365601"), max=Decimal("999999999"), rate=Decimal("0.37")),
         ],
         FilingStatus.HEAD_OF_HOUSEHOLD: [
-            {"min": 0, "max": 16550, "rate": 0.10},
-            {"min": 16551, "max": 63100, "rate": 0.12},
-            {"min": 63101, "max": 100500, "rate": 0.22},
-            {"min": 100501, "max": 191950, "rate": 0.24},
-            {"min": 191951, "max": 243700, "rate": 0.32},
-            {"min": 243701, "max": 609350, "rate": 0.35},
-            {"min": 609351, "max": 999999999, "rate": 0.37},
+            TaxBracket(min=Decimal("0"), max=Decimal("16550"), rate=Decimal("0.10")),
+            TaxBracket(min=Decimal("16551"), max=Decimal("63100"), rate=Decimal("0.12")),
+            TaxBracket(min=Decimal("63101"), max=Decimal("100500"), rate=Decimal("0.22")),
+            TaxBracket(min=Decimal("100501"), max=Decimal("191950"), rate=Decimal("0.24")),
+            TaxBracket(min=Decimal("191951"), max=Decimal("243700"), rate=Decimal("0.32")),
+            TaxBracket(min=Decimal("243701"), max=Decimal("609350"), rate=Decimal("0.35")),
+            TaxBracket(min=Decimal("609351"), max=Decimal("999999999"), rate=Decimal("0.37")),
         ],
     },
     standard_deductions=StandardDeductions(
@@ -88,65 +91,44 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
 )
 
 
-# For now, we'll use 2025 data as a template, but tests should use year 9999
-# This avoids the complex FICA structure - we just need the rates
-IRS_2024_FICA_LIMITS = load_fica_limits_model(2025)
-
-# For simplified tests, also use the 2025 structure with year 9999
-SIMPLE_TEST_FICA_LIMITS = load_fica_limits_model(2025)
-
-
-# Simplified test data for basic calculations
-# Uses round numbers for easy verification
-SIMPLE_TEST_TAX_BRACKETS = TaxBrackets(
-    tax_year=2030,  # Future year to avoid confusion with real data
+# IRS 2024 FICA Limits (from IRS Publication 15, Social Security Administration)
+# https://www.ssa.gov/benefits/retirement/2024.html
+# https://www.irs.gov/publications/p15
+IRS_2024_FICA_LIMITS = FICALimits(
+    tax_year=2024,
     last_updated="2024-01-01",
-    source="Test data - simplified for verification",
-    tax_brackets={
-        FilingStatus.SINGLE: [
-            {"min": 0, "max": 10000, "rate": 0.10},
-            {"min": 10001, "max": 40000, "rate": 0.12},
-            {"min": 40001, "max": 100000, "rate": 0.22},
-            {"min": 100001, "max": 999999999, "rate": 0.24},
-        ],
-        FilingStatus.MARRIED_FILING_JOINTLY: [
-            {"min": 0, "max": 20000, "rate": 0.10},
-            {"min": 20001, "max": 80000, "rate": 0.12},
-            {"min": 80001, "max": 200000, "rate": 0.22},
-            {"min": 200001, "max": 999999999, "rate": 0.24},
-        ],
-        FilingStatus.MARRIED_FILING_SEPARATELY: [
-            {"min": 0, "max": 10000, "rate": 0.10},
-            {"min": 10001, "max": 40000, "rate": 0.12},
-            {"min": 40001, "max": 100000, "rate": 0.22},
-            {"min": 100001, "max": 999999999, "rate": 0.24},
-        ],
-        FilingStatus.HEAD_OF_HOUSEHOLD: [
-            {"min": 0, "max": 15000, "rate": 0.10},
-            {"min": 15001, "max": 60000, "rate": 0.12},
-            {"min": 60001, "max": 120000, "rate": 0.22},
-            {"min": 120001, "max": 999999999, "rate": 0.24},
-        ],
+    source="IRS Publication 15, Social Security Administration - 2024 Rates",
+    social_security=SocialSecurityTax(
+        employee_rate=Decimal("0.062"),
+        employer_rate=Decimal("0.062"),
+        total_rate=Decimal("0.124"),
+        wage_base_limit=Decimal("168600"),
+        max_employee_tax=Decimal("10453.20"),
+        max_employer_tax=Decimal("10453.20"),
+        max_combined_tax=Decimal("20906.40"),
+    ),
+    medicare=MedicareTax(
+        employee_rate=Decimal("0.0145"),
+        employer_rate=Decimal("0.0145"),
+        total_rate=Decimal("0.029"),
+        wage_base_limit=None,
+        note="No wage base limit - applies to all wages",
+    ),
+    additional_medicare=AdditionalMedicareTax(
+        rate=Decimal("0.009"),
+        employer_match=False,
+        thresholds={
+            "single": Decimal("200000"),
+            "married_filing_jointly": Decimal("250000"),
+            "married_filing_separately": Decimal("125000"),
+        },
+        note="Applies to wages above threshold, no employer match",
+    ),
+    combined_rates={
+        "below_ss_wage_base": Decimal("0.0765"),
+        "above_ss_wage_base": Decimal("0.0145"),
+        "above_additional_medicare_threshold": Decimal("0.0235"),
     },
-    standard_deductions=StandardDeductions(
-        amounts={
-            FilingStatus.SINGLE: Decimal("15000"),
-            FilingStatus.MARRIED_FILING_JOINTLY: Decimal("30000"),
-            FilingStatus.MARRIED_FILING_SEPARATELY: Decimal("15000"),
-            FilingStatus.HEAD_OF_HOUSEHOLD: Decimal("22500"),
-        },
-        additional_age_65_plus={"single": Decimal("2000"), "married": Decimal("1600")},
-    ),
-    child_tax_credit=ChildTaxCredit(
-        amount_per_child=Decimal("2000"),
-        refundable_portion=Decimal("1600"),
-        phase_out_threshold={
-            FilingStatus.MARRIED_FILING_JOINTLY: Decimal("400000"),
-            FilingStatus.SINGLE: Decimal("200000"),
-            FilingStatus.HEAD_OF_HOUSEHOLD: Decimal("200000"),
-            FilingStatus.MARRIED_FILING_SEPARATELY: Decimal("200000"),
-        },
-    ),
 )
 
 
@@ -154,7 +136,7 @@ def get_irs_test_data(year: int = 2024) -> tuple[TaxBrackets, FICALimits]:
     """Get IRS-verified test data for a given year.
 
     Args:
-        year: Tax year (2024 is default, 2030 for simplified test data)
+        year: Tax year (only 2024 is available)
 
     Returns:
         Tuple of (TaxBrackets, FICALimits)
@@ -164,9 +146,7 @@ def get_irs_test_data(year: int = 2024) -> tuple[TaxBrackets, FICALimits]:
     """
     if year == 2024:
         return IRS_2024_TAX_BRACKETS, IRS_2024_FICA_LIMITS
-    if year == 2030:
-        return SIMPLE_TEST_TAX_BRACKETS, SIMPLE_TEST_FICA_LIMITS
-    raise ValueError(f"Test data not available for year {year}")
+    raise ValueError(f"Test data not available for year {year}. Only 2024 is supported.")
 
 
 # IRS Example Calculations for Verification

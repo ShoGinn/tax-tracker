@@ -12,52 +12,54 @@ class TestTaxCalculator:
         """Test calculator initializes correctly with injected data."""
         assert test_calculator is not None
         # Verify injected data is available
-        assert test_calculator.tax_year == 2030
+        assert test_calculator.tax_year == 2024
         assert test_calculator._tax_brackets is not None
         assert test_calculator._fica_limits is not None
 
     def test_tax_year_property(self, test_calculator):
         """Test that calculator stores tax year."""
-        assert test_calculator.tax_year == 2030
+        assert test_calculator.tax_year == 2024
 
     def test_tax_brackets_available(self, test_calculator):
         """Test that tax brackets are available from init."""
         brackets = test_calculator._tax_brackets
 
-        assert brackets.tax_year == 2030
+        assert brackets.tax_year == 2024
         assert hasattr(brackets, "tax_brackets")
         assert hasattr(brackets, "standard_deductions")
-        assert "single" in brackets.tax_brackets
+        assert FilingStatus.SINGLE in brackets.tax_brackets
 
     def test_fica_limits_available(self, test_calculator):
         """Test that FICA limits are available from init."""
         fica = test_calculator._fica_limits
 
-        # Uses 2025 FICA data as template
+        # Uses IRS 2024 FICA data
         assert hasattr(fica, "social_security")
         assert hasattr(fica, "medicare")
 
 
 class TestFederalTaxCalculation:
-    """Tests for federal tax calculation using simplified test data.
+    """Tests for federal tax calculation using IRS 2024 verified test data.
 
-    Simplified test data (year 2030):
-    - Single standard deduction: $15,000
-    - Married standard deduction: $30,000
-    - Brackets: 10% ($0-$10k), 12% ($10k-$40k), 22% ($40k-$100k), 24% ($100k+)
+    IRS 2024 data:
+    - Single standard deduction: $14,600
+    - Married standard deduction: $29,200
+    - Brackets (Single): 10% ($0-$11,600), 12% ($11,601-$47,150), 22% ($47,151-$100,525), etc.
     """
 
     def test_single_filer_50k(self, test_calculator):
-        """Test single filer with $50k income using simplified brackets.
+        """Test single filer with $50k income using IRS 2024 brackets.
 
         Expected calculation:
         - Gross: $50,000
-        - Std deduction: $15,000
-        - Taxable: $35,000
-        - Tax: $1,000 (10% on $10k) + $3,000 (12% on $25k) = $4,000
+        - Std deduction: $14,600
+        - Taxable: $35,400
+        - Tax: 10% on $11,600 = $1,160
+               12% on $23,800 ($35,400 - $11,600) = $2,856
+        - Total: $4,016
         """
         gross_income = Decimal("50000")
-        standard_deduction = Decimal("15000")
+        standard_deduction = Decimal("14600")
         taxable_income = max(Decimal(0), gross_income - standard_deduction)
 
         federal_tax, marginal_rate, breakdown = test_calculator.calculate_federal_tax(
@@ -66,16 +68,16 @@ class TestFederalTaxCalculation:
         )
 
         # Verify taxable income
-        assert taxable_income == Decimal("35000")
+        assert taxable_income == Decimal("35400")
 
-        # Should have federal tax (35000 is in 12% bracket)
+        # Should have federal tax (35400 is in 12% bracket)
         assert federal_tax > 0
 
-        # Calculate expected tax manually (Simplified 2030 brackets):
-        # First $10,000 at 10% = $1,000
-        # Next $25,000 ($35,000 - $10,000) at 12% = $3,000
-        # Total = $4,000
-        expected_tax = Decimal("1000") + Decimal("3000")
+        # Calculate expected tax manually (IRS 2024 brackets):
+        # First $11,600 at 10% = $1,160
+        # Next $23,800 ($35,400 - $11,600) at 12% = $2,856
+        # Total = $4,016
+        expected_tax = Decimal("1160") + Decimal("2856")
         assert abs(federal_tax - expected_tax) < Decimal("1.00")
 
         # Marginal rate should be 12%
@@ -86,12 +88,14 @@ class TestFederalTaxCalculation:
 
         Expected calculation:
         - Gross: $100,000
-        - Std deduction: $30,000
-        - Taxable: $70,000
-        - Tax: $2,000 (10% on $20k) + $6,000 (12% on $50k) = $8,000
+        - Std deduction: $29,200
+        - Taxable: $70,800
+        - Tax: 10% on $23,200 = $2,320
+               12% on $47,600 ($70,800 - $23,200) = $5,712
+        - Total: $8,032
         """
         gross_income = Decimal("100000")
-        standard_deduction = Decimal("30000")
+        standard_deduction = Decimal("29200")
         taxable_income = max(Decimal(0), gross_income - standard_deduction)
 
         federal_tax, marginal_rate, breakdown = test_calculator.calculate_federal_tax(
@@ -100,14 +104,14 @@ class TestFederalTaxCalculation:
         )
 
         # Verify taxable income
-        assert taxable_income == Decimal("70000")
+        assert taxable_income == Decimal("70800")
         assert federal_tax > 0
 
         # Should be in 12% bracket
         assert marginal_rate == Decimal("0.12")
 
-        # Expected: $2,000 (10% on $20k) + $6,000 (12% on $50k) = $8,000
-        expected_tax = Decimal("2000") + Decimal("6000")
+        # Expected: $2,320 (10% on $23,200) + $5,712 (12% on $47,600) = $8,032
+        expected_tax = Decimal("2320") + Decimal("5712")
         assert abs(federal_tax - expected_tax) < Decimal("1.00")
 
     def test_zero_income(self, test_calculator):
@@ -151,15 +155,15 @@ class TestFICACalculation:
         assert abs(float(ss_tax) - 3100.0) < 1.0
         assert abs(float(medicare_tax) - 725.0) < 1.0
 
-    def test_fica_over_ss_limit(self, test_calculator):
+    def test_fica_over_ss_limit(self, irs_2024_calculator):
         """Test FICA calculation over social security limit.
 
         For $200,000 income:
-        - SS: Capped at wage base (~$176,100 * 6.2% = ~$10,918)
+        - SS: Capped at wage base (168,600 * 6.2% = 10,453.20 for 2024)
         - Medicare: $200,000 * 1.45% = $2,900
-        - Additional Medicare: $0 (threshold is $200k for single)
+        - Additional Medicare: ($200,000 - $200,000) * 0.9% = $0
         """
-        fica_taxes = test_calculator.calculate_fica(
+        fica_taxes = irs_2024_calculator.calculate_fica(
             gross_wages=Decimal("200000"),
             filing_status=FilingStatus.SINGLE,
         )
@@ -167,8 +171,8 @@ class TestFICACalculation:
         ss_tax = float(fica_taxes["social_security_tax"])
         medicare_tax = float(fica_taxes["medicare_tax"])
 
-        # SS should be capped (between $10k-$11k depending on wage base)
-        assert 10000 < ss_tax < 12000
+        # SS should be capped at 2024 wage base
+        assert abs(ss_tax - 10453.2) < 1
 
         # Medicare should not be capped
         assert abs(medicare_tax - 2900.0) < 1.0
@@ -180,7 +184,7 @@ class TestFullTaxCalculation:
     def test_simple_single_calculation(self, test_calculator):
         """Test complete calculation for single filer."""
         request = TaxCalculationRequest(
-            tax_year=2030,
+            tax_year=2024,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal("75000"),
             num_children=0,
@@ -196,13 +200,13 @@ class TestFullTaxCalculation:
         assert result.federal_tax_owed > 0
         assert result.total_tax_liability > 0
 
-        # Taxable income should be gross - standard deduction ($15k)
-        assert result.taxable_income == Decimal("60000")
+        # Taxable income should be gross - standard deduction ($14,600)
+        assert result.taxable_income == Decimal("60400")
 
     def test_married_with_children(self, test_calculator):
         """Test calculation with child tax credits."""
         request = TaxCalculationRequest(
-            tax_year=2030,
+            tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
             gross_income=Decimal("100000"),
             num_children=2,
@@ -222,7 +226,7 @@ class TestFullTaxCalculation:
     def test_itemized_deductions(self, test_calculator):
         """Test with itemized deductions."""
         request = TaxCalculationRequest(
-            tax_year=2030,
+            tax_year=2024,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal("80000"),
             num_children=0,
@@ -244,31 +248,32 @@ class TestTaxCalculatorEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
     def test_income_at_bracket_boundary(self, test_calculator):
-        """Test income exactly at bracket boundary.
+        """Test income exactly at first bracket boundary.
 
-        $10,000 is exactly the boundary between 10% and 12% brackets.
+        $14,600 is the standard deduction for single in 2024.
         """
-        # Income at standard deduction means $0 taxable
+        # Income at standard deduction means small taxable amount
         request = TaxCalculationRequest(
-            tax_year=2030,
+            tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("15000"),  # Exactly std deduction
+            gross_income=Decimal("15000"),
             num_children=0,
         )
 
         result = test_calculator.calculate_taxes(request)
 
-        # Should have $0 taxable income and $0 tax
-        assert result.taxable_income == Decimal("0")
-        assert result.federal_tax_owed == Decimal("0")
+        # Should have small taxable income ($15,000 - $14,600 = $400)
+        assert result.taxable_income == Decimal("400")
+        # Tax on $400 at 10% = $40
+        assert result.federal_tax_owed == Decimal("40.00")
 
     def test_very_high_income(self, test_calculator):
         """Test very high income in top bracket.
 
-        With simplified brackets, $500k should be in 24% bracket.
+        With IRS 2024 brackets, $500k should be in 35% bracket for single filers.
         """
         request = TaxCalculationRequest(
-            tax_year=2030,
+            tax_year=2024,
             filing_status=FilingStatus.SINGLE,
             gross_income=Decimal("500000"),
             num_children=0,
@@ -276,8 +281,8 @@ class TestTaxCalculatorEdgeCases:
 
         result = test_calculator.calculate_taxes(request)
 
-        # Should be in top bracket (24%)
-        assert result.marginal_tax_rate == Decimal("24.00")
+        # Should be in 35% bracket (Single: $243,726-$609,350)
+        assert result.marginal_tax_rate == Decimal("35.00")
 
         # Should have substantial tax liability
         assert result.federal_tax_owed > Decimal("100000")
