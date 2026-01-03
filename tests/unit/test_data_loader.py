@@ -1,6 +1,5 @@
 """Unit tests for data_loader service."""
 
-from decimal import Decimal
 
 import pytest
 

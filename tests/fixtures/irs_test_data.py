@@ -176,10 +176,9 @@ def get_irs_test_data(year: int = 2024) -> tuple[TaxBrackets, FICALimits]:
     """
     if year == 2024:
         return IRS_2024_TAX_BRACKETS, IRS_2024_FICA_LIMITS
-    elif year == 2030:
+    if year == 2030:
         return SIMPLE_TEST_TAX_BRACKETS, SIMPLE_TEST_FICA_LIMITS
-    else:
-        raise ValueError(f"Test data not available for year {year}")
+    raise ValueError(f"Test data not available for year {year}")
 
 
 # IRS Example Calculations for Verification

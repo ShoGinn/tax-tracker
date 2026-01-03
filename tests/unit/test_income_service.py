@@ -3,11 +3,8 @@
 from datetime import date
 from decimal import Decimal
 
-import pytest
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
 from taxtracker.models.schemas import (
     EmployerCreate,
     EmployerUpdate,

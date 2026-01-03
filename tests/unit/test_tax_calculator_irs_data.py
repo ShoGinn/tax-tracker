@@ -6,23 +6,22 @@ These tests demonstrate the proper approach:
 3. Tests are deterministic and independent of external files
 """
 
-import pytest
 from decimal import Decimal
+
+from fixtures.irs_test_data import (
+    FICA_EXAMPLE_1,
+    FICA_EXAMPLE_2,
+    IRS_EXAMPLE_1,
+    IRS_EXAMPLE_2,
+)
 
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
 from taxtracker.services.tax_calculator import TaxCalculator
 
-from fixtures.irs_test_data import (
-    IRS_EXAMPLE_1,
-    IRS_EXAMPLE_2,
-    FICA_EXAMPLE_1,
-    FICA_EXAMPLE_2,
-)
-
 
 class TestTaxCalculatorWithIRSData:
     """Tests using IRS-verified examples."""
-    
+
     def test_irs_example_1_single_filer(self, irs_2024_calculator: TaxCalculator):
         """Test IRS Example 1: Single filer, no dependents.
         
@@ -39,18 +38,18 @@ class TestTaxCalculatorWithIRSData:
             num_children=IRS_EXAMPLE_1["num_children"],
             use_standard_deduction=IRS_EXAMPLE_1["use_standard_deduction"]
         )
-        
+
         result = irs_2024_calculator.calculate_taxes(request)
-        
+
         # Verify taxable income calculation
         assert abs(float(result.taxable_income) - IRS_EXAMPLE_1["expected_taxable_income"]) < 1
-        
+
         # Verify federal tax (allow small tolerance for rounding/bracket differences)
         assert abs(float(result.federal_tax_owed) - IRS_EXAMPLE_1["expected_federal_tax"]) < 50
-        
+
         # Verify marginal rate
         assert float(result.marginal_tax_rate) == IRS_EXAMPLE_1["expected_marginal_rate"]
-    
+
     def test_irs_example_2_married_with_children(self, irs_2024_calculator: TaxCalculator):
         """Test IRS Example 2: Married filing jointly with 2 children.
         
@@ -69,22 +68,22 @@ class TestTaxCalculatorWithIRSData:
             num_children=IRS_EXAMPLE_2["num_children"],
             use_standard_deduction=IRS_EXAMPLE_2["use_standard_deduction"]
         )
-        
+
         result = irs_2024_calculator.calculate_taxes(request)
-        
+
         # Verify taxable income
         assert abs(float(result.taxable_income) - IRS_EXAMPLE_2["expected_taxable_income"]) < 1
-        
+
         # Verify child tax credits
         assert abs(float(result.child_tax_credits) - IRS_EXAMPLE_2["expected_child_credits"]) < 1
-        
+
         # Verify final tax after credits (allow more tolerance for bracket differences)
         assert abs(float(result.total_tax_liability) - IRS_EXAMPLE_2["expected_federal_tax"]) < 100
 
 
 class TestSimplifiedTaxCalculations:
     """Tests using simplified test data for easy verification."""
-    
+
     def test_simple_10_percent_bracket(self, test_calculator: TaxCalculator):
         """Test simple calculation in 10% bracket.
         
@@ -100,13 +99,13 @@ class TestSimplifiedTaxCalculations:
             gross_income=Decimal("8000"),
             num_children=0
         )
-        
+
         result = test_calculator.calculate_taxes(request)
-        
+
         # Income below standard deduction = no tax
         assert float(result.taxable_income) == 0
         assert float(result.federal_tax_owed) == 0
-    
+
     def test_simple_12_percent_bracket(self, test_calculator: TaxCalculator):
         """Test simple calculation in 12% bracket.
         
@@ -122,22 +121,22 @@ class TestSimplifiedTaxCalculations:
             gross_income=Decimal("30000"),
             num_children=0
         )
-        
+
         result = test_calculator.calculate_taxes(request)
-        
+
         # Verify taxable income
         assert float(result.taxable_income) == 15000
-        
+
         # Verify tax calculation
         # First $10k at 10% = $1,000
         # Next $5k at 12% = $600
         # Total = $1,600
         expected_tax = 1000 + 600
         assert abs(float(result.federal_tax_owed) - expected_tax) < 1
-        
+
         # Marginal rate should be 12%
         assert float(result.marginal_tax_rate) == 12
-    
+
     def test_simple_with_child_credits(self, test_calculator: TaxCalculator):
         """Test calculation with child tax credits.
         
@@ -154,12 +153,12 @@ class TestSimplifiedTaxCalculations:
             gross_income=Decimal("60000"),
             num_children=2
         )
-        
+
         result = test_calculator.calculate_taxes(request)
-        
+
         # Verify child credits applied
         assert float(result.child_tax_credits) == 4000
-        
+
         # Credits reduce tax liability
         assert float(result.child_tax_credits) > 0
         assert float(result.federal_tax_owed) >= 0
@@ -167,7 +166,7 @@ class TestSimplifiedTaxCalculations:
 
 class TestFICAWithIRSData:
     """Test FICA calculations using IRS examples."""
-    
+
     def test_fica_example_1_standard_wages(self, irs_2024_calculator: TaxCalculator):
         """Test FICA Example 1: Standard wages under SS limit.
         
@@ -183,23 +182,23 @@ class TestFICAWithIRSData:
             gross_income=Decimal(str(FICA_EXAMPLE_1["gross_wages"])),
             num_children=0
         )
-        
+
         result = irs_2024_calculator.calculate_taxes(request)
-        
+
         fica = result.fica_taxes
-        
+
         # Verify SS tax
         ss_tax = float(fica.get("social_security_tax", 0))
         assert abs(ss_tax - FICA_EXAMPLE_1["expected_ss_tax"]) < 1
-        
+
         # Verify Medicare tax
         medicare_tax = float(fica.get("medicare_tax", 0))
         assert abs(medicare_tax - FICA_EXAMPLE_1["expected_medicare_tax"]) < 1
-        
+
         # Verify total
         total_fica = float(fica.get("total_fica", 0))
         assert abs(total_fica - FICA_EXAMPLE_1["expected_total_fica"]) < 1
-    
+
     def test_fica_example_2_exceeds_ss_limit(self, irs_2024_calculator: TaxCalculator):
         """Test FICA Example 2: Wages exceeding SS limit.
         
@@ -214,16 +213,16 @@ class TestFICAWithIRSData:
             gross_income=Decimal(str(FICA_EXAMPLE_2["gross_wages"])),
             num_children=0
         )
-        
+
         result = irs_2024_calculator.calculate_taxes(request)
-        
+
         fica = result.fica_taxes
-        
+
         # Verify SS tax is capped (exact amount depends on wage base)
         ss_tax = float(fica.get("social_security_tax", 0))
         # Should be between $10k-$11k (168600*.062 to 176100*.062)
         assert 10000 < ss_tax < 11000, f"SS tax {ss_tax} should be capped"
-        
+
         # Verify Medicare has no cap
         medicare_tax = float(fica.get("medicare_tax", 0))
         assert abs(medicare_tax - FICA_EXAMPLE_2["expected_medicare_tax"]) < 1
@@ -231,7 +230,7 @@ class TestFICAWithIRSData:
 
 class TestDeterministicCalculations:
     """Tests that calculations are deterministic and repeatable."""
-    
+
     def test_same_input_same_output(self, test_calculator: TaxCalculator):
         """Test that same input always produces same output."""
         request = TaxCalculationRequest(
@@ -240,19 +239,19 @@ class TestDeterministicCalculations:
             gross_income=Decimal("75000"),
             num_children=1
         )
-        
+
         # Calculate multiple times
         result1 = test_calculator.calculate_taxes(request)
         result2 = test_calculator.calculate_taxes(request)
         result3 = test_calculator.calculate_taxes(request)
-        
+
         # All results should be identical
         assert result1.federal_tax_owed == result2.federal_tax_owed
         assert result2.federal_tax_owed == result3.federal_tax_owed
-        
+
         assert result1.taxable_income == result2.taxable_income
         assert result2.taxable_income == result3.taxable_income
-    
+
     def test_no_external_file_dependency(self, test_calculator: TaxCalculator):
         """Test that calculator works without accessing external files."""
         # This test passes if no FileNotFoundError is raised
@@ -262,8 +261,8 @@ class TestDeterministicCalculations:
             gross_income=Decimal("50000"),
             num_children=0
         )
-        
+
         result = test_calculator.calculate_taxes(request)
-        
+
         # Should work without accessing any JSON files
         assert result.federal_tax_owed >= 0

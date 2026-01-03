@@ -1,13 +1,9 @@
 """Test CSV import with new field names."""
 
-from decimal import Decimal
-from io import StringIO
-
-import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from taxtracker.models.database import NonTaxableIncome, Retirement1099R
+from taxtracker.models.database import NonTaxableIncome
 from taxtracker.services import csv_import
 
 
