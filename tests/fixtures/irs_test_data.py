@@ -11,9 +11,7 @@ Sources:
 All values are from published IRS examples and rate schedules.
 """
 
-import json
 from decimal import Decimal
-from pathlib import Path
 
 from taxtracker.models.tax_data import (
     ChildTaxCredit,
@@ -22,17 +20,7 @@ from taxtracker.models.tax_data import (
     StandardDeductions,
     TaxBrackets,
 )
-
-
-# Helper to load FICA from JSON (since the structure is complex)
-def _load_fica_from_json(year: int) -> FICALimits:
-    """Load FICA limits from existing JSON files."""
-    data_dir = Path(__file__).parent.parent.parent / "src" / "taxtracker" / "data"
-    fica_file = data_dir / f"fica_limits_{year}.json"
-    with open(fica_file) as f:
-        data = json.load(f)
-    return FICALimits(**data)
-
+from taxtracker.services.data_loader import load_fica_limits_model
 
 # IRS 2024 Tax Brackets (from actual IRS Publication 17)
 # https://www.irs.gov/publications/p17
@@ -102,10 +90,10 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
 
 # For now, we'll use 2025 data as a template, but tests should use year 9999
 # This avoids the complex FICA structure - we just need the rates
-IRS_2024_FICA_LIMITS = _load_fica_from_json(2025)
+IRS_2024_FICA_LIMITS = load_fica_limits_model(2025)
 
 # For simplified tests, also use the 2025 structure with year 9999
-SIMPLE_TEST_FICA_LIMITS = _load_fica_from_json(2025)
+SIMPLE_TEST_FICA_LIMITS = load_fica_limits_model(2025)
 
 
 # Simplified test data for basic calculations

@@ -6,6 +6,7 @@ from typing import Any
 
 from taxtracker.core.config import DataFileType, settings
 from taxtracker.core.exceptions import DataLoadError
+from taxtracker.models.tax_data import FICALimits, TaxBrackets
 
 
 def _load_json_file(file_type: DataFileType, year: int) -> dict[str, Any]:
@@ -173,3 +174,55 @@ def get_available_years() -> list[int]:
     data_dir = settings.data_dir
     tax_files = list(data_dir.glob("tax_brackets_*.json"))
     return sorted([int(f.stem.split("_")[-1]) for f in tax_files])
+
+
+def load_tax_brackets_model(year: int) -> TaxBrackets:
+    """Load and validate tax brackets for a given year.
+
+    This is the primary entry point for loading tax bracket data.
+    It loads the JSON file, validates the structure, and returns
+    a TaxBrackets model instance.
+
+    Args:
+        year: Tax year
+
+    Returns:
+        Validated TaxBrackets object
+
+    Raises:
+        DataLoadError: If file not found or validation fails
+    """
+    data = load_tax_brackets(year)
+    try:
+        return TaxBrackets(**data)
+    except Exception as e:
+        raise DataLoadError(
+            f"Failed to construct TaxBrackets model for {year}: {e}",
+            details={"year": year, "error": str(e)},
+        ) from e
+
+
+def load_fica_limits_model(year: int) -> FICALimits:
+    """Load and validate FICA limits for a given year.
+
+    This is the primary entry point for loading FICA limits data.
+    It loads the JSON file, validates the structure, and returns
+    a FICALimits model instance.
+
+    Args:
+        year: Tax year
+
+    Returns:
+        Validated FICALimits object
+
+    Raises:
+        DataLoadError: If file not found or validation fails
+    """
+    data = load_fica_limits(year)
+    try:
+        return FICALimits(**data)
+    except Exception as e:
+        raise DataLoadError(
+            f"Failed to construct FICALimits model for {year}: {e}",
+            details={"year": year, "error": str(e)},
+        ) from e
