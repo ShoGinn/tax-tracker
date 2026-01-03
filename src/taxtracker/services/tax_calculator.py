@@ -14,61 +14,79 @@ from taxtracker.models.tax_data import (
 )
 
 
+def _load_tax_brackets_from_file(year: int) -> TaxBrackets:
+    """Load tax brackets from JSON file for a given year.
+
+    Args:
+        year: Tax year
+
+    Returns:
+        TaxBrackets object
+
+    Raises:
+        FileNotFoundError: If brackets file doesn't exist
+    """
+    brackets_file = settings.get_data_file(DataFileType.TAX_BRACKETS, year)
+    if not brackets_file.exists():
+        raise FileNotFoundError(f"Tax brackets file not found for year {year}")
+
+    with brackets_file.open() as f:
+        data = json.load(f)
+
+    return TaxBrackets(**data)
+
+
+def _load_fica_limits_from_file(year: int) -> FICALimits:
+    """Load FICA limits from JSON file for a given year.
+
+    Args:
+        year: Tax year
+
+    Returns:
+        FICALimits object
+
+    Raises:
+        FileNotFoundError: If FICA limits file doesn't exist
+    """
+    fica_file = settings.get_data_file(DataFileType.FICA_LIMITS, year)
+    if not fica_file.exists():
+        raise FileNotFoundError(f"FICA limits file not found for year {year}")
+
+    with fica_file.open() as f:
+        data = json.load(f)
+
+    return FICALimits(**data)
+
+
 class TaxCalculator:
-    """Calculate federal taxes and FICA based on IRS rules."""
+    """Calculate federal taxes and FICA based on IRS rules.
 
-    def __init__(self) -> None:
-        """Initialize tax calculator with caches for tax data."""
-        self._tax_brackets_cache: dict[int, TaxBrackets] = {}
-        self._fica_cache: dict[int, FICALimits] = {}
+    This calculator is instantiated with a specific tax year and pre-loaded tax data,
+    making it immutable and suitable for both production and testing scenarios.
+    """
 
-    def set_test_data(self, year: int, tax_brackets: TaxBrackets, fica_limits: FICALimits) -> None:
-        """Inject test data directly (for testing purposes).
-
-        This allows tests to provide known IRS data without relying on JSON files.
+    def __init__(
+        self,
+        tax_year: int,
+        tax_brackets: TaxBrackets | None = None,
+        fica_limits: FICALimits | None = None,
+    ) -> None:
+        """Initialize tax calculator with tax year and data.
 
         Args:
-            year: Tax year
-            tax_brackets: TaxBrackets object with known test data
-            fica_limits: FICALimits object with known test data
+            tax_year: Tax year for calculations
+            tax_brackets: TaxBrackets object (loads from file if not provided)
+            fica_limits: FICALimits object (loads from file if not provided)
+
+        Raises:
+            FileNotFoundError: If tax data files not found when not injected
         """
-        self._tax_brackets_cache[year] = tax_brackets
-        self._fica_cache[year] = fica_limits
-
-    def load_tax_brackets(self, year: int) -> TaxBrackets:
-        """Load tax brackets for a given year."""
-        if year in self._tax_brackets_cache:
-            return self._tax_brackets_cache[year]
-
-        brackets_file = settings.get_data_file(DataFileType.TAX_BRACKETS, year)
-        if not brackets_file.exists():
-            raise FileNotFoundError(f"Tax brackets file not found for year {year}")
-
-        with brackets_file.open() as f:
-            data = json.load(f)
-
-        tax_brackets = TaxBrackets(**data)
-        self._tax_brackets_cache[year] = tax_brackets
-        return tax_brackets
-
-    def load_fica_limits(self, year: int) -> FICALimits:
-        """Load FICA limits for a given year."""
-        if year in self._fica_cache:
-            return self._fica_cache[year]
-
-        fica_file = settings.get_data_file(DataFileType.FICA_LIMITS, year)
-        if not fica_file.exists():
-            raise FileNotFoundError(f"FICA limits file not found for year {year}")
-
-        with fica_file.open() as f:
-            data = json.load(f)
-
-        fica_limits = FICALimits(**data)
-        self._fica_cache[year] = fica_limits
-        return fica_limits
+        self.tax_year = tax_year
+        self._tax_brackets = tax_brackets or _load_tax_brackets_from_file(tax_year)
+        self._fica_limits = fica_limits or _load_fica_limits_from_file(tax_year)
 
     def calculate_federal_tax(
-        self, taxable_income: Decimal, filing_status: FilingStatus, year: int
+        self, taxable_income: Decimal, filing_status: FilingStatus
     ) -> tuple[Decimal, Decimal, list[dict[str, Any]]]:
         """
         Calculate federal income tax based on tax brackets.
@@ -76,8 +94,7 @@ class TaxCalculator:
         Returns:
             tuple: (total_tax, marginal_rate, breakdown_by_bracket)
         """
-        tax_data = self.load_tax_brackets(year)
-        brackets = tax_data.brackets_for_status(filing_status)
+        brackets = self._tax_brackets.brackets_for_status(filing_status)
 
         total_tax = Decimal(0)
         marginal_rate = Decimal(0)
@@ -113,7 +130,7 @@ class TaxCalculator:
         return total_tax, marginal_rate, breakdown
 
     def calculate_fica(
-        self, gross_wages: Decimal, filing_status: FilingStatus, year: int
+        self, gross_wages: Decimal, filing_status: FilingStatus
     ) -> dict[str, Decimal]:
         """
         Calculate FICA taxes (Social Security and Medicare).
@@ -121,28 +138,29 @@ class TaxCalculator:
         Args:
             gross_wages: Total W-2 wages subject to FICA
             filing_status: Filing status for Additional Medicare threshold
-            year: Tax year
 
         Returns:
             dict with ss_tax, medicare_tax, additional_medicare_tax, total_fica
         """
-        fica_data = self.load_fica_limits(year)
-
         # Social Security (capped at wage base)
-        ss_taxable = min(gross_wages, fica_data.social_security.wage_base_limit)
-        ss_tax = ss_taxable * fica_data.social_security.employee_rate
+        ss_taxable = min(gross_wages, self._fica_limits.social_security.wage_base_limit)
+        ss_tax = ss_taxable * self._fica_limits.social_security.employee_rate
 
         # Regular Medicare (no cap)
-        medicare_tax = gross_wages * fica_data.medicare.employee_rate
+        medicare_tax = gross_wages * self._fica_limits.medicare.employee_rate
 
         # Additional Medicare (only on wages above threshold)
         threshold_key = filing_status.value
-        if threshold_key not in fica_data.additional_medicare.thresholds:
+        if threshold_key not in self._fica_limits.additional_medicare.thresholds:
             threshold_key = "single"  # Default to single if not found
 
-        additional_medicare_threshold = fica_data.additional_medicare.thresholds[threshold_key]
+        additional_medicare_threshold = self._fica_limits.additional_medicare.thresholds[
+            threshold_key
+        ]
         additional_medicare_taxable = max(Decimal(0), gross_wages - additional_medicare_threshold)
-        additional_medicare_tax = additional_medicare_taxable * fica_data.additional_medicare.rate
+        additional_medicare_tax = (
+            additional_medicare_taxable * self._fica_limits.additional_medicare.rate
+        )
 
         total_fica = ss_tax + medicare_tax + additional_medicare_tax
 
@@ -151,7 +169,7 @@ class TaxCalculator:
             "medicare_tax": medicare_tax,
             "additional_medicare_tax": additional_medicare_tax,
             "total_fica": total_fica,
-            "ss_wage_base_limit": fica_data.social_security.wage_base_limit,
+            "ss_wage_base_limit": self._fica_limits.social_security.wage_base_limit,
             "ss_taxable_wages": ss_taxable,
         }
 
@@ -165,7 +183,6 @@ class TaxCalculator:
         Returns:
             TaxCalculationResponse with detailed tax breakdown
         """
-        tax_data = self.load_tax_brackets(request.tax_year)
         notes = []
 
         # Step 1: Calculate Adjusted Gross Income (AGI)
@@ -177,7 +194,7 @@ class TaxCalculator:
 
         # Step 2: Determine deduction
         if request.use_standard_deduction:
-            deduction = tax_data.standard_deductions.for_status(request.filing_status)
+            deduction = self._tax_brackets.standard_deductions.for_status(request.filing_status)
             deduction_type = "Standard Deduction"
         else:
             if request.itemized_deduction_amount is None:
@@ -192,11 +209,13 @@ class TaxCalculator:
 
         # Step 4: Calculate federal income tax
         federal_tax, marginal_rate, breakdown = self.calculate_federal_tax(
-            taxable_income, request.filing_status, request.tax_year
+            taxable_income, request.filing_status
         )
 
         # Step 5: Apply child tax credits
-        child_credits = Decimal(request.num_children) * tax_data.child_tax_credit.amount_per_child
+        child_credits = (
+            Decimal(request.num_children) * self._tax_brackets.child_tax_credit.amount_per_child
+        )
         if child_credits > 0:
             notes.append(
                 f"Child Tax Credit: ${child_credits:,.2f} for {request.num_children} children"
@@ -207,9 +226,7 @@ class TaxCalculator:
 
         # Step 7: Calculate FICA (only on W-2 wages, not pension)
         # For multi-employer situations, FICA is calculated on combined wages
-        fica_taxes = self.calculate_fica(
-            request.gross_income, request.filing_status, request.tax_year
-        )
+        fica_taxes = self.calculate_fica(request.gross_income, request.filing_status)
 
         # If wages exceed SS wage base, note the cap
         if request.gross_income > fica_taxes["ss_wage_base_limit"]:

@@ -207,7 +207,7 @@ async def calculate_taxes_from_database(
 
     # Calculate FICA separately for W-2 income only
     # Pension doesn't pay FICA (already paid during active service)
-    fica_result = tax_calculator.calculate_fica(ytd.total_w2_gross, filing_status, year)
+    fica_result = tax_calculator.calculate_fica(ytd.total_w2_gross, filing_status)
 
     # Total tax liability
     total_liability = Decimal(str(tax_result.total_tax_liability)) + Decimal(

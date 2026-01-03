@@ -194,12 +194,11 @@ def test_calculator() -> TaxCalculator:
     Uses simplified test data (year 2030) with known values for easy verification.
     Tests can verify calculations without depending on external JSON files.
     """
-    calculator = TaxCalculator()
-    # Inject simplified test data
-    calculator.set_test_data(
-        year=2030, tax_brackets=SIMPLE_TEST_TAX_BRACKETS, fica_limits=SIMPLE_TEST_FICA_LIMITS
+    return TaxCalculator(
+        tax_year=2030,
+        tax_brackets=SIMPLE_TEST_TAX_BRACKETS,
+        fica_limits=SIMPLE_TEST_FICA_LIMITS,
     )
-    return calculator
 
 
 @pytest.fixture(scope="function")
@@ -208,10 +207,8 @@ def irs_2024_calculator() -> TaxCalculator:
 
     Uses real IRS Publication 17 data for integration testing.
     """
-    calculator = TaxCalculator()
     brackets, fica = get_irs_test_data(2024)
-    calculator.set_test_data(year=2024, tax_brackets=brackets, fica_limits=fica)
-    return calculator
+    return TaxCalculator(tax_year=2024, tax_brackets=brackets, fica_limits=fica)
 
 
 @pytest.fixture(scope="function")
