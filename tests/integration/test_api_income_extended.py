@@ -6,6 +6,8 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
+from taxtracker.models.database import Employer, Paycheck, Retirement1099R
+
 
 @pytest.mark.integration
 class TestIncomeAPICreate:
@@ -13,7 +15,6 @@ class TestIncomeAPICreate:
 
     async def test_create_paycheck_minimal(self, client: TestClient, async_db_session):
         """Test creating paycheck with minimal data."""
-        from taxtracker.models.database import Employer
 
         # Create employer first
         employer = Employer(name="Test Corp", ein="12-3456789", start_date=date(2025, 1, 1))
@@ -36,7 +37,6 @@ class TestIncomeAPICreate:
 
     async def test_create_paycheck_full(self, client: TestClient, async_db_session):
         """Test creating paycheck with all fields."""
-        from taxtracker.models.database import Employer
 
         employer = Employer(name="Full Test Corp", ein="98-7654321", start_date=date(2025, 1, 1))
         async_db_session.add(employer)
@@ -100,7 +100,6 @@ class TestIncomeAPIFiltering:
 
     async def test_filter_paychecks_by_year(self, client: TestClient, async_db_session):
         """Test filtering paychecks by year."""
-        from taxtracker.models.database import Employer, Paycheck
 
         # Create employer
         employer = Employer(name="Filter Test Corp", ein="11-2233445", start_date=date(2024, 1, 1))
@@ -131,7 +130,6 @@ class TestIncomeAPIFiltering:
 
     async def test_filter_1099r_by_year(self, client: TestClient, async_db_session):
         """Test filtering pension by year."""
-        from taxtracker.models.database import Retirement1099R
 
         # Create pension payments
         pension_2024 = Retirement1099R(pay_date=date(2024, 12, 1), gross_amount=Decimal("3000"))
@@ -154,7 +152,6 @@ class TestIncomeAPIValidation:
 
     def test_create_paycheck_invalid_date(self, client: TestClient, db_session):
         """Test creating paycheck with invalid date."""
-        from taxtracker.models.database import Employer
 
         employer = Employer(name="Date Test Corp", ein="33-4455667", start_date=date(2025, 1, 1))
         db_session.add(employer)

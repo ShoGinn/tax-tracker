@@ -1,14 +1,28 @@
 """Tax calculation API endpoints."""
 
+import json
+from collections.abc import Callable
+from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from taxtracker.api.dependencies import get_db
-from taxtracker.core.exceptions import TaxCalculationError
-from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest, TaxCalculationResponse
-from taxtracker.services.data_loader import load_fica_limits, load_tax_brackets
+from taxtracker.api.dependencies import get_db, get_tax_data
+from taxtracker.core.config import settings
+from taxtracker.core.exceptions import DataLoadError, TaxCalculationError
+from taxtracker.models.tax_data import (
+    FICALimits,
+    FilingStatus,
+    TaxBrackets,
+    TaxCalculationRequest,
+    TaxCalculationResponse,
+)
+from taxtracker.services.data_loader import (
+    get_available_years,
+    validate_and_save_fica_limits,
+    validate_and_save_tax_brackets,
+)
 from taxtracker.services.db_tax_calculator import calculate_taxes_from_database
 from taxtracker.services.tax_calculator import TaxCalculator
 
@@ -98,58 +112,101 @@ async def calculate_from_database(
 
 
 @router.get("/fica/{year}")
-async def get_fica_info(year: int) -> dict[str, Any]:
-    """
-    Get FICA limits and rates for a given year.
+async def get_fica_info(
+    year: int,
+    tax_data: Annotated[tuple[TaxBrackets, FICALimits], Depends(get_tax_data)],
+) -> FICALimits:
+    """Get FICA limits and rates for a given year.
 
     Args:
         year: Tax year
+        tax_data: Injected tax data (brackets and FICA limits)
 
     Returns:
-        FICA rates and wage base limits
+        FICA limits data
     """
     try:
-        data = load_fica_limits(year)
-        return {
-            "year": year,
-            "social_security": data["social_security"],
-            "medicare": data["medicare"],
-        }
+        _, fica_limits = tax_data
+        return fica_limits
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"FICA data not found for {year}: {e!s}") from e
 
 
 @router.get("/brackets/{year}")
-async def get_tax_brackets(year: int, filing_status: FilingStatus | None = None) -> dict[str, Any]:
-    """
-    Get tax brackets for a given year.
+async def get_tax_brackets(
+    year: int,
+    tax_data: Annotated[tuple[TaxBrackets, FICALimits], Depends(get_tax_data)],
+) -> TaxBrackets:
+    """Get tax brackets for a given year.
 
     Args:
         year: Tax year
-        filing_status: Optional filing status to filter brackets
+        tax_data: Injected tax data (brackets and FICA limits)
 
     Returns:
         Tax brackets and standard deductions
     """
     try:
-        data = load_tax_brackets(year)
-
-        if filing_status:
-            status_key = filing_status.value
-            return {
-                "year": year,
-                "filing_status": status_key,
-                "brackets": data["tax_brackets"].get(status_key, []),
-                "standard_deduction": data["standard_deductions"].get(status_key),
-            }
-
-        return {
-            "year": year,
-            "tax_brackets": data["tax_brackets"],
-            "standard_deductions": data["standard_deductions"],
-            "child_tax_credit": data.get("child_tax_credit"),
-        }
+        tax_brackets, _ = tax_data
+        return tax_brackets
     except Exception as e:
         raise HTTPException(
             status_code=404, detail=f"Tax bracket data not found for {year}: {e!s}"
         ) from e
+
+
+@router.get("/tax-data/available-years")
+async def list_available_years() -> dict[str, Any]:
+    """Get list of years with available tax data."""
+    years = get_available_years()
+    return {
+        "available_years": years,
+        "latest_year": max(years) if years else None,
+        "data_directory": str(settings.data_dir),
+    }
+
+
+@router.post("/tax-data/upload/{year}")
+async def upload_tax_data(year: int, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
+    return await _handle_json_upload(
+        year,
+        file,
+        validator=validate_and_save_tax_brackets,
+        success_message="Tax data for {year} uploaded successfully",
+    )
+
+
+@router.post("/fica-data/upload/{year}")
+async def upload_fica_data(year: int, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
+    return await _handle_json_upload(
+        year,
+        file,
+        validator=validate_and_save_fica_limits,
+        success_message="FICA data for {year} uploaded successfully",
+    )
+
+
+async def _handle_json_upload(
+    year: int,
+    file: UploadFile,
+    *,
+    validator: Callable[[int, dict[str, Any]], Path],
+    success_message: str,
+) -> dict[str, Any]:
+    if not file.filename or not file.filename.endswith(".json"):
+        raise HTTPException(status_code=400, detail="File must be JSON")
+
+    try:
+        content = await file.read()
+        data = json.loads(content)
+        filepath = validator(year, data)
+        return {
+            "success": True,
+            "year": year,
+            "file": str(filepath),
+            "message": success_message.format(year=year),
+        }
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}") from e
+    except DataLoadError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e

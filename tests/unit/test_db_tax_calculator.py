@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
@@ -406,7 +407,6 @@ class TestCalculateTaxesFromDatabase:
         self, async_db_session: AsyncSession, test_calculator: TaxCalculator
     ):
         """Test calculation with no income records - should fail validation."""
-        from pydantic import ValidationError
 
         # Use test_calculator fixture
 
