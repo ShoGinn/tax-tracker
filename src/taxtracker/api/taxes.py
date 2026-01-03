@@ -5,7 +5,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from taxtracker.api.dependencies import get_db, get_tax_calculator
+from taxtracker.api.dependencies import get_db
 from taxtracker.core.exceptions import TaxCalculationError
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest, TaxCalculationResponse
 from taxtracker.services.data_loader import load_fica_limits, load_tax_brackets
@@ -18,7 +18,6 @@ router = APIRouter(prefix="/taxes", tags=["Taxes"])
 @router.post("/calculate")
 async def calculate_taxes(
     request: TaxCalculationRequest,
-    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> TaxCalculationResponse:
     """
     Calculate federal taxes for a given income and filing status.
@@ -40,7 +39,7 @@ async def calculate_taxes(
         HTTPException: If calculation fails
     """
     try:
-        return calculator.calculate_taxes(request)
+        return TaxCalculator().calculate_taxes(request)
     except TaxCalculationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
@@ -56,7 +55,6 @@ async def calculate_from_database(
     itemized_deduction_amount: float = 0,
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
-    calculator: Annotated[TaxCalculator, Depends(get_tax_calculator)],
 ) -> dict[str, Any]:
     """
     Calculate taxes using income data from database.
@@ -81,7 +79,7 @@ async def calculate_from_database(
         result = await calculate_taxes_from_database(
             db=db,
             year=year,
-            tax_calculator=calculator,
+            tax_calculator=TaxCalculator(),
             filing_status=filing_status,
             num_children=num_children,
             use_standard_deduction=use_standard_deduction,
