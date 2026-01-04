@@ -41,7 +41,10 @@ class TaxCalculator:
         self._fica_limits = fica_limits or load_fica_limits_model(tax_year)
 
     def calculate_federal_tax(
-        self, taxable_income: Decimal, filing_status: FilingStatus
+        self,
+        taxable_income: Decimal,
+        filing_status: FilingStatus,
+        annotate_taxability: bool = False,
     ) -> tuple[Decimal, Decimal, list[dict[str, Any]]]:
         """
         Calculate federal income tax using pre-computed cumulative tax (O(1) lookup).
@@ -85,15 +88,16 @@ class TaxCalculator:
             if bracket == active_bracket:
                 # Last entry: the active bracket with partial tax
                 bracket_max = float(bracket.threshold) if bracket.threshold is not None else None
-                breakdown.append(
-                    {
-                        "bracket_min": float(previous_threshold),
-                        "bracket_max": bracket_max,
-                        "rate": float(bracket.rate),
-                        "taxable_amount": float(excess_income),
-                        "tax_amount": float(tax_in_bracket),
-                    }
-                )
+                entry = {
+                    "bracket_min": float(previous_threshold),
+                    "bracket_max": bracket_max,
+                    "rate": float(bracket.rate),
+                    "taxable_amount": float(excess_income),
+                    "tax_amount": float(tax_in_bracket),
+                }
+                if annotate_taxability:
+                    entry["taxable"] = True
+                breakdown.append(entry)
                 break
 
             # Prior brackets: fully taxed
@@ -101,15 +105,16 @@ class TaxCalculator:
                 bracket_width = bracket.threshold - previous_threshold
                 tax_in_full_bracket = bracket_width * bracket.rate
 
-                breakdown.append(
-                    {
-                        "bracket_min": float(previous_threshold),
-                        "bracket_max": float(bracket.threshold),
-                        "rate": float(bracket.rate),
-                        "taxable_amount": float(bracket_width),
-                        "tax_amount": float(tax_in_full_bracket),
-                    }
-                )
+                entry = {
+                    "bracket_min": float(previous_threshold),
+                    "bracket_max": float(bracket.threshold),
+                    "rate": float(bracket.rate),
+                    "taxable_amount": float(bracket_width),
+                    "tax_amount": float(tax_in_full_bracket),
+                }
+                if annotate_taxability:
+                    entry["taxable"] = True
+                breakdown.append(entry)
                 previous_threshold = bracket.threshold
 
         marginal_rate = active_bracket.rate
@@ -159,7 +164,11 @@ class TaxCalculator:
             "ss_taxable_wages": ss_taxable,
         }
 
-    def calculate_taxes(self, request: TaxCalculationRequest) -> TaxCalculationResponse:
+    def calculate_taxes(
+        self,
+        request: TaxCalculationRequest,
+        include_taxability_in_breakdown: bool = False,
+    ) -> TaxCalculationResponse:
         """
         Calculate complete tax liability based on request.
 
@@ -180,7 +189,11 @@ class TaxCalculator:
 
         # Step 2: Determine deduction
         if request.use_standard_deduction:
-            deduction = self._tax_brackets.standard_deductions.for_status(request.filing_status)
+            deduction = self._tax_brackets.standard_deductions.for_status_with_age(
+                request.filing_status,
+                age_65_plus=request.age_65_plus,
+                agi=agi,
+            )
             deduction_type = "Standard Deduction"
         else:
             if request.itemized_deduction_amount is None:
@@ -195,7 +208,9 @@ class TaxCalculator:
 
         # Step 4: Calculate federal income tax
         federal_tax, marginal_rate, breakdown = self.calculate_federal_tax(
-            taxable_income, request.filing_status
+            taxable_income,
+            request.filing_status,
+            annotate_taxability=include_taxability_in_breakdown,
         )
 
         # Step 5: Apply child tax credits

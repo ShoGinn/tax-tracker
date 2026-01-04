@@ -1,5 +1,6 @@
 """Tax data models for validation and type safety."""
 
+from collections.abc import Callable
 from decimal import Decimal
 from enum import Enum
 from typing import Any
@@ -75,6 +76,44 @@ class StandardDeductions(BaseModel):
         """Return the standard deduction for the given status."""
 
         return self.amounts[filing_status]
+
+    def for_status_with_age(
+        self,
+        filing_status: FilingStatus,
+        age_65_plus: bool = False,
+        agi: Decimal | None = None,
+        phase_out_fn: Callable[..., Decimal] | None = None,
+    ) -> Decimal:
+        """Return deduction including age 65+ extra with optional phase-out.
+
+        The phase_out_fn hook allows future law changes (e.g., 2026 OBBB senior
+        deduction phase-outs) without altering callers. When provided, it should
+        accept (base, extra, agi, filing_status) and return the adjusted extra.
+        """
+
+        base = self.for_status(filing_status)
+        if not age_65_plus:
+            return base
+
+        # Map filing status to the appropriate age-based key
+        age_key = (
+            "married"
+            if filing_status
+            in (
+                FilingStatus.MARRIED_FILING_JOINTLY,
+                FilingStatus.MARRIED_FILING_SEPARATELY,
+            )
+            else "single"
+        )
+        extra = self.additional_age_65_plus.get(age_key, Decimal(0))
+
+        adjusted_extra = extra
+        if phase_out_fn and agi is not None:
+            adjusted_extra = phase_out_fn(
+                base=base, extra=extra, agi=agi, filing_status=filing_status
+            )
+
+        return base + adjusted_extra
 
 
 class ChildTaxCredit(BaseModel):
@@ -205,6 +244,7 @@ class TaxCalculationRequest(BaseModel):
 
     gross_income: Decimal = Field(..., gt=0, description="Total gross income")
     filing_status: FilingStatus
+    age_65_plus: bool = Field(default=False, description="Whether taxpayer is 65 or older")
     num_children: int = Field(default=0, ge=0, description="Number of qualifying children")
     use_standard_deduction: bool = Field(
         default=True, description="Use standard deduction vs itemized"
