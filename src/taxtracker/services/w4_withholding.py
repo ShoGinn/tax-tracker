@@ -3,7 +3,7 @@
 from decimal import Decimal
 from typing import Any
 
-from taxtracker.models.tax_data import FilingStatus
+from taxtracker.models.tax_data import FilingStatus, TaxBracket
 from taxtracker.services.data_loader import load_tax_brackets_model
 
 
@@ -22,19 +22,36 @@ def load_tax_data(year: int) -> dict[str, Any]:
     Raises:
         DataLoadError: If tax data file cannot be loaded or is invalid
     """
+
     tax_brackets_model = load_tax_brackets_model(year)
 
     # Convert model back to dict format for compatibility with existing calculations
+    # Convert threshold-based brackets to min/max format for this function
+    def convert_brackets_to_legacy_format(brackets: list[TaxBracket]) -> list[dict[str, Any]]:
+        """Convert threshold-based brackets to legacy min/max format."""
+        legacy_brackets: list[dict[str, Any]] = []
+        previous_threshold = Decimal(0)
+
+        for bracket in brackets:
+            legacy_brackets.append(
+                {
+                    "min": float(previous_threshold),
+                    "max": float(bracket.threshold) if bracket.threshold is not None else None,
+                    "rate": float(bracket.rate),
+                }
+            )
+            if bracket.threshold is not None:
+                previous_threshold = bracket.threshold
+
+        return legacy_brackets
+
     return {
         "standard_deductions": {
             status.value: tax_brackets_model.standard_deductions.amounts[status]
             for status in FilingStatus
         },
         "tax_brackets": {
-            status.value: [
-                {"min": bracket.min, "max": bracket.max, "rate": bracket.rate}
-                for bracket in tax_brackets_model.tax_brackets[status]
-            ]
+            status.value: convert_brackets_to_legacy_format(tax_brackets_model.tax_brackets[status])
             for status in FilingStatus
         },
     }

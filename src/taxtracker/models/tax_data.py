@@ -4,7 +4,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class FilingStatus(str, Enum):
@@ -17,21 +17,26 @@ class FilingStatus(str, Enum):
 
 
 class TaxBracket(BaseModel):
-    """Individual tax bracket definition."""
+    """Individual tax bracket definition.
 
-    min: Decimal = Field(..., ge=0, description="Minimum income for this bracket")
-    max: Decimal | None = Field(
-        None, description="Maximum income for this bracket (None for highest bracket)"
+    Represents a single step in the progressive tax schedule.
+    The threshold is the upper limit of this bracket (the income level where the rate applies up to)
+    The rate applies to all income from the previous bracket's
+    threshold up to this bracket's threshold
+    For the highest bracket, threshold should be None.
+
+    The cumulative_tax field is pre-computed and represents the total tax owed on all income
+    up to the start of this bracket. This enables O(1) tax lookups instead of O(N) loops.
+    """
+
+    threshold: Decimal | None = Field(
+        None, description="Upper limit of this bracket (None for highest/infinite bracket)"
     )
     rate: Decimal = Field(..., ge=0, le=1, description="Tax rate as decimal (e.g., 0.22 for 22%)")
-
-    @field_validator("max")
-    @classmethod
-    def validate_max(cls, v: Decimal | None, info: ValidationInfo) -> Decimal | None:
-        """Ensure max is greater than min if provided."""
-        if v is not None and "min" in info.data and v <= info.data["min"]:
-            raise ValueError("max must be greater than min")
-        return v
+    cumulative_tax: Decimal = Field(
+        default=Decimal(0),
+        description="Pre-computed tax on all income up to this bracket's threshold",
+    )
 
 
 class StandardDeductions(BaseModel):
@@ -113,6 +118,33 @@ class TaxBrackets(BaseModel):
             missing_labels = ", ".join(status.value for status in missing_statuses)
             raise ValueError(f"Missing tax brackets for filing statuses: {missing_labels}")
         return value
+
+    @model_validator(mode="after")
+    def precompute_cumulative_tax(self) -> "TaxBrackets":
+        """Pre-compute cumulative tax for each bracket.
+
+        This enables O(1) tax lookups: Tax = cumulative_tax + (rate * excess_income)
+        Instead of iterating through all brackets every calculation.
+
+        The cumulative_tax of each bracket is the total tax owed on all income
+        up to the start of that bracket.
+        """
+        for status in FilingStatus:
+            brackets = self.tax_brackets[status]
+            total_prior_tax = Decimal(0)
+            prev_threshold = Decimal(0)
+
+            for bracket in brackets:
+                # Set this bracket's cumulative tax (tax on all prior brackets)
+                bracket.cumulative_tax = total_prior_tax
+
+                # If this bracket has a threshold, add its full tax to the running total
+                if bracket.threshold is not None:
+                    bracket_width = bracket.threshold - prev_threshold
+                    total_prior_tax += bracket_width * bracket.rate
+                    prev_threshold = bracket.threshold
+
+        return self
 
     def brackets_for_status(self, filing_status: FilingStatus) -> list[TaxBracket]:
         """Return tax brackets for a given filing status."""

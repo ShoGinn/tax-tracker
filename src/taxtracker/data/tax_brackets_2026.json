@@ -5,41 +5,41 @@
 	"notes": "Manually parsed",
 	"tax_brackets": {
 		"married_filing_jointly": [
-			{ "min": 0, "max": 24800, "rate": 0.1 },
-			{ "min": 24801, "max": 100800, "rate": 0.12 },
-			{ "min": 100801, "max": 211400, "rate": 0.22 },
-			{ "min": 211401, "max": 403550, "rate": 0.24 },
-			{ "min": 403551, "max": 512450, "rate": 0.32 },
-			{ "min": 512451, "max": 768700, "rate": 0.35 },
-			{ "min": 768701, "max": null, "rate": 0.37 }
+			{ "threshold": 24800, "rate": 0.1 },
+			{ "threshold": 100800, "rate": 0.12 },
+			{ "threshold": 211400, "rate": 0.22 },
+			{ "threshold": 403550, "rate": 0.24 },
+			{ "threshold": 512450, "rate": 0.32 },
+			{ "threshold": 768700, "rate": 0.35 },
+			{ "threshold": null, "rate": 0.37 }
 		],
 		"single": [
-			{ "min": 0, "max": 12400, "rate": 0.1 },
-			{ "min": 12401, "max": 50400, "rate": 0.12 },
-			{ "min": 50401, "max": 105700, "rate": 0.22 },
-			{ "min": 105701, "max": 201775, "rate": 0.24 },
-			{ "min": 201776, "max": 256225, "rate": 0.32 },
-			{ "min": 256226, "max": 640600, "rate": 0.35 },
-			{ "min": 640601, "max": null, "rate": 0.37 }
+			{ "threshold": 12400, "rate": 0.1 },
+			{ "threshold": 50400, "rate": 0.12 },
+			{ "threshold": 105700, "rate": 0.22 },
+			{ "threshold": 201775, "rate": 0.24 },
+			{ "threshold": 256225, "rate": 0.32 },
+			{ "threshold": 640600, "rate": 0.35 },
+			{ "threshold": null, "rate": 0.37 }
 		],
 		"married_filing_separately": [
-			{ "min": 0, "max": 12400, "rate": 0.1 },
-			{ "min": 12401, "max": 50400, "rate": 0.12 },
-			{ "min": 50401, "max": 105700, "rate": 0.22 },
-			{ "min": 105701, "max": 201775, "rate": 0.24 },
-			{ "min": 201776, "max": 256225, "rate": 0.32 },
-			{ "min": 256226, "max": 384350, "rate": 0.35 },
-			{ "min": 384351, "max": null, "rate": 0.37 }
+			{ "threshold": 12400, "rate": 0.1 },
+			{ "threshold": 50400, "rate": 0.12 },
+			{ "threshold": 105700, "rate": 0.22 },
+			{ "threshold": 201775, "rate": 0.24 },
+			{ "threshold": 256225, "rate": 0.32 },
+			{ "threshold": 384350, "rate": 0.35 },
+			{ "threshold": null, "rate": 0.37 }
 		],
 
 		"head_of_household": [
-			{ "min": 0, "max": 17700, "rate": 0.1 },
-			{ "min": 17701, "max": 67450, "rate": 0.12 },
-			{ "min": 67451, "max": 105700, "rate": 0.22 },
-			{ "min": 105701, "max": 201750, "rate": 0.24 },
-			{ "min": 201751, "max": 256200, "rate": 0.32 },
-			{ "min": 256201, "max": 640600, "rate": 0.35 },
-			{ "min": 640601, "max": null, "rate": 0.37 }
+			{ "threshold": 17700, "rate": 0.1 },
+			{ "threshold": 67450, "rate": 0.12 },
+			{ "threshold": 105700, "rate": 0.22 },
+			{ "threshold": 201750, "rate": 0.24 },
+			{ "threshold": 256200, "rate": 0.32 },
+			{ "threshold": 640600, "rate": 0.35 },
+			{ "threshold": null, "rate": 0.37 }
 		]
 	},
 	"standard_deductions": {
