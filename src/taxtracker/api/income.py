@@ -187,7 +187,7 @@ async def import_pension_csv_endpoint(
 
 
 # ============================================================================
-# Non-taxable benefit Endpoints
+# Non-taxable Endpoints
 # ============================================================================
 
 
@@ -195,7 +195,7 @@ async def import_pension_csv_endpoint(
 async def create_va_entry(
     va: NonTaxableIncomeCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> NonTaxableIncomeResponse:
-    """Create a new non-taxable benefit entry."""
+    """Create a new Non-taxable entry."""
     try:
         return await income_service.create_non_taxable_payment(db, va)  # type: ignore[return-value]
     except ValidationError as e:
@@ -208,7 +208,7 @@ async def create_va_entry(
 async def list_va_disability(
     year: int | None = None, *, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> list[NonTaxableIncomeResponse]:
-    """List all non-taxable benefit entries, optionally filtered by year."""
+    """List all Non-taxable entries, optionally filtered by year."""
     try:
         return await income_service.get_non_taxable_payments(db, year)  # type: ignore[return-value]
     except DatabaseError as e:
@@ -219,14 +219,14 @@ async def list_va_disability(
 async def delete_va_entry(
     non_taxable_id: int, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> dict[str, Any]:
-    """Delete a non-taxable benefit entry."""
+    """Delete a Non-taxable entry."""
     try:
         deleted = await income_service.delete_non_taxable_payment(db, non_taxable_id)
         if not deleted:
             raise HTTPException(
                 status_code=404, detail=f"Non-taxable entry {non_taxable_id} not found"
             )
-        return {"message": "non-taxable benefit entry deleted successfully"}
+        return {"message": "Non-taxable entry deleted successfully"}
     except HTTPException:
         raise
     except ValidationError as e:
