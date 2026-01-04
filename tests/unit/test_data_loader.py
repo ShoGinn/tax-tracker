@@ -1,6 +1,5 @@
 """Unit tests for data_loader service."""
 
-
 import pytest
 
 from taxtracker.core.exceptions import DataLoadError
@@ -46,14 +45,13 @@ class TestLoadTaxBrackets:
 
         # First bracket
         first = brackets[0]
-        assert "min" in first
-        assert "max" in first
+        assert "threshold" in first
         assert "rate" in first
         assert first["rate"] == 0.10
 
-        # Last bracket has no max
+        # Last bracket has no threshold (None)
         last = brackets[-1]
-        assert last["max"] is None
+        assert last["threshold"] is None
         assert last["rate"] == 0.37
 
 

@@ -44,44 +44,75 @@ class TaxCalculator:
         self, taxable_income: Decimal, filing_status: FilingStatus
     ) -> tuple[Decimal, Decimal, list[dict[str, Any]]]:
         """
-        Calculate federal income tax based on tax brackets.
+        Calculate federal income tax using pre-computed cumulative tax (O(1) lookup).
+
+        Uses the cumulative_tax optimization:
+        - Find the bracket the income falls into
+        - Tax = cumulative_tax + (rate * excess_income_over_bracket_floor)
 
         Returns:
             tuple: (total_tax, marginal_rate, breakdown_by_bracket)
         """
         brackets = self._tax_brackets.brackets_for_status(filing_status)
 
-        total_tax = Decimal(0)
-        marginal_rate = Decimal(0)
-        breakdown = []
+        if taxable_income <= 0:
+            return Decimal(0), Decimal(0), []
+
+        # Find the active bracket (the one this income falls into)
+        active_bracket = None
+        bracket_floor = Decimal(0)
 
         for bracket in brackets:
-            bracket_min = bracket.min
-            bracket_max = bracket.max if bracket.max is not None else Decimal("inf")
+            # If this bracket's threshold is None, it's the "infinite" top bracket
+            if bracket.threshold is None or taxable_income <= bracket.threshold:
+                active_bracket = bracket
+                break
+            bracket_floor = bracket.threshold
 
-            if taxable_income <= bracket_min:
-                # Haven't reached this bracket yet
-                continue
+        if active_bracket is None:
+            return Decimal(0), Decimal(0), []
 
-            # Calculate taxable amount in this bracket
-            taxable_in_bracket = min(taxable_income, bracket_max) - bracket_min
-            if taxable_in_bracket <= 0:
-                continue
+        # Calculate tax using cumulative helper formula
+        excess_income = taxable_income - bracket_floor
+        tax_in_bracket = excess_income * active_bracket.rate
+        total_tax = active_bracket.cumulative_tax + tax_in_bracket
 
-            tax_in_bracket = taxable_in_bracket * bracket.rate
-            total_tax += tax_in_bracket
-            marginal_rate = bracket.rate
+        # Build breakdown for full audit trail (all brackets up to active bracket)
+        breakdown = []
+        previous_threshold = Decimal(0)
 
-            breakdown.append(
-                {
-                    "bracket_min": float(bracket_min),
-                    "bracket_max": float(bracket_max) if bracket.max is not None else None,
-                    "rate": float(bracket.rate),
-                    "taxable_amount": float(taxable_in_bracket),
-                    "tax_amount": float(tax_in_bracket),
-                }
-            )
+        for bracket in brackets:
+            if bracket == active_bracket:
+                # Last entry: the active bracket with partial tax
+                bracket_max = float(bracket.threshold) if bracket.threshold is not None else None
+                breakdown.append(
+                    {
+                        "bracket_min": float(previous_threshold),
+                        "bracket_max": bracket_max,
+                        "rate": float(bracket.rate),
+                        "taxable_amount": float(excess_income),
+                        "tax_amount": float(tax_in_bracket),
+                    }
+                )
+                break
 
+            # Prior brackets: fully taxed
+            if bracket.threshold is not None:
+                bracket_width = bracket.threshold - previous_threshold
+                tax_in_full_bracket = bracket_width * bracket.rate
+
+                breakdown.append(
+                    {
+                        "bracket_min": float(previous_threshold),
+                        "bracket_max": float(bracket.threshold),
+                        "rate": float(bracket.rate),
+                        "taxable_amount": float(bracket_width),
+                        "tax_amount": float(tax_in_full_bracket),
+                    }
+                )
+                previous_threshold = bracket.threshold
+
+        marginal_rate = active_bracket.rate
         return total_tax, marginal_rate, breakdown
 
     def calculate_fica(

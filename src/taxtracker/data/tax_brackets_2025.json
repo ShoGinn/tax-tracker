@@ -5,40 +5,40 @@
 	"notes": "OBBB Act made TCJA tax brackets permanent and increased child tax credit to $2,200 for 2025",
 	"tax_brackets": {
 		"married_filing_jointly": [
-			{ "min": 0, "max": 23850, "rate": 0.1 },
-			{ "min": 23851, "max": 97050, "rate": 0.12 },
-			{ "min": 97051, "max": 206700, "rate": 0.22 },
-			{ "min": 206701, "max": 394600, "rate": 0.24 },
-			{ "min": 394601, "max": 501050, "rate": 0.32 },
-			{ "min": 501051, "max": 751600, "rate": 0.35 },
-			{ "min": 751601, "max": null, "rate": 0.37 }
+			{ "threshold": 23850, "rate": 0.1 },
+			{ "threshold": 97050, "rate": 0.12 },
+			{ "threshold": 206700, "rate": 0.22 },
+			{ "threshold": 394600, "rate": 0.24 },
+			{ "threshold": 501050, "rate": 0.32 },
+			{ "threshold": 751600, "rate": 0.35 },
+			{ "threshold": null, "rate": 0.37 }
 		],
 		"single": [
-			{ "min": 0, "max": 11925, "rate": 0.1 },
-			{ "min": 11926, "max": 48475, "rate": 0.12 },
-			{ "min": 48476, "max": 103350, "rate": 0.22 },
-			{ "min": 103351, "max": 197300, "rate": 0.24 },
-			{ "min": 197301, "max": 250525, "rate": 0.32 },
-			{ "min": 250526, "max": 626350, "rate": 0.35 },
-			{ "min": 626351, "max": null, "rate": 0.37 }
+			{ "threshold": 11925, "rate": 0.1 },
+			{ "threshold": 48475, "rate": 0.12 },
+			{ "threshold": 103350, "rate": 0.22 },
+			{ "threshold": 197300, "rate": 0.24 },
+			{ "threshold": 250525, "rate": 0.32 },
+			{ "threshold": 626350, "rate": 0.35 },
+			{ "threshold": null, "rate": 0.37 }
 		],
 		"married_filing_separately": [
-			{ "min": 0, "max": 11925, "rate": 0.1 },
-			{ "min": 11926, "max": 48475, "rate": 0.12 },
-			{ "min": 48476, "max": 103350, "rate": 0.22 },
-			{ "min": 103351, "max": 197300, "rate": 0.24 },
-			{ "min": 197301, "max": 250525, "rate": 0.32 },
-			{ "min": 250526, "max": 375800, "rate": 0.35 },
-			{ "min": 375801, "max": null, "rate": 0.37 }
+			{ "threshold": 11925, "rate": 0.1 },
+			{ "threshold": 48475, "rate": 0.12 },
+			{ "threshold": 103350, "rate": 0.22 },
+			{ "threshold": 197300, "rate": 0.24 },
+			{ "threshold": 250525, "rate": 0.32 },
+			{ "threshold": 375800, "rate": 0.35 },
+			{ "threshold": null, "rate": 0.37 }
 		],
 		"head_of_household": [
-			{ "min": 0, "max": 17000, "rate": 0.1 },
-			{ "min": 17001, "max": 64850, "rate": 0.12 },
-			{ "min": 64851, "max": 103350, "rate": 0.22 },
-			{ "min": 103351, "max": 197300, "rate": 0.24 },
-			{ "min": 197301, "max": 250500, "rate": 0.32 },
-			{ "min": 250501, "max": 626350, "rate": 0.35 },
-			{ "min": 626351, "max": null, "rate": 0.37 }
+			{ "threshold": 17000, "rate": 0.1 },
+			{ "threshold": 64850, "rate": 0.12 },
+			{ "threshold": 103350, "rate": 0.22 },
+			{ "threshold": 197300, "rate": 0.24 },
+			{ "threshold": 250500, "rate": 0.32 },
+			{ "threshold": 626350, "rate": 0.35 },
+			{ "threshold": null, "rate": 0.37 }
 		]
 	},
 	"standard_deductions": {
