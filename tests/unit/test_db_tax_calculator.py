@@ -32,7 +32,7 @@ class TestDatabaseTaxCalculation:
             pension_gross=Decimal("0"),
             pension_pretax_deductions=Decimal("0"),
             pension_taxable=Decimal("0"),
-            va_disability=Decimal("0"),
+            non_taxable_income=Decimal("0"),
             agi=Decimal("70000"),
             deduction_amount=Decimal("15750"),
             deduction_type="Standard",
@@ -84,7 +84,7 @@ class TestDatabaseTaxCalculation:
             pension_gross=Decimal("0"),
             pension_pretax_deductions=Decimal("0"),
             pension_taxable=Decimal("0"),
-            va_disability=Decimal("0"),
+            non_taxable_income=Decimal("0"),
             agi=Decimal("75000"),
             deduction_amount=Decimal("15750"),
             deduction_type="Standard",
@@ -124,7 +124,7 @@ class TestDatabaseTaxCalculation:
             pension_gross=Decimal("0"),
             pension_pretax_deductions=Decimal("0"),
             pension_taxable=Decimal("0"),
-            va_disability=Decimal("0"),
+            non_taxable_income=Decimal("0"),
             agi=Decimal("75000"),
             deduction_amount=Decimal("15750"),
             deduction_type="Standard",
@@ -163,7 +163,7 @@ class TestDatabaseTaxCalculation:
             pension_gross=Decimal("0"),
             pension_pretax_deductions=Decimal("0"),
             pension_taxable=Decimal("0"),
-            va_disability=Decimal("0"),
+            non_taxable_income=Decimal("0"),
             agi=Decimal("75000"),
             deduction_amount=Decimal("15750"),
             deduction_type="Standard",
@@ -265,11 +265,11 @@ class TestCalculateTaxesFromDatabase:
         assert float(result.pension_pretax_deductions) == 300.0
         assert float(result.pension_taxable) == 2700.0
 
-    async def test_calculate_with_va_disability(
+    async def test_calculate_with_non_taxable_income(
         self, async_db_session: AsyncSession, test_calculator: TaxCalculator
     ):
-        """Test calculation with VA disability (non-taxable)."""
-        # VA disability alone is not taxable income, so we need some W2 income too
+        """Test calculation with non-taxable income."""
+        # Non-taxable income alone is not taxable income, so we need some W2 income too
         employer = Employer(name="Test Corp", ein="12-3456789", start_date=date(2030, 1, 1))
         async_db_session.add(employer)
         await async_db_session.commit()
@@ -294,8 +294,8 @@ class TestCalculateTaxesFromDatabase:
             num_children=0,
         )
 
-        # VA disability should be recorded but not taxable
-        assert float(result.va_disability) == 2000.0
+        # Non-taxable income should be recorded but not taxable
+        assert float(result.non_taxable_income) == 2000.0
 
     async def test_calculate_with_children(
         self, async_db_session: AsyncSession, test_calculator: TaxCalculator

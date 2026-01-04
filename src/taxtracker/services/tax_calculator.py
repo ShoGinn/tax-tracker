@@ -248,9 +248,7 @@ class TaxCalculator:
         # Step 9: Total household income (including non-taxable VA)
         total_household = request.gross_income + request.non_taxable_income
         if request.non_taxable_income > 0:
-            notes.append(
-                f"VA disability income (${request.non_taxable_income:,.2f}) is non-taxable"
-            )
+            notes.append(f"Non-taxable income (${request.non_taxable_income:,.2f}) is non-taxable")
 
         return TaxCalculationResponse(
             gross_income=request.gross_income,

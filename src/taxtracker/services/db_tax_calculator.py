@@ -26,7 +26,7 @@ class DatabaseTaxCalculation:
         pension_gross: Decimal,
         pension_pretax_deductions: Decimal,
         pension_taxable: Decimal,
-        va_disability: Decimal,
+        non_taxable_income: Decimal,
         # Tax calculations
         agi: Decimal,
         deduction_amount: Decimal,
@@ -60,7 +60,7 @@ class DatabaseTaxCalculation:
         self.pension_gross = pension_gross
         self.pension_pretax_deductions = pension_pretax_deductions
         self.pension_taxable = pension_taxable
-        self.va_disability = va_disability
+        self.non_taxable_income = non_taxable_income
 
         self.agi = agi
         self.deduction_amount = deduction_amount
@@ -101,13 +101,13 @@ class DatabaseTaxCalculation:
                     "pretax_deductions": float(self.pension_pretax_deductions),
                     "taxable": float(self.pension_taxable),
                 },
-                "va_disability": {
-                    "amount": float(self.va_disability),
+                "non_taxable_income": {
+                    "amount": float(self.non_taxable_income),
                     "taxable": 0.0,
-                    "note": "VA disability is not taxable",
+                    "note": "Non-taxable income is not taxable",
                 },
                 "total_household_income": float(
-                    self.w2_gross + self.pension_gross + self.va_disability
+                    self.w2_gross + self.pension_gross + self.non_taxable_income
                 ),
                 "total_taxable_income": float(self.agi),
             },
@@ -242,7 +242,7 @@ async def calculate_taxes_from_database(
         pension_gross=ytd.total_pension_gross,
         pension_pretax_deductions=ytd.total_pension_pretax_deductions,
         pension_taxable=ytd.total_pension_taxable,
-        va_disability=ytd.total_va_disability,
+        non_taxable_income=ytd.total_non_taxable_income,
         # Tax calculation
         agi=agi,
         deduction_amount=Decimal(str(tax_result.deduction_amount)),
