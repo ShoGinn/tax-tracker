@@ -17,6 +17,7 @@ from taxtracker.models.tax_data import (
     TaxBrackets,
     TaxCalculationRequest,
     TaxCalculationResponse,
+    TaxReconciliationResponse,
 )
 from taxtracker.services.data_loader import (
     get_available_years,
@@ -61,7 +62,7 @@ async def calculate_taxes(
         raise HTTPException(status_code=500, detail=f"Tax calculation failed: {e!s}") from e
 
 
-@router.post("/calculate-from-db/{year}", response_model=dict)
+@router.post("/calculate-from-db/{year}")
 async def calculate_from_database(
     year: int,
     filing_status: FilingStatus,
@@ -70,7 +71,7 @@ async def calculate_from_database(
     itemized_deduction_amount: float = 0,
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> dict[str, Any]:
+) -> TaxReconciliationResponse:
     """
     Calculate taxes using income data from database.
 
@@ -91,7 +92,7 @@ async def calculate_from_database(
     """
     try:
         # Call the service function with injected calculator
-        result = await calculate_taxes_from_database(
+        return await calculate_taxes_from_database(
             db=db,
             year=year,
             tax_calculator=TaxCalculator(tax_year=year),
@@ -101,8 +102,6 @@ async def calculate_from_database(
             itemized_deductions=itemized_deduction_amount,
         )
 
-        # Convert to dict for API response
-        return result.to_dict()
     except TaxCalculationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
