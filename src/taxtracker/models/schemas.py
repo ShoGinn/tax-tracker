@@ -48,7 +48,9 @@ class EmployerBase(BaseModel):
     """Base employer fields."""
 
     name: str = Field(..., min_length=1, max_length=200)
-    ein: str | None = Field(None, max_length=20, description="Employer Identification Number")
+    ein: str | None = Field(
+        default=None, max_length=20, description="Employer Identification Number"
+    )
     start_date: FlexibleDate
     end_date: FlexibleDate | None = None
     notes: str | None = None
@@ -61,8 +63,8 @@ class EmployerCreate(EmployerBase):
 class EmployerUpdate(BaseModel):
     """Schema for updating an employer (all fields optional)."""
 
-    name: str | None = Field(None, min_length=1, max_length=200)
-    ein: str | None = Field(None, max_length=20)
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    ein: str | None = Field(default=None, max_length=20)
     start_date: FlexibleDate | None = None
     end_date: FlexibleDate | None = None
     notes: str | None = None
@@ -130,30 +132,30 @@ class PaycheckUpdate(BaseModel):
     """Schema for updating a paycheck (all fields optional)."""
 
     pay_date: FlexibleDate | None = None
-    gross_wages: CleanDecimal | None = Field(None, ge=0)
-    bonus: CleanDecimal | None = Field(None, ge=0)
-    taxable_benefit: CleanDecimal | None = Field(None, ge=0)
+    gross_wages: CleanDecimal | None = Field(default=None, ge=0)
+    bonus: CleanDecimal | None = Field(default=None, ge=0)
+    taxable_benefit: CleanDecimal | None = Field(default=None, ge=0)
 
-    deduction_401k: CleanDecimal | None = Field(None, ge=0)
-    deduction_403b: CleanDecimal | None = Field(None, ge=0)
-    deduction_health_insurance: CleanDecimal | None = Field(None, ge=0)
-    deduction_dental_insurance: CleanDecimal | None = Field(None, ge=0)
-    deduction_vision_insurance: CleanDecimal | None = Field(None, ge=0)
-    deduction_hsa: CleanDecimal | None = Field(None, ge=0)
-    deduction_fsa: CleanDecimal | None = Field(None, ge=0)
-    deduction_dependent_care_fsa: CleanDecimal | None = Field(None, ge=0)
-    deduction_commuter: CleanDecimal | None = Field(None, ge=0)
-    deduction_other_pretax: CleanDecimal | None = Field(None, ge=0)
+    deduction_401k: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_403b: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_health_insurance: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_dental_insurance: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_vision_insurance: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_hsa: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_fsa: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_dependent_care_fsa: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_commuter: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_other_pretax: CleanDecimal | None = Field(default=None, ge=0)
 
-    deduction_roth_401k: CleanDecimal | None = Field(None, ge=0)
-    deduction_roth_403b: CleanDecimal | None = Field(None, ge=0)
-    deduction_other_posttax: CleanDecimal | None = Field(None, ge=0)
+    deduction_roth_401k: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_roth_403b: CleanDecimal | None = Field(default=None, ge=0)
+    deduction_other_posttax: CleanDecimal | None = Field(default=None, ge=0)
 
-    federal_withholding: CleanDecimal | None = Field(None, ge=0)
-    social_security: CleanDecimal | None = Field(None, ge=0)
-    medicare: CleanDecimal | None = Field(None, ge=0)
-    state_withholding: CleanDecimal | None = Field(None, ge=0)
-    local_withholding: CleanDecimal | None = Field(None, ge=0)
+    federal_withholding: CleanDecimal | None = Field(default=None, ge=0)
+    social_security: CleanDecimal | None = Field(default=None, ge=0)
+    medicare: CleanDecimal | None = Field(default=None, ge=0)
+    state_withholding: CleanDecimal | None = Field(default=None, ge=0)
+    local_withholding: CleanDecimal | None = Field(default=None, ge=0)
 
     notes: str | None = None
     pay_period_start: FlexibleDate | None = None
@@ -251,20 +253,20 @@ class NonTaxableIncomeBase(BaseModel):
 
 
 class NonTaxableIncomeCreate(NonTaxableIncomeBase):
-    """Schema for creating non-taxable benefit payment."""
+    """Schema for creating non-taxable income payment."""
 
 
 class NonTaxableIncomeUpdate(BaseModel):
     """Schema for updating non-taxable income."""
 
     pay_date: FlexibleDate | None = None
-    amount: CleanDecimal | None = Field(None, ge=0)
+    amount: CleanDecimal | None = Field(default=None, ge=0)
     source_type: str | None = None
     notes: str | None = None
 
 
 class NonTaxableIncomeResponse(NonTaxableIncomeBase):
-    """Schema for non-taxable benefit payment response."""
+    """Schema for non-taxable income payment response."""
 
     id: int
 
@@ -290,8 +292,8 @@ class YTDSummary(BaseModel):
     total_pension_taxable: CleanDecimal
     total_pension_federal_withheld: CleanDecimal
 
-    # Non-taxable benefit (non-taxable)
-    total_va_disability: CleanDecimal
+    # Non-Taxable Income
+    total_non_taxable_income: CleanDecimal
 
     # Combined
     total_taxable_income: CleanDecimal

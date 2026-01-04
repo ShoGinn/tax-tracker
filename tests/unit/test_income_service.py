@@ -513,6 +513,6 @@ class TestYTDSummary:
         assert summary.total_pension_gross == Decimal("4000")
         assert summary.total_pension_pretax_deductions == Decimal("400")
         assert summary.total_pension_taxable == Decimal("3600")
-        assert summary.total_va_disability == Decimal("3000")
+        assert summary.total_non_taxable_income == Decimal("3000")
         assert summary.total_federal_withheld == Decimal("1250")  # 750 + 500
         assert summary.total_w2_fica_withheld == Decimal("382.50")  # 310 + 72.50

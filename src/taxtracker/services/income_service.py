@@ -211,11 +211,11 @@ async def delete_retirement_1099r(db: AsyncSession, payment_id: int) -> bool:
     return True
 
 
-# Non-taxable benefit Payment CRUD
+# Non-Taxable Payment CRUD
 async def create_non_taxable_payment(
     db: AsyncSession, payment: NonTaxableIncomeCreate
 ) -> NonTaxableIncome:
-    """Create a new non-taxable benefit payment."""
+    """Create a new Non-Taxable payment."""
     db_payment = NonTaxableIncome(**payment.model_dump())
     db.add(db_payment)
     await db.commit()
@@ -224,7 +224,7 @@ async def create_non_taxable_payment(
 
 
 async def get_non_taxable_payment(db: AsyncSession, payment_id: int) -> NonTaxableIncome | None:
-    """Get VA payment by ID."""
+    """Get Non-Taxable payment by ID."""
     result = await db.execute(select(NonTaxableIncome).filter(NonTaxableIncome.id == payment_id))
     return result.scalar_one_or_none()
 
@@ -232,7 +232,7 @@ async def get_non_taxable_payment(db: AsyncSession, payment_id: int) -> NonTaxab
 async def get_non_taxable_payments(
     db: AsyncSession, year: int | None = None, skip: int = 0, limit: int = 100
 ) -> list[NonTaxableIncome]:
-    """Get VA payments with optional year filtering."""
+    """Get Non-Taxable payments with optional year filtering."""
     query = select(NonTaxableIncome)
 
     if year:
@@ -246,7 +246,7 @@ async def get_non_taxable_payments(
 async def update_non_taxable_payment(
     db: AsyncSession, payment_id: int, payment_update: NonTaxableIncomeUpdate
 ) -> NonTaxableIncome | None:
-    """Update a VA payment."""
+    """Update a non-taxable payment."""
     db_payment = await get_non_taxable_payment(db, payment_id)
     if not db_payment:
         return None
@@ -261,7 +261,7 @@ async def update_non_taxable_payment(
 
 
 async def delete_non_taxable_payment(db: AsyncSession, payment_id: int) -> bool:
-    """Delete a VA payment."""
+    """Delete a non-taxable payment."""
     db_payment = await get_non_taxable_payment(db, payment_id)
     if not db_payment:
         return False
@@ -296,8 +296,8 @@ async def get_ytd_summary(db: AsyncSession, year: int) -> YTDSummary:
     pension_taxable = sum((p.taxable_amount for p in retirement_1099rs), Decimal(0))
     pension_federal = sum((p.federal_withholding for p in retirement_1099rs), Decimal(0))
 
-    # Calculate VA totals (non-taxable)
-    va_total = sum((p.amount for p in non_taxable_payments), Decimal(0))
+    # Calculate non-taxable income totals
+    non_taxable_income_total = sum((p.amount for p in non_taxable_payments), Decimal(0))
 
     return YTDSummary(
         year=year,
@@ -310,9 +310,9 @@ async def get_ytd_summary(db: AsyncSession, year: int) -> YTDSummary:
         total_pension_pretax_deductions=pension_pretax,
         total_pension_taxable=pension_taxable,
         total_pension_federal_withheld=pension_federal,
-        total_va_disability=va_total,
+        total_non_taxable_income=non_taxable_income_total,
         total_taxable_income=w2_taxable + pension_taxable,
-        total_household_income=w2_gross + pension_gross + va_total,
+        total_household_income=w2_gross + pension_gross + non_taxable_income_total,
         total_federal_withheld=w2_federal + pension_federal,
         paycheck_count=len(paychecks),
         retirement_1099r_count=len(retirement_1099rs),
