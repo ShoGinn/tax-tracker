@@ -279,3 +279,33 @@ class TaxCalculationResponse(BaseModel):
     fica_taxes: dict[str, Decimal]
     total_household_income: Decimal  # Including non-taxable benefit
     notes: list[str]
+
+
+class TaxReconciliationResponse(TaxCalculationResponse):
+    """Tax calculation plus withholding and YTD income context."""
+
+    # Context
+    tax_year: int
+    filing_status: FilingStatus
+    num_children: int
+
+    # Income details
+    w2_gross: Decimal
+    w2_pretax_deductions: Decimal
+    w2_taxable: Decimal
+    pension_gross: Decimal
+    pension_pretax_deductions: Decimal
+    pension_taxable: Decimal
+    non_taxable_income: Decimal
+    total_taxable_income: Decimal
+
+    # Withholding and reconciliation
+    total_federal_withheld: Decimal
+    total_fica_withheld: Decimal
+    total_withheld: Decimal
+
+    # Combined tax picture
+    combined_liability: Decimal  # federal (after credits) + fica
+    refund_or_owed: Decimal
+    overpayment_percentage: Decimal
+    result_status: str  # REFUND | OWED | EVEN

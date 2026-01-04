@@ -8,24 +8,39 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
-from taxtracker.models.tax_data import FilingStatus
-from taxtracker.services.db_tax_calculator import (
-    DatabaseTaxCalculation,
-    calculate_taxes_from_database,
+from taxtracker.models.tax_data import (
+    FilingStatus,
+    TaxCalculationRequest,
+    TaxReconciliationResponse,
 )
+from taxtracker.services.db_tax_calculator import calculate_taxes_from_database
 from taxtracker.services.tax_calculator import TaxCalculator
 
 
 @pytest.mark.unit
-class TestDatabaseTaxCalculation:
-    """Tests for DatabaseTaxCalculation class."""
+class TestTaxReconciliationResponse:
+    """Unit-level checks for the unified reconciliation model."""
 
-    def test_to_dict(self):
-        """Test conversion to dictionary."""
-        calc = DatabaseTaxCalculation(
-            year=2030,
-            filing_status="single",
+    def test_refund_status_and_combined_liability(self):
+        resp = TaxReconciliationResponse(
+            tax_year=2030,
+            filing_status=FilingStatus.SINGLE,
             num_children=0,
+            gross_income=Decimal("70000"),
+            retirement_pretax_deductions=Decimal("0"),
+            adjusted_gross_income=Decimal("70000"),
+            deduction_amount=Decimal("15750"),
+            deduction_type="Standard Deduction",
+            taxable_income=Decimal("54250"),
+            federal_tax_owed=Decimal("7000"),
+            child_tax_credits=Decimal("0"),
+            total_tax_liability=Decimal("7000"),
+            effective_tax_rate=Decimal("10"),
+            marginal_tax_rate=Decimal("22"),
+            breakdown_by_bracket=[],
+            fica_taxes={"total_fica": Decimal("5738")},
+            total_household_income=Decimal("70000"),
+            notes=[],
             w2_gross=Decimal("75000"),
             w2_pretax_deductions=Decimal("5000"),
             w2_taxable=Decimal("70000"),
@@ -33,161 +48,19 @@ class TestDatabaseTaxCalculation:
             pension_pretax_deductions=Decimal("0"),
             pension_taxable=Decimal("0"),
             non_taxable_income=Decimal("0"),
-            agi=Decimal("70000"),
-            deduction_amount=Decimal("15750"),
-            deduction_type="Standard",
-            taxable_income=Decimal("54250"),
-            federal_tax_before_credits=Decimal("7000"),
-            child_tax_credits=Decimal("0"),
-            federal_tax_liability=Decimal("7000"),
-            fica_liability=Decimal("5738"),
-            total_tax_liability=Decimal("12738"),
-            federal_withheld=Decimal("7500"),
-            fica_withheld=Decimal("5738"),
+            total_taxable_income=Decimal("70000"),
+            total_federal_withheld=Decimal("7500"),
+            total_fica_withheld=Decimal("5738"),
             total_withheld=Decimal("13238"),
+            combined_liability=Decimal("12738"),
             refund_or_owed=Decimal("500"),
             overpayment_percentage=Decimal("3.9"),
-            federal_tax_breakdown=[],
-            fica_breakdown={},
-            marginal_rate=Decimal("22"),
-            effective_rate=Decimal("12.9"),
+            result_status="REFUND",
         )
 
-        result = calc.to_dict()
-
-        # Verify structure (actual keys from the implementation)
-        assert "year" in result
-        assert "filing_status" in result
-        assert "income_summary" in result  # NOT "income"
-        assert "tax_calculation" in result  # NOT "deductions" and "taxes"
-        assert "withholdings" in result
-        assert "result" in result
-        assert "details" in result
-
-        # Verify income_summary section
-        assert "w2" in result["income_summary"]
-        assert float(result["income_summary"]["w2"]["gross"]) == 75000.0
-        assert float(result["income_summary"]["w2"]["taxable"]) == 70000.0
-
-        # Verify result message exists
-        assert "message" in result["result"]
-
-    def test_result_message_overpayment(self):
-        """Test result message for overpayment."""
-        calc = DatabaseTaxCalculation(
-            year=2030,
-            filing_status="single",
-            num_children=0,
-            w2_gross=Decimal("75000"),
-            w2_pretax_deductions=Decimal("0"),
-            w2_taxable=Decimal("75000"),
-            pension_gross=Decimal("0"),
-            pension_pretax_deductions=Decimal("0"),
-            pension_taxable=Decimal("0"),
-            non_taxable_income=Decimal("0"),
-            agi=Decimal("75000"),
-            deduction_amount=Decimal("15750"),
-            deduction_type="Standard",
-            taxable_income=Decimal("59250"),
-            federal_tax_before_credits=Decimal("8000"),
-            child_tax_credits=Decimal("0"),
-            federal_tax_liability=Decimal("8000"),
-            fica_liability=Decimal("5738"),
-            total_tax_liability=Decimal("13738"),
-            federal_withheld=Decimal("9000"),
-            fica_withheld=Decimal("5738"),
-            total_withheld=Decimal("14738"),
-            refund_or_owed=Decimal("1001"),  # Overpaid by $1000
-            overpayment_percentage=Decimal("7.3"),
-            federal_tax_breakdown=[],
-            fica_breakdown={},
-            marginal_rate=Decimal("22"),
-            effective_rate=Decimal("12"),
-        )
-
-        result = calc.to_dict()
-        message = result["result"]["message"]
-
-        assert "overpaid" in message.lower()
-        assert "1,001" in message
-        assert "7.3%" in message
-
-    def test_result_message_underpayment(self):
-        """Test result message for underpayment."""
-        calc = DatabaseTaxCalculation(
-            year=2030,
-            filing_status="single",
-            num_children=0,
-            w2_gross=Decimal("75000"),
-            w2_pretax_deductions=Decimal("0"),
-            w2_taxable=Decimal("75000"),
-            pension_gross=Decimal("0"),
-            pension_pretax_deductions=Decimal("0"),
-            pension_taxable=Decimal("0"),
-            non_taxable_income=Decimal("0"),
-            agi=Decimal("75000"),
-            deduction_amount=Decimal("15750"),
-            deduction_type="Standard",
-            taxable_income=Decimal("59250"),
-            federal_tax_before_credits=Decimal("8000"),
-            child_tax_credits=Decimal("0"),
-            federal_tax_liability=Decimal("8000"),
-            fica_liability=Decimal("5738"),
-            total_tax_liability=Decimal("13738"),
-            federal_withheld=Decimal("7000"),
-            fica_withheld=Decimal("5738"),
-            total_withheld=Decimal("12738"),
-            refund_or_owed=Decimal("-1001"),  # Owe $1000
-            overpayment_percentage=Decimal("0"),
-            federal_tax_breakdown=[],
-            fica_breakdown={},
-            marginal_rate=Decimal("22"),
-            effective_rate=Decimal("12"),
-        )
-
-        result = calc.to_dict()
-        message = result["result"]["message"]
-
-        assert "owe" in message.lower()
-        assert "1,001" in message
-
-    def test_result_message_perfect(self):
-        """Test result message for perfect withholding."""
-        calc = DatabaseTaxCalculation(
-            year=2030,
-            filing_status="single",
-            num_children=0,
-            w2_gross=Decimal("75000"),
-            w2_pretax_deductions=Decimal("0"),
-            w2_taxable=Decimal("75000"),
-            pension_gross=Decimal("0"),
-            pension_pretax_deductions=Decimal("0"),
-            pension_taxable=Decimal("0"),
-            non_taxable_income=Decimal("0"),
-            agi=Decimal("75000"),
-            deduction_amount=Decimal("15750"),
-            deduction_type="Standard",
-            taxable_income=Decimal("59250"),
-            federal_tax_before_credits=Decimal("8000"),
-            child_tax_credits=Decimal("0"),
-            federal_tax_liability=Decimal("8000"),
-            fica_liability=Decimal("5738"),
-            total_tax_liability=Decimal("13738"),
-            federal_withheld=Decimal("8050"),
-            fica_withheld=Decimal("5738"),
-            total_withheld=Decimal("13788"),
-            refund_or_owed=Decimal("50"),  # Within +/-$100
-            overpayment_percentage=Decimal("0.4"),
-            federal_tax_breakdown=[],
-            fica_breakdown={},
-            marginal_rate=Decimal("22"),
-            effective_rate=Decimal("12"),
-        )
-
-        result = calc.to_dict()
-        message = result["result"]["message"]
-
-        assert "perfect" in message.lower() or "spot-on" in message.lower()
+        assert resp.result_status == "REFUND"
+        assert resp.combined_liability == Decimal("12738")
+        assert resp.total_withheld - resp.combined_liability == resp.refund_or_owed
 
 
 @pytest.mark.integration
@@ -227,17 +100,61 @@ class TestCalculateTaxesFromDatabase:
         )
 
         # Verify result
-        assert isinstance(result, DatabaseTaxCalculation)
-        assert result.year == 2030
-        assert result.filing_status == "single"
+        assert isinstance(result, TaxReconciliationResponse)
+        assert result.tax_year == 2030
+        assert result.filing_status == FilingStatus.SINGLE
         assert float(result.w2_gross) == 5000.0
         assert float(result.w2_pretax_deductions) == 500.0
-        assert float(result.federal_withheld) == 600.0
+        assert float(result.total_federal_withheld) == 600.0
 
-        # Verify has to_dict
-        result_dict = result.to_dict()
-        assert "income_summary" in result_dict
-        assert "tax_calculation" in result_dict
+    async def test_cross_check_db_vs_manual(
+        self, async_db_session: AsyncSession, test_calculator: TaxCalculator
+    ):
+        """Cross-check DB aggregation vs direct calculator+FICA for parity."""
+
+        employer = Employer(name="Parity Corp", ein="22-3334444", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        # Two identical paychecks
+        for _ in range(2):
+            paycheck = Paycheck(
+                employer_id=employer.id,
+                pay_date=date(2024, 2, 15),
+                gross_wages=Decimal("5000"),
+                federal_withholding=Decimal("600"),
+                social_security=Decimal("310"),
+                medicare=Decimal("72.50"),
+            )
+            async_db_session.add(paycheck)
+        await async_db_session.commit()
+
+        # Run DB-based calc
+        db_result = await calculate_taxes_from_database(
+            db=async_db_session,
+            year=2024,
+            tax_calculator=test_calculator,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            use_standard_deduction=True,
+        )
+
+        # Manual calculation with same inputs
+        manual_request = TaxCalculationRequest(
+            tax_year=2024,
+            filing_status=FilingStatus.SINGLE,
+            gross_income=Decimal("10000"),  # two paychecks, no pretax deductions
+            num_children=0,
+            use_standard_deduction=True,
+        )
+        manual_tax = test_calculator.calculate_taxes(manual_request)
+        manual_fica = test_calculator.calculate_fica(Decimal("10000"), FilingStatus.SINGLE)
+        manual_combined = manual_tax.total_tax_liability + manual_fica["total_fica"]
+        manual_total_withheld = Decimal("1200") + Decimal("765")  # 1200 federal + 765 FICA
+        manual_refund = manual_total_withheld - manual_combined
+
+        assert db_result.combined_liability == manual_combined
+        assert db_result.refund_or_owed == manual_refund
 
     async def test_calculate_with_pension(
         self, async_db_session: AsyncSession, test_calculator: TaxCalculator
@@ -401,7 +318,7 @@ class TestCalculateTaxesFromDatabase:
         # Should sum all paychecks
         assert float(result.w2_gross) == 30000.0  # 6 x $5000
         assert float(result.w2_pretax_deductions) == 3000.0  # 6 x $500
-        assert float(result.federal_withheld) == 3600.0  # 6 x $600
+        assert float(result.total_federal_withheld) == 3600.0  # 6 x $600
 
     async def test_calculate_empty_database(
         self, async_db_session: AsyncSession, test_calculator: TaxCalculator
