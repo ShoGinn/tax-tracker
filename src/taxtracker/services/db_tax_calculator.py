@@ -168,6 +168,8 @@ async def calculate_taxes_from_database(
     num_children: int = 0,
     use_standard_deduction: bool = True,
     itemized_deductions: float = 0.0,
+    age_65_plus: bool = False,
+    include_taxability_in_breakdown: bool = False,
 ) -> DatabaseTaxCalculation:
     """
     Calculate taxes from database records.
@@ -197,13 +199,17 @@ async def calculate_taxes_from_database(
         filing_status=filing_status,
         gross_income=agi,  # This is already AGI (after pre-tax deductions)
         num_children=num_children,
+        age_65_plus=age_65_plus,
         use_standard_deduction=use_standard_deduction,
         itemized_deduction_amount=Decimal(str(itemized_deductions))
         if not use_standard_deduction
         else None,
     )
 
-    tax_result = tax_calculator.calculate_taxes(tax_request)
+    tax_result = tax_calculator.calculate_taxes(
+        tax_request,
+        include_taxability_in_breakdown=include_taxability_in_breakdown,
+    )
 
     # Calculate FICA separately for W-2 income only
     # Pension doesn't pay FICA (already paid during active service)
