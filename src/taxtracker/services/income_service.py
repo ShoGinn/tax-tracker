@@ -103,7 +103,7 @@ async def get_paychecks(
     employer_id: int | None = None,
     year: int | None = None,
     skip: int = 0,
-    limit: int = 100,
+    limit: int | None = 100,
 ) -> list[Paycheck]:
     """Get paychecks with optional filtering."""
     query = select(Paycheck).options(selectinload(Paycheck.employer))
@@ -114,7 +114,9 @@ async def get_paychecks(
     if year:
         query = query.filter(extract("year", Paycheck.pay_date) == year)
 
-    query = query.order_by(Paycheck.pay_date.desc()).offset(skip).limit(limit)
+    query = query.order_by(Paycheck.pay_date.desc()).offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
     result = await db.execute(query)
     return list(result.scalars().all())
 
@@ -173,7 +175,7 @@ async def get_retirement_1099r(db: AsyncSession, payment_id: int) -> Retirement1
 
 
 async def get_retirement_1099rs(
-    db: AsyncSession, year: int | None = None, skip: int = 0, limit: int = 100
+    db: AsyncSession, year: int | None = None, skip: int = 0, limit: int | None = 100
 ) -> list[Retirement1099R]:
     """Get pension payments with optional year filtering."""
     query = select(Retirement1099R)
@@ -181,7 +183,9 @@ async def get_retirement_1099rs(
     if year:
         query = query.filter(extract("year", Retirement1099R.pay_date) == year)
 
-    query = query.order_by(Retirement1099R.pay_date.desc()).offset(skip).limit(limit)
+    query = query.order_by(Retirement1099R.pay_date.desc()).offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
     result = await db.execute(query)
     return list(result.scalars().all())
 
@@ -233,7 +237,7 @@ async def get_non_taxable_payment(db: AsyncSession, payment_id: int) -> NonTaxab
 
 
 async def get_non_taxable_payments(
-    db: AsyncSession, year: int | None = None, skip: int = 0, limit: int = 100
+    db: AsyncSession, year: int | None = None, skip: int = 0, limit: int | None = 100
 ) -> list[NonTaxableIncome]:
     """Get Non-Taxable payments with optional year filtering."""
     query = select(NonTaxableIncome)
@@ -241,7 +245,9 @@ async def get_non_taxable_payments(
     if year:
         query = query.filter(extract("year", NonTaxableIncome.pay_date) == year)
 
-    query = query.order_by(NonTaxableIncome.pay_date.desc()).offset(skip).limit(limit)
+    query = query.order_by(NonTaxableIncome.pay_date.desc()).offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
     result = await db.execute(query)
     return list(result.scalars().all())
 
@@ -278,13 +284,13 @@ async def delete_non_taxable_payment(db: AsyncSession, payment_id: int) -> bool:
 async def get_ytd_summary(db: AsyncSession, year: int) -> YTDSummary:
     """Calculate year-to-date summary for a given year."""
     # Get all paychecks for the year
-    paychecks = await get_paychecks(db, year=year, limit=10000)
+    paychecks = await get_paychecks(db, year=year, limit=None)
 
     # Get all pension payments for the year
-    retirement_1099rs = await get_retirement_1099rs(db, year=year, limit=10000)
+    retirement_1099rs = await get_retirement_1099rs(db, year=year, limit=None)
 
     # Get all VA payments for the year
-    non_taxable_payments = await get_non_taxable_payments(db, year=year, limit=10000)
+    non_taxable_payments = await get_non_taxable_payments(db, year=year, limit=None)
 
     # Calculate W-2 totals
     w2_gross = sum((p.gross_wages + p.bonus for p in paychecks), Decimal(0))

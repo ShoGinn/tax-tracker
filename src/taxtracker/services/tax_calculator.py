@@ -1,5 +1,6 @@
 """Federal tax calculation service."""
 
+import math
 from decimal import Decimal
 from typing import Any
 
@@ -142,9 +143,6 @@ class TaxCalculator:
 
         # Additional Medicare (only on wages above threshold)
         threshold_key = filing_status.value
-        if threshold_key not in self._fica_limits.additional_medicare.thresholds:
-            threshold_key = "single"  # Default to single if not found
-
         additional_medicare_threshold = self._fica_limits.additional_medicare.thresholds[
             threshold_key
         ]
@@ -213,25 +211,40 @@ class TaxCalculator:
             annotate_taxability=include_taxability_in_breakdown,
         )
 
-        # Step 5: Apply child tax credits
-        child_credits = (
-            Decimal(request.num_children) * self._tax_brackets.child_tax_credit.amount_per_child
-        )
+        # Step 5: Apply child tax credits (with IRS phase-out)
+        ctc = self._tax_brackets.child_tax_credit
+        child_credits = Decimal(request.num_children) * ctc.amount_per_child
+
         if child_credits > 0:
-            notes.append(
-                f"Child Tax Credit: ${child_credits:,.2f} for {request.num_children} children"
+            # IRS phase-out: reduce by $50 per $1,000 (or fraction) of AGI over threshold
+            threshold = ctc.phase_out_threshold.get(
+                request.filing_status, ctc.phase_out_threshold[FilingStatus.SINGLE]
             )
+            if agi > threshold:
+                excess = agi - threshold
+                # Ceiling division: round up to next $1,000
+                reduction = Decimal(math.ceil(excess / 1000)) * ctc.phase_out_rate
+                child_credits = max(Decimal(0), child_credits - reduction)
+                notes.append(
+                    f"Child Tax Credit phase-out: AGI ${agi:,.2f} exceeds "
+                    f"${threshold:,.0f} threshold, credit reduced by ${reduction:,.2f}"
+                )
+
+            if child_credits > 0:
+                notes.append(
+                    f"Child Tax Credit: ${child_credits:,.2f} "
+                    f"for {request.num_children} children"
+                )
 
         # Step 6: Calculate total tax liability (credits reduce tax)
         total_liability = max(Decimal(0), federal_tax - child_credits)
 
         # Step 7: Calculate FICA (only on W-2 wages, not pension)
-        # For multi-employer situations, FICA is calculated on combined wages
-        fica_taxes = self.calculate_fica(request.gross_income, request.filing_status)
+        fica_taxes = self.calculate_fica(request.w2_gross_income, request.filing_status)
 
         # If wages exceed SS wage base, note the cap
-        if request.gross_income > fica_taxes["ss_wage_base_limit"]:
-            excess = request.gross_income - fica_taxes["ss_wage_base_limit"]
+        if request.w2_gross_income > fica_taxes["ss_wage_base_limit"]:
+            excess = request.w2_gross_income - fica_taxes["ss_wage_base_limit"]
             wage_base = fica_taxes["ss_wage_base_limit"]
             notes.append(
                 f"Social Security tax capped at ${wage_base:,.2f} wage base. "

@@ -16,7 +16,7 @@ class TestProjectionsAPI:
         """Test basic year projection."""
         response = client.post(
             "/projections/project-year",
-            params={
+            json={
                 "projection_year": 2024,
                 "filing_status": "single",
                 "num_children": 0,
@@ -50,7 +50,7 @@ class TestProjectionsAPI:
         """Test projection with child tax credits."""
         response = client.post(
             "/projections/project-year",
-            params={
+            json={
                 "projection_year": 2024,
                 "filing_status": "married_filing_jointly",
                 "num_children": 2,
@@ -70,7 +70,7 @@ class TestProjectionsAPI:
         """Test projection with pension income."""
         response = client.post(
             "/projections/project-year",
-            params={
+            json={
                 "projection_year": 2024,
                 "filing_status": "single",
                 "num_children": 0,
@@ -91,7 +91,7 @@ class TestProjectionsAPI:
         """Test projection with itemized deductions."""
         response = client.post(
             "/projections/project-year",
-            params={
+            json={
                 "projection_year": 2024,
                 "filing_status": "single",
                 "num_children": 0,
@@ -111,7 +111,7 @@ class TestProjectionsAPI:
         """Test projection with high income."""
         response = client.post(
             "/projections/project-year",
-            params={
+            json={
                 "projection_year": 2024,
                 "filing_status": "single",
                 "num_children": 0,
@@ -130,7 +130,7 @@ class TestProjectionsAPI:
         """Test projection with low income."""
         response = client.post(
             "/projections/project-year",
-            params={
+            json={
                 "projection_year": 2024,
                 "filing_status": "single",
                 "num_children": 0,

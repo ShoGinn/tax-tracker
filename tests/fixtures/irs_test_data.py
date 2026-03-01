@@ -121,6 +121,7 @@ IRS_2024_FICA_LIMITS = FICALimits(
             "single": Decimal(200000),
             "married_filing_jointly": Decimal(250000),
             "married_filing_separately": Decimal(125000),
+            "head_of_household": Decimal(200000),
         },
         note="Applies to wages above threshold, no employer match",
     ),

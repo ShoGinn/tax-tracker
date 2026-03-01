@@ -2,6 +2,14 @@
 
 Personal federal tax calculation and W-4 optimization system. FastAPI backend with SQLAlchemy/SQLite. Tracks W-2 paychecks, 1099-R pension income, and non-taxable income (VA disability, etc.) to calculate federal tax liability, reconcile withholding, and optimize W-4 settings.
 
+## Development Phase
+
+This project is in initial development (pre-v1.0). Until we reach a stable release:
+- **No backward compatibility required.** APIs, models, schemas, and data formats can be freely restructured.
+- **Prefer clean design over compatibility shims.** If a better approach exists, refactor — don't add adapters or legacy wrappers.
+- **Breaking changes are expected.** There are no external consumers of this API.
+- Remove dead code, legacy validators, and format converters when found rather than maintaining them.
+
 ## Project Direction
 
 - **Frontend UI** planned (tech stack TBD)
@@ -124,6 +132,7 @@ When working with tax data, always cite the specific IRS source document and cro
 
 - **Always run tests and lint after code changes.** Run `uv run pytest` and `uv run ruff check src/ tests/` to verify.
 - **Every logic component must have comprehensive tests.** This is tax/finance software — calculations must be verified against IRS data.
+- **Tests must verify correct behavior, not be adjusted to match incorrect code.** Do not create trivial tests or modify IRS-validated assertions to make failing tests pass. Fix the implementation. If unsure, ask for guidance.
 - **Be careful with tax calculations** (`services/tax_calculator.py`, `services/w4_calculator.py`, `services/w4_withholding.py`). These contain IRS-verified math. Changes require matching test updates with known-correct values.
 - **Be careful with data files** (`data/tax_brackets_*.json`, `data/fica_limits_*.json`). These are sourced from IRS publications. Do not modify without IRS source verification.
 - **Suggest commits** after completing tasks but don't auto-commit. Use conventional commit format: `type: message` (e.g., `feat:`, `fix:`, `chore:`, `test:`, `refactor:`).
@@ -171,3 +180,18 @@ The plugin can be enabled for all contributors via `.claude/settings.json`:
 - Pydantic schemas for all API request/response validation
 - Test markers: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.slow`
 - Flexible date/decimal parsing via custom Annotated types in schemas
+
+## Known Limitations / Out of Scope
+
+The following IRS features are **not supported** and should not be added without explicit discussion:
+- AMT (Alternative Minimum Tax)
+- NIIT (Net Investment Income Tax, 3.8%)
+- Self-employment tax / 1099-NEC income
+- Qualified dividends / capital gains preferential rates
+- Stock options (ISOs/NSOs), RSUs
+- Rental income / Schedule C
+- Education credits (AOTC, Lifetime Learning)
+- EITC (Earned Income Tax Credit)
+- Quarterly estimated tax payments
+- Mid-year W-4 change optimization (full-year assumption only)
+- 1099-R distribution code handling (all distributions treated as taxable minus pre-tax deductions)

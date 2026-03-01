@@ -45,7 +45,7 @@ class TestAdditionalIRSExamples:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(IRS_EXAMPLE_3["gross_income"])),
+            w2_gross_income=Decimal(str(IRS_EXAMPLE_3["gross_income"])),
             num_children=IRS_EXAMPLE_3["num_children"],
             use_standard_deduction=IRS_EXAMPLE_3["use_standard_deduction"],
         )
@@ -70,7 +70,7 @@ class TestAdditionalIRSExamples:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.HEAD_OF_HOUSEHOLD,
-            gross_income=Decimal(str(IRS_EXAMPLE_4["gross_income"])),
+            w2_gross_income=Decimal(str(IRS_EXAMPLE_4["gross_income"])),
             num_children=IRS_EXAMPLE_4["num_children"],
             use_standard_deduction=IRS_EXAMPLE_4["use_standard_deduction"],
         )
@@ -97,7 +97,7 @@ class TestAdditionalIRSExamples:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(IRS_EXAMPLE_5["gross_income"])),
+            w2_gross_income=Decimal(str(IRS_EXAMPLE_5["gross_income"])),
             num_children=IRS_EXAMPLE_5["num_children"],
             use_standard_deduction=IRS_EXAMPLE_5["use_standard_deduction"],
             itemized_deduction_amount=Decimal(str(IRS_EXAMPLE_5["itemized_deductions"])),
@@ -122,7 +122,7 @@ class TestAdditionalIRSExamples:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            gross_income=Decimal(str(IRS_EXAMPLE_6["gross_income"])),
+            w2_gross_income=Decimal(str(IRS_EXAMPLE_6["gross_income"])),
             num_children=IRS_EXAMPLE_6["num_children"],
             use_standard_deduction=IRS_EXAMPLE_6["use_standard_deduction"],
         )
@@ -151,7 +151,7 @@ class TestAdditionalFICAExamples:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(FICA_EXAMPLE_4["gross_wages"])),
+            w2_gross_income=Decimal(str(FICA_EXAMPLE_4["gross_wages"])),
             num_children=0,
         )
 
@@ -178,7 +178,7 @@ class TestAdditionalFICAExamples:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            gross_income=Decimal(str(FICA_EXAMPLE_5["gross_wages"])),
+            w2_gross_income=Decimal(str(FICA_EXAMPLE_5["gross_wages"])),
             num_children=0,
         )
 
@@ -211,7 +211,7 @@ class TestEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(EDGE_CASE_1["gross_income"])),
+            w2_gross_income=Decimal(str(EDGE_CASE_1["gross_income"])),
             num_children=EDGE_CASE_1["num_children"],
         )
 
@@ -231,7 +231,7 @@ class TestEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(EDGE_CASE_2["gross_income"])),
+            w2_gross_income=Decimal(str(EDGE_CASE_2["gross_income"])),
             num_children=EDGE_CASE_2["num_children"],
         )
 
@@ -252,7 +252,7 @@ class TestEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            gross_income=Decimal(str(EDGE_CASE_3["gross_income"])),
+            w2_gross_income=Decimal(str(EDGE_CASE_3["gross_income"])),
             num_children=EDGE_CASE_3["num_children"],
         )
 
@@ -271,7 +271,7 @@ class TestEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(EDGE_CASE_4["gross_income"])),
+            w2_gross_income=Decimal(str(EDGE_CASE_4["gross_income"])),
             num_children=EDGE_CASE_4["num_children"],
         )
 
@@ -293,7 +293,7 @@ class TestEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_SEPARATELY,
-            gross_income=Decimal(str(EDGE_CASE_5["gross_income"])),
+            w2_gross_income=Decimal(str(EDGE_CASE_5["gross_income"])),
             num_children=EDGE_CASE_5["num_children"],
         )
 

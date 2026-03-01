@@ -193,7 +193,8 @@ def optimize_w4(
     tax_request = TaxCalculationRequest(
         tax_year=year,
         filing_status=filing_status,
-        gross_income=total_taxable,
+        w2_gross_income=total_w2_taxable,
+        pension_gross_income=pension_taxable,
         num_children=num_children,
         use_standard_deduction=use_standard_deduction,
         itemized_deduction_amount=Decimal(str(itemized_deductions))

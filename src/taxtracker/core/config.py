@@ -1,5 +1,6 @@
 """Application configuration and settings."""
 
+import datetime
 from decimal import Decimal
 from enum import Enum
 from importlib.resources import files
@@ -69,3 +70,16 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings: Final[Settings] = Settings()
+
+
+TAX_FILING_DEADLINE_MONTH: Final[int] = 4  # April
+
+
+def current_tax_year() -> int:
+    """Return the current tax year based on today's date.
+
+    During tax filing season (Jan-Apr), returns the previous year since most
+    users are filing for that year. After April, returns the current year.
+    """
+    today = datetime.datetime.now(tz=datetime.UTC).date()
+    return today.year if today.month > TAX_FILING_DEADLINE_MONTH else today.year - 1

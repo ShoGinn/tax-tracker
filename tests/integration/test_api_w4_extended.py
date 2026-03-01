@@ -16,7 +16,7 @@ class TestW4APIOptimize:
         """Test W4 optimization for single filer with no children."""
         response = client.post(
             "/w4/optimize",
-            params={
+            json={
                 "total_annual_w2_income": 60000,
                 "paychecks_per_year": 26,
                 "filing_status": "single",
@@ -38,7 +38,7 @@ class TestW4APIOptimize:
         """Test W4 optimization for married with children."""
         response = client.post(
             "/w4/optimize",
-            params={
+            json={
                 "total_annual_w2_income": 120000,
                 "paychecks_per_year": 24,
                 "filing_status": "married_filing_jointly",
@@ -62,7 +62,7 @@ class TestW4APIOptimize:
         """Test W4 optimization with other income."""
         response = client.post(
             "/w4/optimize",
-            params={
+            json={
                 "total_annual_w2_income": 75000,
                 "paychecks_per_year": 26,
                 "filing_status": "single",
@@ -83,7 +83,7 @@ class TestW4APIOptimize:
         """Test W4 optimization with itemized deductions."""
         response = client.post(
             "/w4/optimize",
-            params={
+            json={
                 "total_annual_w2_income": 150000,
                 "paychecks_per_year": 26,
                 "filing_status": "married_filing_jointly",
@@ -104,7 +104,7 @@ class TestW4APIOptimize:
         """Test W4 optimization for high earner."""
         response = client.post(
             "/w4/optimize",
-            params={
+            json={
                 "total_annual_w2_income": 300000,
                 "paychecks_per_year": 26,
                 "filing_status": "single",
@@ -124,7 +124,7 @@ class TestW4APIOptimize:
         """Test W4 optimization targeting large refund."""
         response = client.post(
             "/w4/optimize",
-            params={
+            json={
                 "total_annual_w2_income": 80000,
                 "paychecks_per_year": 26,
                 "filing_status": "single",
@@ -150,14 +150,14 @@ class TestW4APIWithholding:
         """Test withholding calculation for biweekly paycheck."""
         response = client.post(
             "/w4/calculate-withholding",
-            params={
+            json={
                 "gross_pay_per_paycheck": 3000,
                 "pay_frequency": "biweekly",
                 "filing_status": "single",
                 "multiple_jobs_checkbox": False,
                 "dependents_amount": 0,
-                "other_income": 0,
-                "deductions": 0,
+                "other_income_annual": 0,
+                "deductions_annual": 0,
                 "extra_withholding": 0,
                 "year": 2024,
             },
@@ -176,7 +176,7 @@ class TestW4APIWithholding:
         """Test withholding calculation for weekly paycheck."""
         response = client.post(
             "/w4/calculate-withholding",
-            params={
+            json={
                 "gross_pay_per_paycheck": 1500,
                 "pay_frequency": "weekly",
                 "filing_status": "married_filing_jointly",
@@ -196,7 +196,7 @@ class TestW4APIWithholding:
         """Test withholding with extra withholding amount."""
         response = client.post(
             "/w4/calculate-withholding",
-            params={
+            json={
                 "gross_pay_per_paycheck": 4000,
                 "pay_frequency": "biweekly",
                 "filing_status": "single",
@@ -218,7 +218,7 @@ class TestW4APIWithholding:
         """Test withholding for monthly paycheck."""
         response = client.post(
             "/w4/calculate-withholding",
-            params={
+            json={
                 "gross_pay_per_paycheck": 6500,
                 "pay_frequency": "monthly",
                 "filing_status": "married_filing_jointly",

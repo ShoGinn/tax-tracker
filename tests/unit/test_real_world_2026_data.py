@@ -16,6 +16,8 @@ from taxtracker.models.tax_data import (
 )
 from taxtracker.services.tax_calculator import TaxCalculator
 
+pytestmark = pytest.mark.unit
+
 # --- FIXTURES FOR DATA MOCKING ---
 
 
@@ -123,7 +125,12 @@ def mock_fica_limits_2026():
         additional_medicare=AdditionalMedicareTax(
             rate=Decimal("0.009"),
             employer_match=False,
-            thresholds={"single": Decimal(200000), "married_filing_jointly": Decimal(250000)},
+            thresholds={
+                "single": Decimal(200000),
+                "married_filing_jointly": Decimal(250000),
+                "married_filing_separately": Decimal(125000),
+                "head_of_household": Decimal(200000),
+            },
             note="Applies to wages over threshold",
         ),
         combined_rates={"total": Decimal("0.0765")},
@@ -140,7 +147,7 @@ def test_veteran_retirement_scenario(mock_tax_brackets_2026, mock_fica_limits_20
     """
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
     request = TaxCalculationRequest(
-        gross_income=Decimal(45000),
+        w2_gross_income=Decimal(45000),
         retirement_pretax_deductions=Decimal(3000),
         non_taxable_income=Decimal(48000),
         filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
@@ -163,7 +170,7 @@ def test_high_earner_fica_cap(mock_tax_brackets_2026, mock_fica_limits_2026):
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
 
     request = TaxCalculationRequest(
-        gross_income=Decimal(250000), filing_status=FilingStatus.SINGLE, tax_year=2026
+        w2_gross_income=Decimal(250000), filing_status=FilingStatus.SINGLE, tax_year=2026
     )
 
     response = calc.calculate_taxes(request)
@@ -182,7 +189,7 @@ def test_bracket_edge_case_exact_threshold(mock_tax_brackets_2026, mock_fica_lim
     """
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
     request = TaxCalculationRequest(
-        gross_income=Decimal(128550),
+        w2_gross_income=Decimal(128550),
         filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
         tax_year=2026,
     )
@@ -204,7 +211,7 @@ def test_child_tax_credit_limit(mock_tax_brackets_2026, mock_fica_limits_2026):
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
 
     request = TaxCalculationRequest(
-        gross_income=Decimal(40000),
+        w2_gross_income=Decimal(40000),
         filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
         num_children=3,  # $6,600 in credits
         tax_year=2026,

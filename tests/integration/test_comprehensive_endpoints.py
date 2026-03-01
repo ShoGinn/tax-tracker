@@ -17,7 +17,7 @@ class TestTaxCalculateEndpoint:
         payload = {
             "tax_year": 2024,
             "filing_status": "single",
-            "gross_income": 50000,
+            "w2_gross_income": 50000,
             "num_children": 0,
             "use_standard_deduction": True,
         }
@@ -54,7 +54,7 @@ class TestTaxCalculateEndpoint:
         payload = {
             "tax_year": 2024,
             "filing_status": "married_filing_jointly",
-            "gross_income": 100000,
+            "w2_gross_income": 100000,
             "num_children": 2,
             "use_standard_deduction": True,
         }
@@ -86,7 +86,7 @@ class TestTaxCalculateEndpoint:
         payload = {
             "tax_year": 2024,
             "filing_status": "single",
-            "gross_income": 250000,
+            "w2_gross_income": 250000,
             "num_children": 0,
             "use_standard_deduction": True,
         }
@@ -113,7 +113,7 @@ class TestTaxCalculateEndpoint:
         payload = {
             "tax_year": 2024,
             "filing_status": "single",
-            "gross_income": 100000,
+            "w2_gross_income": 100000,
             "num_children": 0,
             "use_standard_deduction": False,
             "itemized_deduction_amount": 25000,
@@ -131,26 +131,28 @@ class TestTaxCalculateEndpoint:
         # Taxable income
         assert float(data["taxable_income"]) == 75000  # 100000 - 25000
 
-    def test_zero_income_validation(self, client: TestClient):
-        """Test that zero income fails validation."""
+    def test_zero_income_returns_zero_tax(self, client: TestClient):
+        """Test that zero income returns zero tax liability."""
         payload = {
             "tax_year": 2024,
             "filing_status": "single",
-            "gross_income": 0,
+            "w2_gross_income": 0,
             "num_children": 0,
         }
 
         response = client.post("/taxes/calculate", json=payload)
 
-        # Should fail validation (gross_income must be > 0)
-        assert response.status_code == 422
+        assert response.status_code == 200
+        data = response.json()
+        assert float(data["taxable_income"]) == 0
+        assert float(data["federal_tax_owed"]) == 0
 
     def test_negative_income_validation(self, client: TestClient):
         """Test that negative income fails validation."""
         payload = {
             "tax_year": 2024,
             "filing_status": "single",
-            "gross_income": -10000,
+            "w2_gross_income": -10000,
             "num_children": 0,
         }
 
@@ -224,7 +226,7 @@ class TestW4Endpoints:
         """Test basic W-4 optimization."""
         response = client.post(
             "/w4/optimize",
-            params={
+            json={
                 "total_annual_w2_income": 75000,
                 "paychecks_per_year": 26,
                 "filing_status": "single",
@@ -254,7 +256,7 @@ class TestW4Endpoints:
         """Test withholding calculation per paycheck."""
         response = client.post(
             "/w4/calculate-withholding",
-            params={
+            json={
                 "gross_pay_per_paycheck": 3000,
                 "pay_frequency": "biweekly",
                 "filing_status": "single",
@@ -289,7 +291,7 @@ class TestEndToEndScenarios:
             json={
                 "tax_year": 2024,
                 "filing_status": "single",
-                "gross_income": 75000,
+                "w2_gross_income": 75000,
                 "num_children": 0,
                 "use_standard_deduction": True,
             },
@@ -318,7 +320,7 @@ class TestEndToEndScenarios:
             json={
                 "tax_year": 2024,
                 "filing_status": "married_filing_jointly",
-                "gross_income": 150000,
+                "w2_gross_income": 150000,
                 "num_children": 2,
                 "use_standard_deduction": True,
             },
@@ -328,7 +330,7 @@ class TestEndToEndScenarios:
         # Optimize W-4
         w4 = client.post(
             "/w4/optimize",
-            params={
+            json={
                 "total_annual_w2_income": 150000,
                 "paychecks_per_year": 24,
                 "filing_status": "married_filing_jointly",

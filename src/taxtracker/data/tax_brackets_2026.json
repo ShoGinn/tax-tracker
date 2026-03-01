@@ -43,10 +43,12 @@
 		]
 	},
 	"standard_deductions": {
-		"married_filing_jointly": 32200,
-		"single": 16100,
-		"married_filing_separately": 16100,
-		"head_of_household": 24150,
+		"amounts": {
+			"married_filing_jointly": 32200,
+			"single": 16100,
+			"married_filing_separately": 16100,
+			"head_of_household": 24150
+		},
 		"additional_age_65_plus": {
 			"single": 2050,
 			"married": 1650
@@ -57,7 +59,9 @@
 		"refundable_portion": 1700,
 		"phase_out_threshold": {
 			"married_filing_jointly": 400000,
-			"single": 200000
+			"single": 200000,
+			"married_filing_separately": 200000,
+			"head_of_household": 200000
 		}
 	}
 }

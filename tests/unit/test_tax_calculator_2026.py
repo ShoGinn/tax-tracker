@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+import pytest
+
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
 from taxtracker.services.tax_calculator import TaxCalculator
 
@@ -31,6 +33,7 @@ def compute_progressive_tax(
     return total
 
 
+@pytest.mark.unit
 def test_2026_single_filer_80k():
     """Single filer, $80k W-2, standard deduction, 2026 data file."""
     calculator = TaxCalculator(tax_year=2026)
@@ -38,7 +41,7 @@ def test_2026_single_filer_80k():
     request = TaxCalculationRequest(
         tax_year=2026,
         filing_status=FilingStatus.SINGLE,
-        gross_income=Decimal(80000),
+        w2_gross_income=Decimal(80000),
         num_children=0,
         use_standard_deduction=True,
     )
@@ -64,6 +67,7 @@ def test_2026_single_filer_80k():
     assert result.marginal_tax_rate == Decimal("22.00")
 
 
+@pytest.mark.unit
 def test_2026_single_high_income_top_bracket():
     """High-income single filer should land in 37% bracket with correct tax."""
     calculator = TaxCalculator(tax_year=2026)
@@ -71,7 +75,7 @@ def test_2026_single_high_income_top_bracket():
     request = TaxCalculationRequest(
         tax_year=2026,
         filing_status=FilingStatus.SINGLE,
-        gross_income=Decimal(700000),
+        w2_gross_income=Decimal(700000),
         num_children=0,
         use_standard_deduction=True,
     )

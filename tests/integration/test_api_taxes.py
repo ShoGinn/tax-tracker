@@ -228,7 +228,7 @@ class TestTaxesAPI:
         payload = {
             "tax_year": 2024,
             "filing_status": "single",
-            "gross_income": 50000,
+            "w2_gross_income": 50000,
             "num_children": 0,
             "use_standard_deduction": True,
         }
@@ -249,7 +249,7 @@ class TestTaxesAPI:
         payload = {
             "tax_year": 2024,
             "filing_status": "married_filing_jointly",
-            "gross_income": 100000,
+            "w2_gross_income": 100000,
             "num_children": 2,
             "use_standard_deduction": True,
         }
@@ -269,7 +269,7 @@ class TestTaxesAPI:
         payload = {
             "tax_year": 2099,
             "filing_status": "single",
-            "gross_income": 50000,
+            "w2_gross_income": 50000,
             "num_children": 0,
         }
 
@@ -286,7 +286,7 @@ class TestTaxesAPI:
         payload = {
             "tax_year": 2024,
             "filing_status": "invalid_status",
-            "gross_income": -1000,  # Negative income
+            "w2_gross_income": -1000,  # Negative income
             "num_children": 0,
         }
 

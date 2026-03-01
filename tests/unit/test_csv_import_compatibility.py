@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 
+import pytest
 from sqlalchemy import select
 
 from taxtracker.models.database import NonTaxableIncome
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
+@pytest.mark.unit
 class TestCSVImportBackwardCompatibility:
     """Test that CSV import works with new field names."""
 

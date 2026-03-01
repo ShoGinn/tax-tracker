@@ -45,15 +45,12 @@ async def calculate_taxes_from_database(
     # Get YTD summary from database
     ytd = await get_ytd_summary(db, year)
 
-    # Calculate AGI (W-2 taxable + pension taxable)
-    # Note: Pre-tax deductions already removed from these amounts
-    agi = ytd.total_w2_taxable_wages + ytd.total_pension_taxable
-
     # Use the existing tax calculator
     tax_request = TaxCalculationRequest(
         tax_year=year,
         filing_status=filing_status,
-        gross_income=agi,  # This is already AGI (after pre-tax deductions)
+        w2_gross_income=ytd.total_w2_taxable_wages,
+        pension_gross_income=ytd.total_pension_taxable,
         num_children=num_children,
         age_65_plus=age_65_plus,
         use_standard_deduction=use_standard_deduction,

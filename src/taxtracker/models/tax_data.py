@@ -48,19 +48,6 @@ class StandardDeductions(BaseModel):
     amounts: dict[FilingStatus, Decimal]
     additional_age_65_plus: dict[str, Decimal]
 
-    @model_validator(mode="before")
-    @classmethod
-    def normalize_input(cls, value: dict[str, Any]) -> dict[str, Any]:
-        """Allow legacy flat dicts by folding into amounts."""
-
-        if "amounts" not in value:
-            amounts = {k: v for k, v in value.items() if k != "additional_age_65_plus"}
-            return {
-                "amounts": amounts,
-                "additional_age_65_plus": value.get("additional_age_65_plus", {}),
-            }
-        return value
-
     @field_validator("amounts", mode="after")
     @classmethod
     def validate_amount_keys(
@@ -119,21 +106,19 @@ class StandardDeductions(BaseModel):
 
 
 class ChildTaxCredit(BaseModel):
-    """Child tax credit configuration."""
+    """Child tax credit configuration.
+
+    IRS phase-out: credit is reduced by $50 for every $1,000 (or fraction thereof)
+    of AGI over the phase-out threshold for the filing status.
+    """
 
     amount_per_child: Decimal
     refundable_portion: Decimal
     phase_out_threshold: dict[FilingStatus, Decimal]
-
-    @model_validator(mode="before")
-    @classmethod
-    def normalize_thresholds(cls, value: dict[str, Any]) -> dict[str, Any]:
-        """Allow legacy string-keyed thresholds."""
-
-        if "phase_out_threshold" in value:
-            thresholds = value.get("phase_out_threshold", {})
-            value = {**value, "phase_out_threshold": thresholds}
-        return value
+    phase_out_rate: Decimal = Field(
+        default=Decimal(50),
+        description="Reduction per $1,000 of AGI over threshold",
+    )
 
 
 class TaxBrackets(BaseModel):
@@ -242,9 +227,19 @@ class FICALimits(BaseModel):
 
 
 class TaxCalculationRequest(BaseModel):
-    """Request model for tax calculation."""
+    """Request model for tax calculation.
 
-    gross_income: Decimal = Field(..., gt=0, description="Total gross income")
+    Separates W-2 and pension income because they have different FICA treatment:
+    - W-2 wages are subject to FICA (Social Security + Medicare)
+    - 1099-R pension income is NOT subject to FICA
+    """
+
+    w2_gross_income: Decimal = Field(
+        default=Decimal(0), ge=0, description="W-2 gross wages (subject to FICA)"
+    )
+    pension_gross_income: Decimal = Field(
+        default=Decimal(0), ge=0, description="1099-R pension gross income (no FICA)"
+    )
     filing_status: FilingStatus
     age_65_plus: bool = Field(default=False, description="Whether taxpayer is 65 or older")
     num_children: int = Field(default=0, ge=0, description="Number of qualifying children")
@@ -261,6 +256,11 @@ class TaxCalculationRequest(BaseModel):
         default=Decimal(0), ge=0, description="Non-taxable income (VA disability, SSA, gifts, etc.)"
     )
     tax_year: int = Field(default=2025, ge=2024, le=2030, description="Tax year for calculation")
+
+    @property
+    def gross_income(self) -> Decimal:
+        """Total gross income (W-2 + pension)."""
+        return self.w2_gross_income + self.pension_gross_income
 
 
 class TaxCalculationResponse(BaseModel):
