@@ -1,12 +1,19 @@
 {
 	"tax_year": 2025,
 	"last_updated": "2025-12-29",
-	"source": "IRS Revenue Procedure 2024-40 + One Big Beautiful Bill Act (July 2025)",
+	"source": "IRS Revenue Procedure 2024-40 + One Big Beautiful Bill Act (PL 119-21)",
 	"notes": "OBBB Act made TCJA tax brackets permanent and increased child tax credit to $2,200 for 2025",
+	"citations": {
+		"tax_brackets": "https://www.irs.gov/filing/federal-income-tax-rates-and-brackets",
+		"standard_deductions": "https://www.irs.gov/newsroom/one-big-beautiful-bill-act-tax-deductions-for-working-americans-and-seniors",
+		"child_tax_credit": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions-families",
+		"revenue_procedure": "https://www.irs.gov/pub/irs-drop/rp-24-40.pdf"
+	},
+	"verified_date": "2026-03-01",
 	"tax_brackets": {
 		"married_filing_jointly": [
 			{ "threshold": 23850, "rate": 0.1 },
-			{ "threshold": 97050, "rate": 0.12 },
+			{ "threshold": 96950, "rate": 0.12 },
 			{ "threshold": 206700, "rate": 0.22 },
 			{ "threshold": 394600, "rate": 0.24 },
 			{ "threshold": 501050, "rate": 0.32 },

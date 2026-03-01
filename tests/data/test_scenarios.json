@@ -115,7 +115,7 @@
           },
           "expected": {
             "taxable_income": 218500,
-            "federal_tax_owed": 38123,
+            "federal_tax_owed": 38134,
             "marginal_rate": 24.0,
             "tolerance": 50
           }
@@ -200,7 +200,7 @@
             "total_taxable_income": 130000,
             "taxable_income": 98500,
             "child_tax_credits": 4400,
-            "total_tax_liability": 7087,
+            "total_tax_liability": 7098,
             "w2_fica": 7650,
             "tolerance": 50
           }

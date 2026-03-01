@@ -115,17 +115,22 @@ The calculation order matters — deductions are critical:
 
 Standard deductions are defined per filing status in the JSON data files and include age 65+ additional amounts. Itemized deductions are accepted as a single total (no category breakdown yet). The `use_standard_deduction` flag on TaxCalculationRequest controls which path is used.
 
-## IRS Data Validation (Active Problem)
+## Data Provenance and Validation
 
-Tax bracket and FICA data is currently added **manually** from IRS publications. Current sources noted in the JSON files:
-- 2025: IRS Revenue Procedure 2024-40 + One Big Beautiful Bill Act
-- 2026: IRS Publication RP-25-32 (manually parsed)
+Tax bracket and FICA data is **manually extracted** from IRS publications and cross-referenced against independent sources. Each data file includes a `citations` object with per-section IRS source URLs and a `verified_date`.
 
-**Current state:** No automated validation. Data accuracy is not independently verified. We need to:
-- Establish a reliable process for sourcing and validating IRS data each year
-- Document exactly where each number comes from (publication, table, line)
-- Build automated checks to validate data against known IRS examples
-- Cross-reference test expected values against IRS publications
+**Primary sources:**
+- 2025: IRS Rev. Proc. 2024-40 + OBBB Act (PL 119-21) — https://www.irs.gov/filing/federal-income-tax-rates-and-brackets
+- 2026: IRS Rev. Proc. 2025-32 — https://www.irs.gov/pub/irs-drop/rp-25-32.pdf
+- FICA: SSA contribution base — https://www.ssa.gov/oact/cola/cbbdet.html
+
+**Cross-references:** PSLmodels Tax-Calculator `policy_current_law.json`, Tax Foundation, IRS Tax Withholding Estimator
+
+**Automated validation:**
+- `tests/unit/test_irs_data_validation.py` — asserts every value in data files matches IRS-published constants (run: `uv run pytest tests/unit/test_irs_data_validation.py -v`)
+- `tests/unit/test_irs_calculation_verification.py` — end-to-end calculation tests with hand-computed audit trails
+
+**Full documentation:** `docs/irs_data_sources.md` (per-value citations), `docs/annual_tax_data_update.md` (how to add new tax years)
 
 When working with tax data, always cite the specific IRS source document and cross-check values.
 

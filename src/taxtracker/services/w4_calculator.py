@@ -225,7 +225,8 @@ def optimize_w4(
 
     # Generate W-4 recommendations
     w4_recommendations = []
-    child_tax_credit_total = Decimal(num_children * 2000)  # $2000 per child for 2025
+    ctc_per_child = tax_calculator.tax_brackets.child_tax_credit.amount_per_child
+    child_tax_credit_total = Decimal(num_children) * ctc_per_child
 
     # Determine which job should claim dependents (highest paying)
     highest_paying_job = max(w2_jobs, key=lambda x: x["annual_gross"])
@@ -246,7 +247,7 @@ def optimize_w4(
         # Step 3: Dependents (only on highest paying job)
         step3_amount = child_tax_credit_total if is_highest_paying else Decimal(0)
         step3_explanation = (
-            f"Claim {num_children} children x $2,000 = ${step3_amount:,.0f}"
+            f"Claim {num_children} children x ${ctc_per_child:,.0f} = ${step3_amount:,.0f}"
             if is_highest_paying
             else "Already claimed on your other W-4 (claim dependents on only one job)"
         )

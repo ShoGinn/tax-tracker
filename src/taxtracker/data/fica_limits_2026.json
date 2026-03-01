@@ -2,6 +2,12 @@
 	"tax_year": 2026,
 	"last_updated": "2025-12-29",
 	"source": "Social Security Administration + IRS Topic 751",
+	"citations": {
+		"social_security_wage_base": "https://www.ssa.gov/oact/cola/cbbdet.html",
+		"fica_rates": "https://www.irs.gov/taxtopics/tc751",
+		"additional_medicare": "https://www.irs.gov/businesses/small-businesses-self-employed/questions-and-answers-for-the-additional-medicare-tax"
+	},
+	"verified_date": "2026-03-01",
 	"social_security": {
 		"employee_rate": 0.062,
 		"employer_rate": 0.062,

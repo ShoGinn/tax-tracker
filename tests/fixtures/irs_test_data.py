@@ -4,9 +4,15 @@ This module contains KNOWN tax data from IRS publications for testing.
 Tests should use this data instead of relying on external JSON files.
 
 Sources:
-- IRS Publication 15 (Circular E) - Employer's Tax Guide
-- IRS Form 1040 Instructions
-- IRS Tax Rate Schedules
+- Tax brackets: IRS Rev. Proc. 2023-34, Sec. 3.01, Table 1
+  https://www.irs.gov/pub/irs-drop/rp-23-34.pdf
+- Standard deductions: IRS Rev. Proc. 2023-34, Sec. 3.15
+- FICA rates: IRS Publication 15 (Circular E) 2024, Table 2
+  https://www.irs.gov/publications/p15
+- SS wage base: SSA Contribution and Benefit Base for 2024
+  https://www.ssa.gov/oact/cola/cbbdet.html
+- Child tax credit: IRC Sec. 24 (pre-OBBB, $2,000 for 2024)
+- Additional Medicare: IRS Sec. 3101(b)(2), threshold per filing status
 
 All values are from published IRS examples and rate schedules.
 """
@@ -25,8 +31,9 @@ from taxtracker.models.tax_data import (
     TaxBrackets,
 )
 
-# IRS 2024 Tax Brackets (from actual IRS Publication 17)
-# https://www.irs.gov/publications/p17
+# IRS 2024 Tax Brackets
+# Primary: IRS Rev. Proc. 2023-34, Sec. 3.01, Table 1
+# Cross-ref: https://www.irs.gov/newsroom/irs-provides-tax-inflation-adjustments-for-tax-year-2024
 IRS_2024_TAX_BRACKETS = TaxBrackets(
     tax_year=2024,
     last_updated="2024-11-01",
@@ -91,9 +98,12 @@ IRS_2024_TAX_BRACKETS = TaxBrackets(
 )
 
 
-# IRS 2024 FICA Limits (from IRS Publication 15, Social Security Administration)
-# https://www.ssa.gov/benefits/retirement/2024.html
-# https://www.irs.gov/publications/p15
+# IRS 2024 FICA Limits
+# SS wage base: SSA Contribution and Benefit Base 2024 ($168,600)
+#   https://www.ssa.gov/oact/cola/cbbdet.html
+# FICA rates: IRS Publication 15 (2024), Table 2
+#   https://www.irs.gov/publications/p15
+# Additional Medicare: 0.9% on wages over threshold (IRC Sec. 3101(b)(2))
 IRS_2024_FICA_LIMITS = FICALimits(
     tax_year=2024,
     last_updated="2024-01-01",
