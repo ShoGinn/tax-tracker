@@ -7,6 +7,7 @@ These tests demonstrate the proper approach:
 """
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from fixtures.irs_test_data import (
     FICA_EXAMPLE_1,
@@ -16,7 +17,9 @@ from fixtures.irs_test_data import (
 )
 
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
-from taxtracker.services.tax_calculator import TaxCalculator
+
+if TYPE_CHECKING:
+    from taxtracker.services.tax_calculator import TaxCalculator
 
 
 class TestTaxCalculatorWithIRSData:
@@ -96,7 +99,7 @@ class TestSimplifiedTaxCalculations:
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("8000"),
+            gross_income=Decimal(8000),
             num_children=0,
         )
 
@@ -118,7 +121,7 @@ class TestSimplifiedTaxCalculations:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("30000"),
+            gross_income=Decimal(30000),
             num_children=0,
         )
 
@@ -150,7 +153,7 @@ class TestSimplifiedTaxCalculations:
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("60000"),
+            gross_income=Decimal(60000),
             num_children=2,
         )
 
@@ -236,7 +239,7 @@ class TestDeterministicCalculations:
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("75000"),
+            gross_income=Decimal(75000),
             num_children=1,
         )
 
@@ -258,7 +261,7 @@ class TestDeterministicCalculations:
         request = TaxCalculationRequest(
             tax_year=2030,  # Year that doesn't exist in JSON files
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("50000"),
+            gross_income=Decimal(50000),
             num_children=0,
         )
 

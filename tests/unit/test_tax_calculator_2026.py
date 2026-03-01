@@ -38,7 +38,7 @@ def test_2026_single_filer_80k():
     request = TaxCalculationRequest(
         tax_year=2026,
         filing_status=FilingStatus.SINGLE,
-        gross_income=Decimal("80000"),
+        gross_income=Decimal(80000),
         num_children=0,
         use_standard_deduction=True,
     )
@@ -46,16 +46,16 @@ def test_2026_single_filer_80k():
     result = calculator.calculate_taxes(request)
 
     # 2026 single standard deduction: 16,100
-    assert result.taxable_income == Decimal("63900")
+    assert result.taxable_income == Decimal(63900)
 
     # Manual expected tax using 2026 single thresholds
     steps = [
-        (Decimal("12400"), Decimal("0.10")),
-        (Decimal("50400"), Decimal("0.12")),
-        (Decimal("105700"), Decimal("0.22")),
-        (Decimal("201775"), Decimal("0.24")),
-        (Decimal("256225"), Decimal("0.32")),
-        (Decimal("640600"), Decimal("0.35")),
+        (Decimal(12400), Decimal("0.10")),
+        (Decimal(50400), Decimal("0.12")),
+        (Decimal(105700), Decimal("0.22")),
+        (Decimal(201775), Decimal("0.24")),
+        (Decimal(256225), Decimal("0.32")),
+        (Decimal(640600), Decimal("0.35")),
         (None, Decimal("0.37")),
     ]
     expected_tax = compute_progressive_tax(result.taxable_income, steps)
@@ -71,7 +71,7 @@ def test_2026_single_high_income_top_bracket():
     request = TaxCalculationRequest(
         tax_year=2026,
         filing_status=FilingStatus.SINGLE,
-        gross_income=Decimal("700000"),
+        gross_income=Decimal(700000),
         num_children=0,
         use_standard_deduction=True,
     )
@@ -79,15 +79,15 @@ def test_2026_single_high_income_top_bracket():
     result = calculator.calculate_taxes(request)
 
     taxable_income = result.taxable_income
-    assert taxable_income > Decimal("640600")  # Above top threshold
+    assert taxable_income > Decimal(640600)  # Above top threshold
 
     steps = [
-        (Decimal("12400"), Decimal("0.10")),
-        (Decimal("50400"), Decimal("0.12")),
-        (Decimal("105700"), Decimal("0.22")),
-        (Decimal("201775"), Decimal("0.24")),
-        (Decimal("256225"), Decimal("0.32")),
-        (Decimal("640600"), Decimal("0.35")),
+        (Decimal(12400), Decimal("0.10")),
+        (Decimal(50400), Decimal("0.12")),
+        (Decimal(105700), Decimal("0.22")),
+        (Decimal(201775), Decimal("0.24")),
+        (Decimal(256225), Decimal("0.32")),
+        (Decimal(640600), Decimal("0.35")),
         (None, Decimal("0.37")),
     ]
     expected_tax = compute_progressive_tax(taxable_income, steps)

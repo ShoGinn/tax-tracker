@@ -6,6 +6,7 @@ These tests verify calculations against published IRS examples from:
 """
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
 from fixtures.irs_test_data import (
@@ -23,7 +24,9 @@ from fixtures.irs_test_data import (
 )
 
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
-from taxtracker.services.tax_calculator import TaxCalculator
+
+if TYPE_CHECKING:
+    from taxtracker.services.tax_calculator import TaxCalculator
 
 
 @pytest.mark.unit
@@ -187,7 +190,7 @@ class TestAdditionalFICAExamples:
         assert 10000 < ss_tax < 12000
 
         # Verify Medicare (base + additional)
-        medicare_tax = float(fica.get("medicare_tax", 0))
+        float(fica.get("medicare_tax", 0))
         additional_medicare = float(fica.get("additional_medicare_tax", 0))
 
         # Should have additional Medicare for married over $250k

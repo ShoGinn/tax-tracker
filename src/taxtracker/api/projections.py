@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from taxtracker.api.dependencies import get_db
 from taxtracker.core.exceptions import ProjectionError
@@ -197,8 +197,8 @@ async def project_from_database(
     """
     try:
         # Get averages from database
-        pension_avg = Decimal("0")
-        va_avg = Decimal("0")
+        pension_avg = Decimal(0)
+        va_avg = Decimal(0)
 
         if use_database_pension:
             pension_entries = await get_retirement_1099rs(db)
@@ -221,9 +221,9 @@ async def project_from_database(
             filing_status=filing_status_enum,
             num_children=num_children,
             w2_gross=Decimal(str(expected_w2_gross)),
-            w2_pretax_deductions=Decimal("0"),
+            w2_pretax_deductions=Decimal(0),
             pension_gross=pension_avg * 12,  # Monthly to annual
-            pension_pretax_deductions=Decimal("0"),
+            pension_pretax_deductions=Decimal(0),
             va_disability=va_avg * 12,  # Monthly to annual
             estimated_federal_withholding=estimated_withholding,
             use_standard_deduction=True,

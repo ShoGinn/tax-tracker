@@ -2,10 +2,9 @@
 
 import csv
 from io import StringIO
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.models.database import Employer
 from taxtracker.models.schemas import (
@@ -15,6 +14,9 @@ from taxtracker.models.schemas import (
     Retirement1099RCreate,
 )
 from taxtracker.services import income_service
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class CSVImportResult:

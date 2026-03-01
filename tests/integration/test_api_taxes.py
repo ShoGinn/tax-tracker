@@ -3,11 +3,14 @@
 import json
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-from fastapi.testclient import TestClient
 
 from taxtracker.core.config import settings
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -68,7 +71,7 @@ class TestAdminAPI:
         assert data["year"] == year
         saved_path = temp_upload_dir / f"tax_brackets_{year}.json"
         assert saved_path.exists()
-        with open(saved_path) as f:
+        with saved_path.open() as f:
             saved = json.load(f)
         assert saved["tax_year"] == year
         assert "tax_brackets" in saved
@@ -136,7 +139,7 @@ class TestAdminAPI:
         assert data["year"] == year
         saved_path = temp_upload_dir / f"fica_limits_{year}.json"
         assert saved_path.exists()
-        with open(saved_path) as f:
+        with saved_path.open() as f:
             saved = json.load(f)
         assert saved["year"] == year
         assert "social_security" in saved

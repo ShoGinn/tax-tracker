@@ -1,12 +1,14 @@
 """Data loader service for tax brackets and FICA limits."""
 
 import json
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from taxtracker.core.config import DataFileType, settings
 from taxtracker.core.exceptions import DataLoadError
 from taxtracker.models.tax_data import FICALimits, TaxBrackets
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _load_json_file(file_type: DataFileType, year: int) -> dict[str, Any]:

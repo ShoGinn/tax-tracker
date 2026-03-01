@@ -1,15 +1,15 @@
 """Shared API dependencies."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator  # noqa: TC003
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from taxtracker.models.database import AsyncSessionLocal
-from taxtracker.models.tax_data import FICALimits, TaxBrackets
+from taxtracker.models.tax_data import FICALimits, TaxBrackets  # noqa: TC001
 from taxtracker.services.data_loader import load_fica_limits_model, load_tax_brackets_model
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """Get async database session.
 
     Yields async database session and ensures cleanup.

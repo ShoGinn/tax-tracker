@@ -1,11 +1,13 @@
 """Tax data models for validation and type safety."""
 
-from collections.abc import Callable
 from decimal import Decimal
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class FilingStatus(str, Enum):
@@ -159,7 +161,7 @@ class TaxBrackets(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def precompute_cumulative_tax(self) -> "TaxBrackets":
+    def precompute_cumulative_tax(self) -> TaxBrackets:
         """Pre-compute cumulative tax for each bracket.
 
         This enables O(1) tax lookups: Tax = cumulative_tax + (rate * excess_income)

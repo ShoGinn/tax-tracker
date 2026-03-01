@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default_factory=_default_data_dir)
 
     # API
-    api_host: str = "0.0.0.0"
+    api_host: str = "0.0.0.0"  # noqa: S104
     api_port: int = 8000
 
     def get_data_file(self, file_type: DataFileType, year: int) -> Path:

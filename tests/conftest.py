@@ -5,7 +5,7 @@ import contextlib
 
 # Import IRS test data
 import sys
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator  # noqa: TC003
 from pathlib import Path
 
 import pytest
@@ -16,7 +16,7 @@ from fixtures.irs_test_data import (
     get_irs_test_data,
 )
 from sqlalchemy import create_engine, event
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine  # noqa: TC002
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -42,16 +42,16 @@ def mock_tax_data_dependency(monkeypatch):
     This ensures both dependency-injected and direct file loading calls work.
     """
 
-    def override_get_tax_data(year: int) -> tuple:
+    def override_get_tax_data(year: int) -> tuple:  # noqa: ARG001
         """Return test data for any year requested."""
         # Always return 2024 test data regardless of year
         return (IRS_2024_TAX_BRACKETS, IRS_2024_FICA_LIMITS)
 
     # Also patch the data loader functions so TaxCalculator can use them
-    def mock_load_tax_brackets_model(year: int):
+    def mock_load_tax_brackets_model(year: int):  # noqa: ARG001
         return IRS_2024_TAX_BRACKETS
 
-    def mock_load_fica_limits_model(year: int):
+    def mock_load_fica_limits_model(year: int):  # noqa: ARG001
         return IRS_2024_FICA_LIMITS
 
     # Patch in data_loader module (where they're defined)
@@ -105,7 +105,7 @@ def irs_2024_calculator() -> TaxCalculator:
 
 
 @pytest.fixture
-def test_engine() -> Generator[Engine, None, None]:
+def test_engine() -> Generator[Engine]:
     """Create a test database engine with proper SQLite configuration.
 
     Uses StaticPool to ensure the in-memory database persists across connections.
@@ -123,7 +123,7 @@ def test_engine() -> Generator[Engine, None, None]:
 
     # Enable foreign keys for SQLite
     @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
+    def set_sqlite_pragma(dbapi_conn, _connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -174,7 +174,7 @@ def test_async_engine():
 
 
 @pytest.fixture
-def db_session(test_engine: Engine) -> Generator[Session, None, None]:
+def db_session(test_engine: Engine) -> Generator[Session]:
     """Create a test database session (SYNC - for unit tests).
 
     This session shares the same engine as the client, allowing tests
@@ -216,7 +216,7 @@ async def async_db_session(test_async_engine):
 
 
 @pytest.fixture
-def client(test_async_engine, mock_tax_data_dependency) -> Generator[TestClient, None, None]:
+def client(test_async_engine, mock_tax_data_dependency) -> Generator[TestClient]:
     """Create a test client with async test database and dependency injection.
 
     The client uses:
@@ -238,7 +238,7 @@ def client(test_async_engine, mock_tax_data_dependency) -> Generator[TestClient,
     )
 
     # Override get_db to use the test async session
-    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+    async def override_get_db() -> AsyncGenerator[AsyncSession]:
         async with _async_session_factory() as session:
             yield session
 
