@@ -232,8 +232,7 @@ class TaxCalculator:
 
             if child_credits > 0:
                 notes.append(
-                    f"Child Tax Credit: ${child_credits:,.2f} "
-                    f"for {request.num_children} children"
+                    f"Child Tax Credit: ${child_credits:,.2f} for {request.num_children} children"
                 )
 
         # Step 6: Calculate total tax liability (credits reduce tax)

@@ -1,6 +1,5 @@
 """Unit tests for CSV import service."""
 
-
 import pytest
 
 from taxtracker.services.csv_import import (
@@ -82,8 +81,7 @@ class TestPaycheckCSVImport:
     async def test_import_row_error_handling(self, async_db_session) -> None:
         """Invalid rows should be tracked as errors."""
         csv_content = (
-            "employer_name,pay_date,gross_wages,net_pay\n"
-            "Test Corp,not-a-date,5000.00,4000.00\n"
+            "employer_name,pay_date,gross_wages,net_pay\nTest Corp,not-a-date,5000.00,4000.00\n"
         )
         result = await import_paychecks_csv(async_db_session, csv_content)
 
@@ -141,10 +139,7 @@ class TestPensionCSVImport:
     @pytest.mark.anyio
     async def test_import_error_handling(self, async_db_session) -> None:
         """Invalid pension rows should be tracked as errors."""
-        csv_content = (
-            "pay_date,gross_amount,net_amount\n"
-            "not-a-date,abc,def\n"
-        )
+        csv_content = "pay_date,gross_amount,net_amount\nnot-a-date,abc,def\n"
         result = await import_pension_csv(async_db_session, csv_content)
 
         assert result["error_count"] == 1
@@ -164,10 +159,7 @@ class TestVACSVImport:
     @pytest.mark.anyio
     async def test_basic_import(self, async_db_session) -> None:
         """Basic VA disability CSV import."""
-        csv_content = (
-            "pay_date,amount,source_type\n"
-            "2024-01-01,2000.00,va_disability\n"
-        )
+        csv_content = "pay_date,amount,source_type\n2024-01-01,2000.00,va_disability\n"
         result = await import_va_csv(async_db_session, csv_content)
 
         assert result["success_count"] == 1
@@ -176,10 +168,7 @@ class TestVACSVImport:
     @pytest.mark.anyio
     async def test_import_error_handling(self, async_db_session) -> None:
         """Invalid VA rows should be tracked as errors."""
-        csv_content = (
-            "pay_date,amount\n"
-            "not-a-date,abc\n"
-        )
+        csv_content = "pay_date,amount\nnot-a-date,abc\n"
         result = await import_va_csv(async_db_session, csv_content)
 
         assert result["error_count"] == 1
