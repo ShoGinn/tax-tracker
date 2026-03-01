@@ -1,10 +1,14 @@
 """Test CSV import with new field names."""
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.models.database import NonTaxableIncome
 from taxtracker.services import csv_import
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class TestCSVImportBackwardCompatibility:

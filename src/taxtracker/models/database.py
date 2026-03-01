@@ -1,6 +1,6 @@
 """Database models using SQLAlchemy ORM."""
 
-from datetime import date, datetime
+from datetime import date, datetime  # noqa: TC003
 from decimal import Decimal
 
 from sqlalchemy import ForeignKey, String, Text, func
@@ -36,7 +36,7 @@ class Employer(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    paychecks: Mapped[list["Paycheck"]] = relationship(
+    paychecks: Mapped[list[Paycheck]] = relationship(
         back_populates="employer", cascade="all, delete-orphan"
     )
 
@@ -95,7 +95,7 @@ class Paycheck(Base):
     pay_period_end: Mapped[date | None] = mapped_column(nullable=True)
 
     # Relationships
-    employer: Mapped["Employer"] = relationship(back_populates="paychecks")
+    employer: Mapped[Employer] = relationship(back_populates="paychecks")
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())

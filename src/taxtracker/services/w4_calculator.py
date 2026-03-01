@@ -2,11 +2,13 @@
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from taxtracker.core.config import settings
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
-from taxtracker.services.tax_calculator import TaxCalculator
+
+if TYPE_CHECKING:
+    from taxtracker.services.tax_calculator import TaxCalculator
 
 
 @dataclass

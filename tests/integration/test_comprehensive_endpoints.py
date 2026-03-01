@@ -1,7 +1,11 @@
 """Comprehensive integration tests for all major endpoints."""
 
+from typing import TYPE_CHECKING
+
 import pytest
-from fastapi.testclient import TestClient
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 @pytest.mark.integration
@@ -70,8 +74,8 @@ class TestTaxCalculateEndpoint:
         assert float(data["child_tax_credits"]) == 4000  # 2 * $2,200
 
         # Federal tax should be reduced by credits
-        federal_before_credits = float(data["federal_tax_owed"])
-        total_liability = float(data["total_tax_liability"])
+        float(data["federal_tax_owed"])
+        float(data["total_tax_liability"])
 
         # Total should be federal + FICA - credits
         # But our model adds them differently, so just check credits applied

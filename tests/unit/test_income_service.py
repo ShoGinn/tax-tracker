@@ -2,8 +2,7 @@
 
 from datetime import date
 from decimal import Decimal
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import TYPE_CHECKING
 
 from taxtracker.models.schemas import (
     EmployerCreate,
@@ -16,6 +15,9 @@ from taxtracker.models.schemas import (
     Retirement1099RUpdate,
 )
 from taxtracker.services import income_service
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class TestEmployerService:
@@ -119,18 +121,18 @@ class TestPaycheckService:
         paycheck_data = PaycheckCreate(
             employer_id=employer.id,
             pay_date=date(2024, 6, 15),
-            gross_wages=Decimal("5000"),
-            federal_withholding=Decimal("750"),
-            social_security=Decimal("310"),
+            gross_wages=Decimal(5000),
+            federal_withholding=Decimal(750),
+            social_security=Decimal(310),
             medicare=Decimal("72.50"),
-            state_withholding=Decimal("200"),
+            state_withholding=Decimal(200),
         )
 
         paycheck = await income_service.create_paycheck(async_db_session, paycheck_data)
 
         assert paycheck.id is not None
         assert paycheck.employer_id == employer.id
-        assert paycheck.gross_wages == Decimal("5000")
+        assert paycheck.gross_wages == Decimal(5000)
         assert paycheck.net_pay == Decimal("3667.50")
 
     async def test_get_paycheck(self, async_db_session: AsyncSession):
@@ -143,7 +145,7 @@ class TestPaycheckService:
         paycheck_data = PaycheckCreate(
             employer_id=employer.id,
             pay_date=date(2024, 6, 15),
-            gross_wages=Decimal("4000"),
+            gross_wages=Decimal(4000),
         )
         created = await income_service.create_paycheck(async_db_session, paycheck_data)
 
@@ -151,7 +153,7 @@ class TestPaycheckService:
 
         assert retrieved is not None
         assert retrieved.id == created.id
-        assert retrieved.gross_wages == Decimal("4000")
+        assert retrieved.gross_wages == Decimal(4000)
 
     async def test_get_paychecks(self, async_db_session: AsyncSession):
         """Test listing paychecks."""
@@ -165,7 +167,7 @@ class TestPaycheckService:
             paycheck_data = PaycheckCreate(
                 employer_id=employer.id,
                 pay_date=date(2024, 6, i + 1),
-                gross_wages=Decimal("4000"),
+                gross_wages=Decimal(4000),
             )
             await income_service.create_paycheck(async_db_session, paycheck_data)
 
@@ -191,7 +193,7 @@ class TestPaycheckService:
                 PaycheckCreate(
                     employer_id=employer1.id,
                     pay_date=date(2024, 6, i + 1),
-                    gross_wages=Decimal("4000"),
+                    gross_wages=Decimal(4000),
                 ),
             )
 
@@ -201,7 +203,7 @@ class TestPaycheckService:
             PaycheckCreate(
                 employer_id=employer2.id,
                 pay_date=date(2024, 6, 1),
-                gross_wages=Decimal("5000"),
+                gross_wages=Decimal(5000),
             ),
         )
 
@@ -224,7 +226,7 @@ class TestPaycheckService:
             PaycheckCreate(
                 employer_id=employer.id,
                 pay_date=date(2024, 6, 1),
-                gross_wages=Decimal("4000"),
+                gross_wages=Decimal(4000),
             ),
         )
         await income_service.create_paycheck(
@@ -232,7 +234,7 @@ class TestPaycheckService:
             PaycheckCreate(
                 employer_id=employer.id,
                 pay_date=date(2025, 6, 1),
-                gross_wages=Decimal("4500"),
+                gross_wages=Decimal(4500),
             ),
         )
 
@@ -253,18 +255,18 @@ class TestPaycheckService:
             PaycheckCreate(
                 employer_id=employer.id,
                 pay_date=date(2024, 6, 1),
-                gross_wages=Decimal("4000"),
+                gross_wages=Decimal(4000),
             ),
         )
 
         # Update it
-        update_data = PaycheckUpdate(gross_wages=Decimal("4500"), notes="Updated")
+        update_data = PaycheckUpdate(gross_wages=Decimal(4500), notes="Updated")
         updated = await income_service.update_paycheck(async_db_session, created.id, update_data)
 
         assert updated is not None
-        assert updated.gross_wages == Decimal("4500")
+        assert updated.gross_wages == Decimal(4500)
         assert updated.notes == "Updated"
-        assert updated.net_pay == Decimal("4500")  # Automatically computed from new gross_wages
+        assert updated.net_pay == Decimal(4500)  # Automatically computed from new gross_wages
 
     async def test_delete_paycheck(self, async_db_session: AsyncSession):
         """Test deleting a paycheck."""
@@ -278,7 +280,7 @@ class TestPaycheckService:
             PaycheckCreate(
                 employer_id=employer.id,
                 pay_date=date(2024, 6, 1),
-                gross_wages=Decimal("4000"),
+                gross_wages=Decimal(4000),
             ),
         )
 
@@ -296,24 +298,24 @@ class TestRetirement1099RService:
         """Test creating 1099-R income."""
         data = Retirement1099RCreate(
             pay_date=date(2024, 6, 1),
-            gross_amount=Decimal("5000"),
-            pretax_deductions=Decimal("500"),
-            federal_withholding=Decimal("600"),
+            gross_amount=Decimal(5000),
+            pretax_deductions=Decimal(500),
+            federal_withholding=Decimal(600),
             source_description="Military Pension",
         )
 
         retirement = await income_service.create_retirement_1099r(async_db_session, data)
 
         assert retirement.id is not None
-        assert retirement.gross_amount == Decimal("5000")
-        assert retirement.pretax_deductions == Decimal("500")
-        assert retirement.taxable_amount == Decimal("4500")  # 5000 - 500
+        assert retirement.gross_amount == Decimal(5000)
+        assert retirement.pretax_deductions == Decimal(500)
+        assert retirement.taxable_amount == Decimal(4500)  # 5000 - 500
 
     async def test_get_retirement_1099r(self, async_db_session: AsyncSession):
         """Test retrieving 1099-R income."""
         created = await income_service.create_retirement_1099r(
             async_db_session,
-            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")),
+            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal(5000)),
         )
 
         retrieved = await income_service.get_retirement_1099r(async_db_session, created.id)
@@ -328,7 +330,7 @@ class TestRetirement1099RService:
                 async_db_session,
                 Retirement1099RCreate(
                     pay_date=date(2024, 6, i + 1),
-                    gross_amount=Decimal("5000"),
+                    gross_amount=Decimal(5000),
                 ),
             )
 
@@ -339,11 +341,11 @@ class TestRetirement1099RService:
         """Test filtering 1099-R by year."""
         await income_service.create_retirement_1099r(
             async_db_session,
-            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")),
+            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal(5000)),
         )
         await income_service.create_retirement_1099r(
             async_db_session,
-            Retirement1099RCreate(pay_date=date(2025, 6, 1), gross_amount=Decimal("5500")),
+            Retirement1099RCreate(pay_date=date(2025, 6, 1), gross_amount=Decimal(5500)),
         )
 
         entries_2024 = await income_service.get_retirement_1099rs(async_db_session, year=2024)
@@ -354,23 +356,23 @@ class TestRetirement1099RService:
         """Test updating 1099-R income."""
         created = await income_service.create_retirement_1099r(
             async_db_session,
-            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")),
+            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal(5000)),
         )
 
-        update_data = Retirement1099RUpdate(gross_amount=Decimal("5500"), notes="Updated")
+        update_data = Retirement1099RUpdate(gross_amount=Decimal(5500), notes="Updated")
         updated = await income_service.update_retirement_1099r(
             async_db_session, created.id, update_data
         )
 
         assert updated is not None
-        assert updated.gross_amount == Decimal("5500")
+        assert updated.gross_amount == Decimal(5500)
         assert updated.notes == "Updated"
 
     async def test_delete_retirement_1099r(self, async_db_session: AsyncSession):
         """Test deleting 1099-R income."""
         created = await income_service.create_retirement_1099r(
             async_db_session,
-            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal("5000")),
+            Retirement1099RCreate(pay_date=date(2024, 6, 1), gross_amount=Decimal(5000)),
         )
 
         result = await income_service.delete_retirement_1099r(async_db_session, created.id)
@@ -387,7 +389,7 @@ class TestNonTaxableIncomeService:
         """Test creating non-taxable income."""
         data = NonTaxableIncomeCreate(
             pay_date=date(2024, 6, 1),
-            amount=Decimal("3000"),
+            amount=Decimal(3000),
             source_type="VA Disability",
             notes="Monthly payment",
         )
@@ -395,14 +397,14 @@ class TestNonTaxableIncomeService:
         income = await income_service.create_non_taxable_payment(async_db_session, data)
 
         assert income.id is not None
-        assert income.amount == Decimal("3000")
+        assert income.amount == Decimal(3000)
         assert income.source_type == "VA Disability"
 
     async def test_get_non_taxable_income(self, async_db_session: AsyncSession):
         """Test retrieving non-taxable income."""
         created = await income_service.create_non_taxable_payment(
             async_db_session,
-            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal("3000")),
+            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal(3000)),
         )
 
         retrieved = await income_service.get_non_taxable_payment(async_db_session, created.id)
@@ -415,7 +417,7 @@ class TestNonTaxableIncomeService:
         for i in range(3):
             await income_service.create_non_taxable_payment(
                 async_db_session,
-                NonTaxableIncomeCreate(pay_date=date(2024, 6, i + 1), amount=Decimal("3000")),
+                NonTaxableIncomeCreate(pay_date=date(2024, 6, i + 1), amount=Decimal(3000)),
             )
 
         entries = await income_service.get_non_taxable_payments(async_db_session)
@@ -425,11 +427,11 @@ class TestNonTaxableIncomeService:
         """Test filtering non-taxable income by year."""
         await income_service.create_non_taxable_payment(
             async_db_session,
-            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal("3000")),
+            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal(3000)),
         )
         await income_service.create_non_taxable_payment(
             async_db_session,
-            NonTaxableIncomeCreate(pay_date=date(2025, 6, 1), amount=Decimal("3200")),
+            NonTaxableIncomeCreate(pay_date=date(2025, 6, 1), amount=Decimal(3200)),
         )
 
         entries_2024 = await income_service.get_non_taxable_payments(async_db_session, year=2024)
@@ -440,23 +442,23 @@ class TestNonTaxableIncomeService:
         """Test updating non-taxable income."""
         created = await income_service.create_non_taxable_payment(
             async_db_session,
-            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal("3000")),
+            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal(3000)),
         )
 
-        update_data = NonTaxableIncomeUpdate(amount=Decimal("3200"), source_type="SSA Disability")
+        update_data = NonTaxableIncomeUpdate(amount=Decimal(3200), source_type="SSA Disability")
         updated = await income_service.update_non_taxable_payment(
             async_db_session, created.id, update_data
         )
 
         assert updated is not None
-        assert updated.amount == Decimal("3200")
+        assert updated.amount == Decimal(3200)
         assert updated.source_type == "SSA Disability"
 
     async def test_delete_non_taxable_income(self, async_db_session: AsyncSession):
         """Test deleting non-taxable income."""
         created = await income_service.create_non_taxable_payment(
             async_db_session,
-            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal("3000")),
+            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal(3000)),
         )
 
         result = await income_service.delete_non_taxable_payment(async_db_session, created.id)
@@ -482,9 +484,9 @@ class TestYTDSummary:
             PaycheckCreate(
                 employer_id=employer.id,
                 pay_date=date(2024, 6, 1),
-                gross_wages=Decimal("5000"),
-                federal_withholding=Decimal("750"),
-                social_security=Decimal("310"),
+                gross_wages=Decimal(5000),
+                federal_withholding=Decimal(750),
+                social_security=Decimal(310),
                 medicare=Decimal("72.50"),
             ),
         )
@@ -494,25 +496,25 @@ class TestYTDSummary:
             async_db_session,
             Retirement1099RCreate(
                 pay_date=date(2024, 6, 1),
-                gross_amount=Decimal("4000"),
-                pretax_deductions=Decimal("400"),
-                federal_withholding=Decimal("500"),
+                gross_amount=Decimal(4000),
+                pretax_deductions=Decimal(400),
+                federal_withholding=Decimal(500),
             ),
         )
 
         # Create non-taxable income
         await income_service.create_non_taxable_payment(
             async_db_session,
-            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal("3000")),
+            NonTaxableIncomeCreate(pay_date=date(2024, 6, 1), amount=Decimal(3000)),
         )
 
         # Get YTD summary
         summary = await income_service.get_ytd_summary(async_db_session, 2024)
 
-        assert summary.total_w2_gross == Decimal("5000")
-        assert summary.total_pension_gross == Decimal("4000")
-        assert summary.total_pension_pretax_deductions == Decimal("400")
-        assert summary.total_pension_taxable == Decimal("3600")
-        assert summary.total_non_taxable_income == Decimal("3000")
-        assert summary.total_federal_withheld == Decimal("1250")  # 750 + 500
+        assert summary.total_w2_gross == Decimal(5000)
+        assert summary.total_pension_gross == Decimal(4000)
+        assert summary.total_pension_pretax_deductions == Decimal(400)
+        assert summary.total_pension_taxable == Decimal(3600)
+        assert summary.total_non_taxable_income == Decimal(3000)
+        assert summary.total_federal_withheld == Decimal(1250)  # 750 + 500
         assert summary.total_w2_fica_withheld == Decimal("382.50")  # 310 + 72.50

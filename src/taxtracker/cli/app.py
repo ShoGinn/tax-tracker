@@ -1,7 +1,7 @@
 """FastAPI application."""
 
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 import uvicorn
 from fastapi import FastAPI
@@ -14,6 +14,9 @@ from taxtracker.api.w4 import router as w4_router
 from taxtracker.core.config import settings
 from taxtracker.models.database import Base, async_engine
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
 
 def create_app(skip_db_init: bool = False) -> FastAPI:
     """Create and configure FastAPI application.
@@ -24,7 +27,7 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
 
     # Create lifespan with conditional DB init
     @asynccontextmanager
-    async def app_lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    async def app_lifespan(_app: FastAPI) -> AsyncGenerator[None]:
         """Application lifespan manager."""
         # Startup
 

@@ -1,8 +1,7 @@
 """Calculate taxes from database income records."""
 
 from decimal import Decimal
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import TYPE_CHECKING
 
 from taxtracker.models.tax_data import (
     FilingStatus,
@@ -10,7 +9,11 @@ from taxtracker.models.tax_data import (
     TaxReconciliationResponse,
 )
 from taxtracker.services.income_service import get_ytd_summary
-from taxtracker.services.tax_calculator import TaxCalculator
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from taxtracker.services.tax_calculator import TaxCalculator
 
 
 async def calculate_taxes_from_database(

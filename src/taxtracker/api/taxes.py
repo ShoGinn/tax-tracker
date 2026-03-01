@@ -1,17 +1,17 @@
 """Tax calculation API endpoints."""
 
 import json
-from collections.abc import Callable
-from pathlib import Path
+from collections.abc import Callable  # noqa: TC003
+from pathlib import Path  # noqa: TC003
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from taxtracker.api.dependencies import get_db, get_tax_data
 from taxtracker.core.config import settings
 from taxtracker.core.exceptions import DataLoadError, TaxCalculationError
-from taxtracker.models.tax_data import (
+from taxtracker.models.tax_data import (  # noqa: TC001
     FICALimits,
     FilingStatus,
     TaxBrackets,

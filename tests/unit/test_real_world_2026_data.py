@@ -39,59 +39,59 @@ def mock_tax_brackets_2026():
         source="OBBB Act 2025 / Rev. Proc. 2025-32",
         tax_brackets={
             FilingStatus.MARRIED_FILING_JOINTLY: [
-                TaxBracket(threshold=Decimal("24800"), rate=r10),
-                TaxBracket(threshold=Decimal("100800"), rate=r12),
-                TaxBracket(threshold=Decimal("211400"), rate=r22),
-                TaxBracket(threshold=Decimal("403550"), rate=r24),
-                TaxBracket(threshold=Decimal("512450"), rate=r32),
-                TaxBracket(threshold=Decimal("768700"), rate=r35),
+                TaxBracket(threshold=Decimal(24800), rate=r10),
+                TaxBracket(threshold=Decimal(100800), rate=r12),
+                TaxBracket(threshold=Decimal(211400), rate=r22),
+                TaxBracket(threshold=Decimal(403550), rate=r24),
+                TaxBracket(threshold=Decimal(512450), rate=r32),
+                TaxBracket(threshold=Decimal(768700), rate=r35),
                 TaxBracket(threshold=None, rate=r37),
             ],
             FilingStatus.SINGLE: [
-                TaxBracket(threshold=Decimal("12400"), rate=r10),
-                TaxBracket(threshold=Decimal("50400"), rate=r12),
-                TaxBracket(threshold=Decimal("105700"), rate=r22),
-                TaxBracket(threshold=Decimal("201775"), rate=r24),
-                TaxBracket(threshold=Decimal("256225"), rate=r32),
-                TaxBracket(threshold=Decimal("640600"), rate=r35),
+                TaxBracket(threshold=Decimal(12400), rate=r10),
+                TaxBracket(threshold=Decimal(50400), rate=r12),
+                TaxBracket(threshold=Decimal(105700), rate=r22),
+                TaxBracket(threshold=Decimal(201775), rate=r24),
+                TaxBracket(threshold=Decimal(256225), rate=r32),
+                TaxBracket(threshold=Decimal(640600), rate=r35),
                 TaxBracket(threshold=None, rate=r37),
             ],
             FilingStatus.MARRIED_FILING_SEPARATELY: [
-                TaxBracket(threshold=Decimal("12400"), rate=r10),
-                TaxBracket(threshold=Decimal("50400"), rate=r12),
-                TaxBracket(threshold=Decimal("105700"), rate=r22),
-                TaxBracket(threshold=Decimal("201775"), rate=r24),
-                TaxBracket(threshold=Decimal("256225"), rate=r32),
-                TaxBracket(threshold=Decimal("384350"), rate=r35),
+                TaxBracket(threshold=Decimal(12400), rate=r10),
+                TaxBracket(threshold=Decimal(50400), rate=r12),
+                TaxBracket(threshold=Decimal(105700), rate=r22),
+                TaxBracket(threshold=Decimal(201775), rate=r24),
+                TaxBracket(threshold=Decimal(256225), rate=r32),
+                TaxBracket(threshold=Decimal(384350), rate=r35),
                 TaxBracket(threshold=None, rate=r37),
             ],
             FilingStatus.HEAD_OF_HOUSEHOLD: [
-                TaxBracket(threshold=Decimal("17700"), rate=r10),
-                TaxBracket(threshold=Decimal("67450"), rate=r12),
-                TaxBracket(threshold=Decimal("105700"), rate=r22),
-                TaxBracket(threshold=Decimal("201750"), rate=r24),
-                TaxBracket(threshold=Decimal("256200"), rate=r32),
-                TaxBracket(threshold=Decimal("640600"), rate=r35),
+                TaxBracket(threshold=Decimal(17700), rate=r10),
+                TaxBracket(threshold=Decimal(67450), rate=r12),
+                TaxBracket(threshold=Decimal(105700), rate=r22),
+                TaxBracket(threshold=Decimal(201750), rate=r24),
+                TaxBracket(threshold=Decimal(256200), rate=r32),
+                TaxBracket(threshold=Decimal(640600), rate=r35),
                 TaxBracket(threshold=None, rate=r37),
             ],
         },
         standard_deductions=StandardDeductions(
             amounts={
-                FilingStatus.MARRIED_FILING_JOINTLY: Decimal("32200"),
-                FilingStatus.SINGLE: Decimal("16100"),
-                FilingStatus.MARRIED_FILING_SEPARATELY: Decimal("16100"),
-                FilingStatus.HEAD_OF_HOUSEHOLD: Decimal("24150"),
+                FilingStatus.MARRIED_FILING_JOINTLY: Decimal(32200),
+                FilingStatus.SINGLE: Decimal(16100),
+                FilingStatus.MARRIED_FILING_SEPARATELY: Decimal(16100),
+                FilingStatus.HEAD_OF_HOUSEHOLD: Decimal(24150),
             },
-            additional_age_65_plus={"single": Decimal("2000"), "married": Decimal("1600")},
+            additional_age_65_plus={"single": Decimal(2000), "married": Decimal(1600)},
         ),
         child_tax_credit=ChildTaxCredit(
-            amount_per_child=Decimal("2200"),
-            refundable_portion=Decimal("1700"),
+            amount_per_child=Decimal(2200),
+            refundable_portion=Decimal(1700),
             phase_out_threshold={
-                FilingStatus.MARRIED_FILING_JOINTLY: Decimal("400000"),
-                FilingStatus.SINGLE: Decimal("200000"),
-                FilingStatus.MARRIED_FILING_SEPARATELY: Decimal("200000"),
-                FilingStatus.HEAD_OF_HOUSEHOLD: Decimal("200000"),
+                FilingStatus.MARRIED_FILING_JOINTLY: Decimal(400000),
+                FilingStatus.SINGLE: Decimal(200000),
+                FilingStatus.MARRIED_FILING_SEPARATELY: Decimal(200000),
+                FilingStatus.HEAD_OF_HOUSEHOLD: Decimal(200000),
             },
         ),
     )
@@ -108,7 +108,7 @@ def mock_fica_limits_2026():
             employee_rate=Decimal("0.062"),
             employer_rate=Decimal("0.062"),
             total_rate=Decimal("0.124"),
-            wage_base_limit=Decimal("176100"),
+            wage_base_limit=Decimal(176100),
             max_employee_tax=Decimal("10918.20"),
             max_employer_tax=Decimal("10918.20"),
             max_combined_tax=Decimal("21836.40"),
@@ -123,7 +123,7 @@ def mock_fica_limits_2026():
         additional_medicare=AdditionalMedicareTax(
             rate=Decimal("0.009"),
             employer_match=False,
-            thresholds={"single": Decimal("200000"), "married_filing_jointly": Decimal("250000")},
+            thresholds={"single": Decimal(200000), "married_filing_jointly": Decimal(250000)},
             note="Applies to wages over threshold",
         ),
         combined_rates={"total": Decimal("0.0765")},
@@ -140,17 +140,17 @@ def test_veteran_retirement_scenario(mock_tax_brackets_2026, mock_fica_limits_20
     """
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
     request = TaxCalculationRequest(
-        gross_income=Decimal("45000"),
-        retirement_pretax_deductions=Decimal("3000"),
-        non_taxable_income=Decimal("48000"),
+        gross_income=Decimal(45000),
+        retirement_pretax_deductions=Decimal(3000),
+        non_taxable_income=Decimal(48000),
         filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
         tax_year=2026,
     )
     response = calc.calculate_taxes(request)
 
-    assert response.adjusted_gross_income == Decimal("42000")
+    assert response.adjusted_gross_income == Decimal(42000)
     # Correct 2026 math: 42000 - 32200 = 9800
-    assert response.taxable_income == Decimal("9800")
+    assert response.taxable_income == Decimal(9800)
     # 10% of 9800 = 980
     assert response.federal_tax_owed == Decimal("980.00")
 
@@ -163,7 +163,7 @@ def test_high_earner_fica_cap(mock_tax_brackets_2026, mock_fica_limits_2026):
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
 
     request = TaxCalculationRequest(
-        gross_income=Decimal("250000"), filing_status=FilingStatus.SINGLE, tax_year=2026
+        gross_income=Decimal(250000), filing_status=FilingStatus.SINGLE, tax_year=2026
     )
 
     response = calc.calculate_taxes(request)
@@ -182,7 +182,7 @@ def test_bracket_edge_case_exact_threshold(mock_tax_brackets_2026, mock_fica_lim
     """
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
     request = TaxCalculationRequest(
-        gross_income=Decimal("128550"),
+        gross_income=Decimal(128550),
         filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
         tax_year=2026,
     )
@@ -204,7 +204,7 @@ def test_child_tax_credit_limit(mock_tax_brackets_2026, mock_fica_limits_2026):
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
 
     request = TaxCalculationRequest(
-        gross_income=Decimal("40000"),
+        gross_income=Decimal(40000),
         filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
         num_children=3,  # $6,600 in credits
         tax_year=2026,
@@ -216,4 +216,4 @@ def test_child_tax_credit_limit(mock_tax_brackets_2026, mock_fica_limits_2026):
     # Tax = 850
     # Credits = 6600
     # Liability should be clamped to 0
-    assert response.total_tax_liability == Decimal("0")
+    assert response.total_tax_liability == Decimal(0)

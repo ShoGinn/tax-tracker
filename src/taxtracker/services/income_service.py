@@ -1,9 +1,9 @@
 """CRUD operations for income tracking."""
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import extract, select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
@@ -18,6 +18,9 @@ from taxtracker.models.schemas import (
     Retirement1099RUpdate,
     YTDSummary,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 # Employer CRUD

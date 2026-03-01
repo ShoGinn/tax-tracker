@@ -2,11 +2,14 @@
 
 from datetime import date
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
-from fastapi.testclient import TestClient
 
 from taxtracker.models.database import Employer, Paycheck, Retirement1099R
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 @pytest.mark.integration
@@ -110,12 +113,12 @@ class TestIncomeAPIFiltering:
         paycheck_2024 = Paycheck(
             employer_id=employer.id,
             pay_date=date(2024, 6, 15),
-            gross_wages=Decimal("5000"),
+            gross_wages=Decimal(5000),
         )
         paycheck_2025 = Paycheck(
             employer_id=employer.id,
             pay_date=date(2025, 1, 15),
-            gross_wages=Decimal("5500"),
+            gross_wages=Decimal(5500),
         )
         async_db_session.add_all([paycheck_2024, paycheck_2025])
         await async_db_session.commit()
@@ -132,8 +135,8 @@ class TestIncomeAPIFiltering:
         """Test filtering pension by year."""
 
         # Create pension payments
-        pension_2024 = Retirement1099R(pay_date=date(2024, 12, 1), gross_amount=Decimal("3000"))
-        pension_2025 = Retirement1099R(pay_date=date(2025, 1, 1), gross_amount=Decimal("3200"))
+        pension_2024 = Retirement1099R(pay_date=date(2024, 12, 1), gross_amount=Decimal(3000))
+        pension_2025 = Retirement1099R(pay_date=date(2025, 1, 1), gross_amount=Decimal(3200))
         async_db_session.add_all([pension_2024, pension_2025])
         await async_db_session.commit()
 

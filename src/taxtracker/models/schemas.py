@@ -166,7 +166,7 @@ class PaycheckResponse(PaycheckBase):
     """Schema for paycheck response."""
 
     id: int
-    employer: "EmployerResponse"
+    employer: EmployerResponse
 
     total_pretax_deductions: CleanDecimal
     total_posttax_deductions: CleanDecimal

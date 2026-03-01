@@ -3,11 +3,11 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from taxtracker.api.dependencies import get_db
 from taxtracker.core.exceptions import DatabaseError, ValidationError
-from taxtracker.models.schemas import (
+from taxtracker.models.schemas import (  # noqa: TC001
     NonTaxableIncomeCreate,
     NonTaxableIncomeResponse,
     PaycheckCreate,
@@ -31,7 +31,7 @@ async def create_paycheck_entry(
 ) -> PaycheckResponse:
     """Create a new paycheck entry."""
     try:
-        return await income_service.create_paycheck(db, paycheck)  # type: ignore[return-value]
+        return await income_service.create_paycheck(db, paycheck)  # ty: ignore[invalid-return-type]
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
@@ -49,7 +49,7 @@ async def list_paychecks(
 ) -> list[PaycheckResponse]:
     """List all paychecks, optionally filtered by year."""
     try:
-        return await income_service.get_paychecks(db, employer_id=None, year=year)  # type: ignore[return-value]
+        return await income_service.get_paychecks(db, employer_id=None, year=year)  # ty: ignore[invalid-return-type]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -119,7 +119,7 @@ async def create_pension_entry(
 ) -> Retirement1099RResponse:
     """Create a new pension entry."""
     try:
-        return await income_service.create_retirement_1099r(db, pension)  # type: ignore[return-value]
+        return await income_service.create_retirement_1099r(db, pension)  # ty: ignore[invalid-return-type]
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
@@ -132,7 +132,7 @@ async def list_pension(
 ) -> list[Retirement1099RResponse]:
     """List all pension entries, optionally filtered by year."""
     try:
-        return await income_service.get_retirement_1099rs(db, year)  # type: ignore[return-value]
+        return await income_service.get_retirement_1099rs(db, year)  # ty: ignore[invalid-return-type]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -197,7 +197,7 @@ async def create_va_entry(
 ) -> NonTaxableIncomeResponse:
     """Create a new Non-taxable entry."""
     try:
-        return await income_service.create_non_taxable_payment(db, va)  # type: ignore[return-value]
+        return await income_service.create_non_taxable_payment(db, va)  # ty: ignore[invalid-return-type]
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except DatabaseError as e:
@@ -210,7 +210,7 @@ async def list_va_disability(
 ) -> list[NonTaxableIncomeResponse]:
     """List all Non-taxable entries, optionally filtered by year."""
     try:
-        return await income_service.get_non_taxable_payments(db, year)  # type: ignore[return-value]
+        return await income_service.get_non_taxable_payments(db, year)  # ty: ignore[invalid-return-type]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

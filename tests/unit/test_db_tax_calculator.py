@@ -2,10 +2,10 @@
 
 from datetime import date
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
 from taxtracker.models.tax_data import (
@@ -14,7 +14,11 @@ from taxtracker.models.tax_data import (
     TaxReconciliationResponse,
 )
 from taxtracker.services.db_tax_calculator import calculate_taxes_from_database
-from taxtracker.services.tax_calculator import TaxCalculator
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from taxtracker.services.tax_calculator import TaxCalculator
 
 
 @pytest.mark.unit
@@ -26,40 +30,40 @@ class TestTaxReconciliationResponse:
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
             num_children=0,
-            gross_income=Decimal("70000"),
-            retirement_pretax_deductions=Decimal("0"),
-            adjusted_gross_income=Decimal("70000"),
-            deduction_amount=Decimal("15750"),
+            gross_income=Decimal(70000),
+            retirement_pretax_deductions=Decimal(0),
+            adjusted_gross_income=Decimal(70000),
+            deduction_amount=Decimal(15750),
             deduction_type="Standard Deduction",
-            taxable_income=Decimal("54250"),
-            federal_tax_owed=Decimal("7000"),
-            child_tax_credits=Decimal("0"),
-            total_tax_liability=Decimal("7000"),
-            effective_tax_rate=Decimal("10"),
-            marginal_tax_rate=Decimal("22"),
+            taxable_income=Decimal(54250),
+            federal_tax_owed=Decimal(7000),
+            child_tax_credits=Decimal(0),
+            total_tax_liability=Decimal(7000),
+            effective_tax_rate=Decimal(10),
+            marginal_tax_rate=Decimal(22),
             breakdown_by_bracket=[],
-            fica_taxes={"total_fica": Decimal("5738")},
-            total_household_income=Decimal("70000"),
+            fica_taxes={"total_fica": Decimal(5738)},
+            total_household_income=Decimal(70000),
             notes=[],
-            w2_gross=Decimal("75000"),
-            w2_pretax_deductions=Decimal("5000"),
-            w2_taxable=Decimal("70000"),
-            pension_gross=Decimal("0"),
-            pension_pretax_deductions=Decimal("0"),
-            pension_taxable=Decimal("0"),
-            non_taxable_income=Decimal("0"),
-            total_taxable_income=Decimal("70000"),
-            total_federal_withheld=Decimal("7500"),
-            total_fica_withheld=Decimal("5738"),
-            total_withheld=Decimal("13238"),
-            combined_liability=Decimal("12738"),
-            refund_or_owed=Decimal("500"),
+            w2_gross=Decimal(75000),
+            w2_pretax_deductions=Decimal(5000),
+            w2_taxable=Decimal(70000),
+            pension_gross=Decimal(0),
+            pension_pretax_deductions=Decimal(0),
+            pension_taxable=Decimal(0),
+            non_taxable_income=Decimal(0),
+            total_taxable_income=Decimal(70000),
+            total_federal_withheld=Decimal(7500),
+            total_fica_withheld=Decimal(5738),
+            total_withheld=Decimal(13238),
+            combined_liability=Decimal(12738),
+            refund_or_owed=Decimal(500),
             overpayment_percentage=Decimal("3.9"),
             result_status="REFUND",
         )
 
         assert resp.result_status == "REFUND"
-        assert resp.combined_liability == Decimal("12738")
+        assert resp.combined_liability == Decimal(12738)
         assert resp.total_withheld - resp.combined_liability == resp.refund_or_owed
 
 
@@ -79,10 +83,10 @@ class TestCalculateTaxesFromDatabase:
         paycheck = Paycheck(
             employer_id=employer.id,
             pay_date=date(2030, 6, 15),
-            gross_wages=Decimal("5000"),
-            deduction_401k=Decimal("500"),
-            federal_withholding=Decimal("600"),
-            social_security=Decimal("310"),
+            gross_wages=Decimal(5000),
+            deduction_401k=Decimal(500),
+            federal_withholding=Decimal(600),
+            social_security=Decimal(310),
             medicare=Decimal("72.50"),
         )
         async_db_session.add(paycheck)
@@ -121,9 +125,9 @@ class TestCalculateTaxesFromDatabase:
             paycheck = Paycheck(
                 employer_id=employer.id,
                 pay_date=date(2024, 2, 15),
-                gross_wages=Decimal("5000"),
-                federal_withholding=Decimal("600"),
-                social_security=Decimal("310"),
+                gross_wages=Decimal(5000),
+                federal_withholding=Decimal(600),
+                social_security=Decimal(310),
                 medicare=Decimal("72.50"),
             )
             async_db_session.add(paycheck)
@@ -143,14 +147,14 @@ class TestCalculateTaxesFromDatabase:
         manual_request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("10000"),  # two paychecks, no pretax deductions
+            gross_income=Decimal(10000),  # two paychecks, no pretax deductions
             num_children=0,
             use_standard_deduction=True,
         )
         manual_tax = test_calculator.calculate_taxes(manual_request)
-        manual_fica = test_calculator.calculate_fica(Decimal("10000"), FilingStatus.SINGLE)
+        manual_fica = test_calculator.calculate_fica(Decimal(10000), FilingStatus.SINGLE)
         manual_combined = manual_tax.total_tax_liability + manual_fica["total_fica"]
-        manual_total_withheld = Decimal("1200") + Decimal("765")  # 1200 federal + 765 FICA
+        manual_total_withheld = Decimal(1200) + Decimal(765)  # 1200 federal + 765 FICA
         manual_refund = manual_total_withheld - manual_combined
 
         assert db_result.combined_liability == manual_combined
@@ -162,9 +166,9 @@ class TestCalculateTaxesFromDatabase:
         """Test calculation with pension income."""
         pension = Retirement1099R(
             pay_date=date(2030, 1, 1),
-            gross_amount=Decimal("3000"),
-            pretax_deductions=Decimal("300"),
-            federal_withholding=Decimal("350"),
+            gross_amount=Decimal(3000),
+            pretax_deductions=Decimal(300),
+            federal_withholding=Decimal(350),
         )
         async_db_session.add(pension)
         await async_db_session.commit()
@@ -192,12 +196,12 @@ class TestCalculateTaxesFromDatabase:
         await async_db_session.commit()
 
         paycheck = Paycheck(
-            employer_id=employer.id, pay_date=date(2030, 6, 15), gross_wages=Decimal("3000")
+            employer_id=employer.id, pay_date=date(2030, 6, 15), gross_wages=Decimal(3000)
         )
         async_db_session.add(paycheck)
 
         non_taxable_payment = NonTaxableIncome(
-            pay_date=date(2030, 1, 1), amount=Decimal("2000"), notes="Monthly disability"
+            pay_date=date(2030, 1, 1), amount=Decimal(2000), notes="Monthly disability"
         )
         async_db_session.add(non_taxable_payment)
         await async_db_session.commit()
@@ -225,10 +229,10 @@ class TestCalculateTaxesFromDatabase:
         paycheck = Paycheck(
             employer_id=employer.id,
             pay_date=date(2030, 6, 15),
-            gross_wages=Decimal("8000"),
-            federal_withholding=Decimal("1000"),
-            social_security=Decimal("496"),
-            medicare=Decimal("116"),
+            gross_wages=Decimal(8000),
+            federal_withholding=Decimal(1000),
+            social_security=Decimal(496),
+            medicare=Decimal(116),
         )
         async_db_session.add(paycheck)
         await async_db_session.commit()
@@ -259,10 +263,10 @@ class TestCalculateTaxesFromDatabase:
         paycheck = Paycheck(
             employer_id=employer.id,
             pay_date=date(2030, 6, 15),
-            gross_wages=Decimal("12000"),
-            federal_withholding=Decimal("1800"),
-            social_security=Decimal("744"),
-            medicare=Decimal("174"),
+            gross_wages=Decimal(12000),
+            federal_withholding=Decimal(1800),
+            social_security=Decimal(744),
+            medicare=Decimal(174),
         )
         async_db_session.add(paycheck)
         await async_db_session.commit()
@@ -297,10 +301,10 @@ class TestCalculateTaxesFromDatabase:
             paycheck = Paycheck(
                 employer_id=employer.id,
                 pay_date=date(2030, month, 15),
-                gross_wages=Decimal("5000"),
-                deduction_401k=Decimal("500"),
-                federal_withholding=Decimal("600"),
-                social_security=Decimal("310"),
+                gross_wages=Decimal(5000),
+                deduction_401k=Decimal(500),
+                federal_withholding=Decimal(600),
+                social_security=Decimal(310),
                 medicare=Decimal("72.50"),
             )
             async_db_session.add(paycheck)

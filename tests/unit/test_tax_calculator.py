@@ -58,17 +58,17 @@ class TestFederalTaxCalculation:
                12% on $23,800 ($35,400 - $11,600) = $2,856
         - Total: $4,016
         """
-        gross_income = Decimal("50000")
-        standard_deduction = Decimal("14600")
+        gross_income = Decimal(50000)
+        standard_deduction = Decimal(14600)
         taxable_income = max(Decimal(0), gross_income - standard_deduction)
 
-        federal_tax, marginal_rate, breakdown = test_calculator.calculate_federal_tax(
+        federal_tax, marginal_rate, _breakdown = test_calculator.calculate_federal_tax(
             taxable_income=taxable_income,
             filing_status=FilingStatus.SINGLE,
         )
 
         # Verify taxable income
-        assert taxable_income == Decimal("35400")
+        assert taxable_income == Decimal(35400)
 
         # Should have federal tax (35400 is in 12% bracket)
         assert federal_tax > 0
@@ -77,7 +77,7 @@ class TestFederalTaxCalculation:
         # First $11,600 at 10% = $1,160
         # Next $23,800 ($35,400 - $11,600) at 12% = $2,856
         # Total = $4,016
-        expected_tax = Decimal("1160") + Decimal("2856")
+        expected_tax = Decimal(1160) + Decimal(2856)
         assert abs(federal_tax - expected_tax) < Decimal("1.00")
 
         # Marginal rate should be 12%
@@ -94,36 +94,36 @@ class TestFederalTaxCalculation:
                12% on $47,600 ($70,800 - $23,200) = $5,712
         - Total: $8,032
         """
-        gross_income = Decimal("100000")
-        standard_deduction = Decimal("29200")
+        gross_income = Decimal(100000)
+        standard_deduction = Decimal(29200)
         taxable_income = max(Decimal(0), gross_income - standard_deduction)
 
-        federal_tax, marginal_rate, breakdown = test_calculator.calculate_federal_tax(
+        federal_tax, marginal_rate, _breakdown = test_calculator.calculate_federal_tax(
             taxable_income=taxable_income,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
         )
 
         # Verify taxable income
-        assert taxable_income == Decimal("70800")
+        assert taxable_income == Decimal(70800)
         assert federal_tax > 0
 
         # Should be in 12% bracket
         assert marginal_rate == Decimal("0.12")
 
         # Expected: $2,320 (10% on $23,200) + $5,712 (12% on $47,600) = $8,032
-        expected_tax = Decimal("2320") + Decimal("5712")
+        expected_tax = Decimal(2320) + Decimal(5712)
         assert abs(federal_tax - expected_tax) < Decimal("1.00")
 
     def test_zero_income(self, test_calculator):
         """Test with zero income."""
-        federal_tax, marginal_rate, breakdown = test_calculator.calculate_federal_tax(
-            taxable_income=Decimal("0"),
+        federal_tax, marginal_rate, _breakdown = test_calculator.calculate_federal_tax(
+            taxable_income=Decimal(0),
             filing_status=FilingStatus.SINGLE,
         )
 
-        assert federal_tax == Decimal("0")
+        assert federal_tax == Decimal(0)
         # With $0 taxable income, marginal rate should be 0 or first bracket
-        assert marginal_rate >= Decimal("0")
+        assert marginal_rate >= Decimal(0)
         assert marginal_rate <= Decimal("0.10")
 
 
@@ -139,7 +139,7 @@ class TestFICACalculation:
         - Total: $3,825
         """
         fica_taxes = test_calculator.calculate_fica(
-            gross_wages=Decimal("50000"),
+            gross_wages=Decimal(50000),
             filing_status=FilingStatus.SINGLE,
         )
 
@@ -164,7 +164,7 @@ class TestFICACalculation:
         - Additional Medicare: ($200,000 - $200,000) * 0.9% = $0
         """
         fica_taxes = irs_2024_calculator.calculate_fica(
-            gross_wages=Decimal("200000"),
+            gross_wages=Decimal(200000),
             filing_status=FilingStatus.SINGLE,
         )
 
@@ -186,7 +186,7 @@ class TestFullTaxCalculation:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("75000"),
+            gross_income=Decimal(75000),
             num_children=0,
             use_standard_deduction=True,
         )
@@ -194,21 +194,21 @@ class TestFullTaxCalculation:
         result = test_calculator.calculate_taxes(request)
 
         # Verify response structure
-        assert result.gross_income == Decimal("75000")
-        assert result.adjusted_gross_income == Decimal("75000")
+        assert result.gross_income == Decimal(75000)
+        assert result.adjusted_gross_income == Decimal(75000)
         assert result.taxable_income > 0
         assert result.federal_tax_owed > 0
         assert result.total_tax_liability > 0
 
         # Taxable income should be gross - standard deduction ($14,600)
-        assert result.taxable_income == Decimal("60400")
+        assert result.taxable_income == Decimal(60400)
 
     def test_married_with_children(self, test_calculator):
         """Test calculation with child tax credits."""
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            gross_income=Decimal("100000"),
+            gross_income=Decimal(100000),
             num_children=2,
             use_standard_deduction=True,
         )
@@ -218,7 +218,7 @@ class TestFullTaxCalculation:
         # Should have child tax credits
         assert result.child_tax_credits > 0
         # 2 children * $2,000 = $4,000
-        assert result.child_tax_credits == Decimal("4000")
+        assert result.child_tax_credits == Decimal(4000)
 
         # Credits should reduce total tax
         assert result.total_tax_liability < result.federal_tax_owed + result.child_tax_credits
@@ -228,20 +228,20 @@ class TestFullTaxCalculation:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("80000"),
+            gross_income=Decimal(80000),
             num_children=0,
             use_standard_deduction=False,
-            itemized_deduction_amount=Decimal("25000"),
+            itemized_deduction_amount=Decimal(25000),
         )
 
         result = test_calculator.calculate_taxes(request)
 
         # Should use itemized deduction
         assert result.deduction_type == "Itemized Deduction"
-        assert result.deduction_amount == Decimal("25000")
+        assert result.deduction_amount == Decimal(25000)
 
         # Taxable income should be gross - itemized ($25k)
-        assert result.taxable_income == Decimal("55000")
+        assert result.taxable_income == Decimal(55000)
 
 
 class TestTaxCalculatorEdgeCases:
@@ -256,14 +256,14 @@ class TestTaxCalculatorEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("15000"),
+            gross_income=Decimal(15000),
             num_children=0,
         )
 
         result = test_calculator.calculate_taxes(request)
 
         # Should have small taxable income ($15,000 - $14,600 = $400)
-        assert result.taxable_income == Decimal("400")
+        assert result.taxable_income == Decimal(400)
         # Tax on $400 at 10% = $40
         assert result.federal_tax_owed == Decimal("40.00")
 
@@ -275,7 +275,7 @@ class TestTaxCalculatorEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("500000"),
+            gross_income=Decimal(500000),
             num_children=0,
         )
 
@@ -285,38 +285,38 @@ class TestTaxCalculatorEdgeCases:
         assert result.marginal_tax_rate == Decimal("35.00")
 
         # Should have substantial tax liability
-        assert result.federal_tax_owed > Decimal("100000")
+        assert result.federal_tax_owed > Decimal(100000)
 
     def test_pension_deduction(self, test_calculator):
         """Test with pension SBP deduction."""
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("50000"),
-            retirement_pretax_deductions=Decimal("5000"),
+            gross_income=Decimal(50000),
+            retirement_pretax_deductions=Decimal(5000),
             num_children=0,
         )
 
         result = test_calculator.calculate_taxes(request)
 
         # AGI should be reduced by pension deduction
-        assert result.adjusted_gross_income == Decimal("45000")
-        assert result.retirement_pretax_deductions == Decimal("5000")
+        assert result.adjusted_gross_income == Decimal(45000)
+        assert result.retirement_pretax_deductions == Decimal(5000)
 
     def test_va_disability_tracking(self, test_calculator):
         """Test VA disability income tracking (non-taxable)."""
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal("50000"),
-            non_taxable_income=Decimal("20000"),
+            gross_income=Decimal(50000),
+            non_taxable_income=Decimal(20000),
             num_children=0,
         )
 
         result = test_calculator.calculate_taxes(request)
 
         # Total household income includes VA
-        assert result.total_household_income == Decimal("70000")
+        assert result.total_household_income == Decimal(70000)
 
         # But VA doesn't affect AGI or taxable income
-        assert result.adjusted_gross_income == Decimal("50000")
+        assert result.adjusted_gross_income == Decimal(50000)
