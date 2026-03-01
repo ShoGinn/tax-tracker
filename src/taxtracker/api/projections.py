@@ -8,7 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from taxtracker.api.dependencies import get_db
 from taxtracker.core.exceptions import ProjectionError
-from taxtracker.models.tax_data import FilingStatus
+from taxtracker.models.api_requests import (  # noqa: TC001
+    CompareYearsRequest,
+    ProjectFromDBRequest,
+    ProjectYearRequest,
+)
 from taxtracker.services.income_service import get_non_taxable_payments, get_retirement_1099rs
 from taxtracker.services.projections import compare_years, project_year
 from taxtracker.services.tax_calculator import TaxCalculator
@@ -17,62 +21,29 @@ router = APIRouter(prefix="/projections", tags=["Projections"])
 
 
 @router.post("/project-year")
-async def project_future_year(
-    projection_year: int,
-    filing_status: str,
-    num_children: int,
-    w2_gross: float,
-    w2_pretax_deductions: float = 0,
-    pension_gross: float = 0,
-    pension_pretax_deductions: float = 0,
-    va_disability: float = 0,
-    use_standard_deduction: bool = True,
-    itemized_deduction_amount: float = 0,
-) -> dict[str, Any]:
+async def project_future_year(request: ProjectYearRequest) -> dict[str, Any]:
     """
     Project taxes for a future year based on expected income.
-
-    Args:
-        projection_year: Year to project
-        filing_status: Filing status
-        num_children: Number of qualifying children
-        w2_gross: Expected W-2 gross income
-        w2_pretax_deductions: W-2 pre-tax deductions (401k, etc.)
-        pension_gross: Expected pension income
-        pension_pretax_deductions: Pension pre-tax deductions
-        va_disability: non-taxable benefit income (non-taxable)
-        use_standard_deduction: Whether to use standard deduction
-        itemized_deduction_amount: Itemized deduction amount if not using standard
 
     Returns:
         Tax projection with breakdown
     """
     try:
-        # Create calculator instance
-
-        # Convert filing status string to enum
-        filing_status_enum = FilingStatus(filing_status)
-
-        # Estimate withholding (roughly 15% of gross for initial projection)
-        estimated_withholding = Decimal(str(w2_gross)) * Decimal("0.15")
-
-        # Call service with correct parameters
         result = project_year(
-            tax_calculator=TaxCalculator(tax_year=projection_year),
-            year=projection_year,
-            filing_status=filing_status_enum,
-            num_children=num_children,
-            w2_gross=Decimal(str(w2_gross)),
-            w2_pretax_deductions=Decimal(str(w2_pretax_deductions)),
-            pension_gross=Decimal(str(pension_gross)),
-            pension_pretax_deductions=Decimal(str(pension_pretax_deductions)),
-            va_disability=Decimal(str(va_disability)),
-            estimated_federal_withholding=estimated_withholding,
-            use_standard_deduction=use_standard_deduction,
-            itemized_deductions=float(itemized_deduction_amount),
+            tax_calculator=TaxCalculator(tax_year=request.projection_year),
+            year=request.projection_year,
+            filing_status=request.filing_status,
+            num_children=request.num_children,
+            w2_gross=request.w2_gross,
+            w2_pretax_deductions=request.w2_pretax_deductions,
+            pension_gross=request.pension_gross,
+            pension_pretax_deductions=request.pension_pretax_deductions,
+            va_disability=request.va_disability,
+            estimated_federal_withholding=Decimal(0),
+            use_standard_deduction=request.use_standard_deduction,
+            itemized_deductions=float(request.itemized_deduction_amount),
         )
 
-        # Convert YearProjection to dict
         return {
             "year": result.year,
             "filing_status": result.filing_status,
@@ -96,69 +67,39 @@ async def project_future_year(
 
 
 @router.post("/compare-years")
-async def compare_tax_years(
-    base_year: int,
-    comparison_year: int,
-    filing_status: str,
-    num_children: int,
-    base_w2_gross: float,
-    comparison_w2_gross: float,
-    base_pension: float = 0,
-    comparison_pension: float = 0,
-) -> dict[str, Any]:
+async def compare_tax_years(request: CompareYearsRequest) -> dict[str, Any]:
     """
     Compare taxes between two years.
 
     Shows how tax liability changes year-over-year with different income levels.
-
-    Args:
-        base_year: Base year for comparison
-        comparison_year: Year to compare against
-        filing_status: Filing status
-        num_children: Number of qualifying children
-        base_w2_gross: W-2 income in base year
-        comparison_w2_gross: W-2 income in comparison year
-        base_pension: Pension income in base year
-        comparison_pension: Pension income in comparison year
-
-    Returns:
-        Year-over-year comparison with differences
     """
     try:
-        # Create calculator instance
-        filing_status_enum = FilingStatus(filing_status)
-
-        # Project base year
-        base_withholding = Decimal(str(base_w2_gross)) * Decimal("0.15")
         base_projection = project_year(
-            tax_calculator=TaxCalculator(tax_year=base_year),
-            year=base_year,
-            filing_status=filing_status_enum,
-            num_children=num_children,
-            w2_gross=Decimal(str(base_w2_gross)),
+            tax_calculator=TaxCalculator(tax_year=request.base_year),
+            year=request.base_year,
+            filing_status=request.filing_status,
+            num_children=request.num_children,
+            w2_gross=request.base_w2_gross,
             w2_pretax_deductions=Decimal(0),
-            pension_gross=Decimal(str(base_pension)),
+            pension_gross=request.base_pension,
             pension_pretax_deductions=Decimal(0),
             va_disability=Decimal(0),
-            estimated_federal_withholding=base_withholding,
+            estimated_federal_withholding=Decimal(0),
         )
 
-        # Project comparison year
-        comp_withholding = Decimal(str(comparison_w2_gross)) * Decimal("0.15")
         comp_projection = project_year(
-            tax_calculator=TaxCalculator(tax_year=comparison_year),
-            year=comparison_year,
-            filing_status=filing_status_enum,
-            num_children=num_children,
-            w2_gross=Decimal(str(comparison_w2_gross)),
+            tax_calculator=TaxCalculator(tax_year=request.comparison_year),
+            year=request.comparison_year,
+            filing_status=request.filing_status,
+            num_children=request.num_children,
+            w2_gross=request.comparison_w2_gross,
             w2_pretax_deductions=Decimal(0),
-            pension_gross=Decimal(str(comparison_pension)),
+            pension_gross=request.comparison_pension,
             pension_pretax_deductions=Decimal(0),
             va_disability=Decimal(0),
-            estimated_federal_withholding=comp_withholding,
+            estimated_federal_withholding=Decimal(0),
         )
 
-        # Compare the projections
         return compare_years([base_projection, comp_projection])
     except ProjectionError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -168,12 +109,7 @@ async def compare_tax_years(
 
 @router.post("/from-database")
 async def project_from_database(
-    projection_year: int,
-    filing_status: str,
-    num_children: int,
-    expected_w2_gross: float,
-    use_database_pension: bool = True,
-    use_database_va: bool = True,
+    request: ProjectFromDBRequest,
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, Any]:
@@ -181,56 +117,38 @@ async def project_from_database(
     Project future year using historical data from database.
 
     Pulls pension and non-taxable benefit averages from database automatically.
-
-    Args:
-        projection_year: Year to project
-        filing_status: Filing status
-        num_children: Number of qualifying children
-        expected_w2_gross: Expected W-2 income
-        paychecks_per_year: Number of paychecks per year
-        use_database_pension: Auto-pull pension from database
-        use_database_va: Auto-pull non-taxable benefit from database
-        db: Database session
-
-    Returns:
-        Tax projection with data sources noted
     """
     try:
-        # Get averages from database
         pension_avg = Decimal(0)
         va_avg = Decimal(0)
 
-        if use_database_pension:
+        if request.use_database_pension:
             pension_entries = await get_retirement_1099rs(db)
             if pension_entries:
                 total = sum(float(p.gross_amount) for p in pension_entries)
                 pension_avg = Decimal(str(total / len(pension_entries)))
 
-        if use_database_va:
+        if request.use_database_va:
             va_entries = await get_non_taxable_payments(db)
             if va_entries:
                 total = sum(float(v.amount) for v in va_entries)
                 va_avg = Decimal(str(total / len(va_entries)))
 
-        filing_status_enum = FilingStatus(filing_status)
-        estimated_withholding = Decimal(str(expected_w2_gross)) * Decimal("0.15")
-
         result = project_year(
-            tax_calculator=TaxCalculator(tax_year=projection_year),
-            year=projection_year,
-            filing_status=filing_status_enum,
-            num_children=num_children,
-            w2_gross=Decimal(str(expected_w2_gross)),
+            tax_calculator=TaxCalculator(tax_year=request.projection_year),
+            year=request.projection_year,
+            filing_status=request.filing_status,
+            num_children=request.num_children,
+            w2_gross=request.expected_w2_gross,
             w2_pretax_deductions=Decimal(0),
-            pension_gross=pension_avg * 12,  # Monthly to annual
+            pension_gross=pension_avg * 12,
             pension_pretax_deductions=Decimal(0),
-            va_disability=va_avg * 12,  # Monthly to annual
-            estimated_federal_withholding=estimated_withholding,
+            va_disability=va_avg * 12,
+            estimated_federal_withholding=Decimal(0),
             use_standard_deduction=True,
             itemized_deductions=0.0,
         )
 
-        # Convert to dict and add data sources
         return {
             "year": result.year,
             "filing_status": result.filing_status,
@@ -247,8 +165,10 @@ async def project_from_database(
             "effective_rate": str(result.effective_rate),
             "marginal_rate": str(result.marginal_rate),
             "data_sources": {
-                "pension": "from database average" if use_database_pension else "not used",
-                "va": "from database average" if use_database_va else "not used",
+                "pension": "from database average"
+                if request.use_database_pension
+                else "not used",
+                "va": "from database average" if request.use_database_va else "not used",
                 "w2": "from request",
             },
         }
@@ -256,4 +176,6 @@ async def project_from_database(
     except ProjectionError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database projection failed: {e!s}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Database projection failed: {e!s}"
+        ) from e

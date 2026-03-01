@@ -5,8 +5,13 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from taxtracker.core.config import current_tax_year
 from taxtracker.core.exceptions import W4CalculationError
-from taxtracker.models.tax_data import FilingStatus
+from taxtracker.models.api_requests import (  # noqa: TC001
+    AnnualWithholdingRequest,
+    W4OptimizeRequest,
+    WithholdingCalcRequest,
+)
 from taxtracker.services.tax_calculator import TaxCalculator
 from taxtracker.services.w4_calculator import optimize_w4
 from taxtracker.services.w4_withholding import (
@@ -18,61 +23,37 @@ router = APIRouter(prefix="/w4", tags=["W-4"])
 
 
 @router.post("/optimize")
-async def optimize_w4_settings(
-    total_annual_w2_income: float,
-    paychecks_per_year: int,
-    filing_status: str,
-    num_children: int = 0,
-    other_annual_income: float = 0,
-    itemized_deductions: float = 0,
-    target_refund: float = 0,
-    year: int = 2024,
-) -> dict[str, Any]:
+async def optimize_w4_settings(request: W4OptimizeRequest) -> dict[str, Any]:
     """
     Optimize W-4 settings to achieve target refund amount.
 
     Calculates optimal W-4 form values for Steps 2, 3, and 4 to ensure
     proper withholding throughout the year.
-
-    Args:
-        total_annual_w2_income: Total W-2 income across all jobs
-        paychecks_per_year: Number of paychecks per year
-        filing_status: Filing status
-        num_children: Number of qualifying children
-        other_annual_income: Other income (pension, interest, etc.)
-        itemized_deductions: Itemized deductions if not using standard
-        target_refund: Desired refund amount (0 to break even)
-        year: Tax year
-
-    Returns:
-        Optimized W-4 settings with instructions
     """
+    year = request.year or current_tax_year()
     try:
-        # Convert simplified API parameters to w4_calculator format
         w2_jobs = [
             {
                 "employer": "Primary Job",
-                "annual_gross": total_annual_w2_income,
-                "paychecks_per_year": paychecks_per_year,
+                "annual_gross": float(request.total_annual_w2_income),
+                "paychecks_per_year": request.paychecks_per_year,
             }
         ]
 
-        # Call the service function with proper parameters
         result = optimize_w4(
             tax_calculator=TaxCalculator(tax_year=year),
             year=year,
-            filing_status=FilingStatus(filing_status),
-            num_children=num_children,
+            filing_status=request.filing_status,
+            num_children=request.num_children,
             w2_jobs=w2_jobs,
-            pension_taxable=Decimal(str(other_annual_income)),
+            pension_taxable=request.other_annual_income,
             va_disability=Decimal(0),
-            current_federal_withholding=Decimal(0),  # We'll calculate optimal
-            target_refund=Decimal(str(target_refund)),
-            use_standard_deduction=itemized_deductions == 0,
-            itemized_deductions=float(itemized_deductions),
+            current_federal_withholding=Decimal(0),
+            target_refund=request.target_refund,
+            use_standard_deduction=request.itemized_deductions == 0,
+            itemized_deductions=float(request.itemized_deductions),
         )
 
-        # Convert dataclass to dict for API response
         return {
             "year": result.year,
             "filing_status": result.filing_status,
@@ -116,46 +97,23 @@ async def optimize_w4_settings(
 
 
 @router.post("/calculate-withholding")
-async def calculate_withholding(
-    gross_pay_per_paycheck: float,
-    pay_frequency: str,
-    filing_status: str,
-    multiple_jobs_checkbox: bool = False,
-    dependents_amount: float = 0,
-    other_income_annual: float = 0,
-    deductions_annual: float = 0,
-    extra_withholding: float = 0,
-    year: int = 2024,
-) -> dict[str, Any]:
+async def calculate_withholding(request: WithholdingCalcRequest) -> dict[str, Any]:
     """
     Calculate federal withholding per paycheck based on W-4 settings.
 
     Uses IRS Publication 15-T percentage method to estimate withholding.
-
-    Args:
-        gross_pay_per_paycheck: Gross pay per paycheck
-        pay_frequency: Pay frequency (weekly, biweekly, semimonthly, monthly)
-        filing_status: Filing status
-        multiple_jobs_checkbox: W-4 Step 2(c) checkbox
-        dependents_amount: W-4 Step 3 amount
-        other_income_annual: W-4 Step 4(a) other income
-        deductions_annual: W-4 Step 4(b) deductions
-        extra_withholding: W-4 Step 4(c) extra withholding
-        year: Tax year
-
-    Returns:
-        Withholding per paycheck and annual withholding
     """
+    year = request.year or current_tax_year()
     try:
         return calculate_withholding_per_paycheck(
-            gross_pay=Decimal(str(gross_pay_per_paycheck)),
-            pay_frequency=pay_frequency,
-            filing_status=FilingStatus(filing_status),
-            multiple_jobs_checkbox=multiple_jobs_checkbox,
-            dependents_amount=Decimal(str(dependents_amount)),
-            other_income_annual=Decimal(str(other_income_annual)),
-            deductions_annual=Decimal(str(deductions_annual)),
-            extra_withholding=Decimal(str(extra_withholding)),
+            gross_pay=request.gross_pay_per_paycheck,
+            pay_frequency=request.pay_frequency,
+            filing_status=request.filing_status,
+            multiple_jobs_checkbox=request.multiple_jobs_checkbox,
+            dependents_amount=request.dependents_amount,
+            other_income_annual=request.other_income_annual,
+            deductions_annual=request.deductions_annual,
+            extra_withholding=request.extra_withholding,
             year=year,
         )
     except W4CalculationError as e:
@@ -163,55 +121,34 @@ async def calculate_withholding(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Withholding calculation failed: {e!s}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Withholding calculation failed: {e!s}"
+        ) from e
 
 
 @router.post("/estimate-annual-withholding")
-async def estimate_withholding(
-    annual_gross: float,
-    pay_frequency: str,
-    filing_status: str,
-    w4_step2_checkbox: bool = False,
-    w4_step3_dependents: float = 0,
-    w4_step4a_other_income: float = 0,
-    w4_step4b_deductions: float = 0,
-    w4_step4c_extra: float = 0,
-    year: int = 2024,
-) -> dict[str, float]:
+async def estimate_withholding(request: AnnualWithholdingRequest) -> dict[str, Any]:
     """
     Estimate total annual withholding from W-4 settings.
 
     Quick calculation to see how much will be withheld for the year.
-
-    Args:
-        annual_gross: Annual gross income
-        pay_frequency: Pay frequency
-        filing_status: Filing status
-        w4_step2_checkbox: Multiple jobs checkbox
-        w4_step3_dependents: Dependents amount
-        w4_step4a_other_income: Other income
-        w4_step4b_deductions: Deductions
-        w4_step4c_extra: Extra withholding
-        year: Tax year
-
-    Returns:
-        Estimated annual withholding
     """
+    year = request.year or current_tax_year()
     try:
         annual_withholding = estimate_annual_withholding_from_w4(
-            annual_gross=Decimal(str(annual_gross)),
-            pay_frequency=pay_frequency,
-            filing_status=FilingStatus(filing_status),
-            w4_step2_checkbox=w4_step2_checkbox,
-            w4_step3_dependents=Decimal(str(w4_step3_dependents)),
-            w4_step4a_other_income=Decimal(str(w4_step4a_other_income)),
-            w4_step4b_deductions=Decimal(str(w4_step4b_deductions)),
-            w4_step4c_extra=Decimal(str(w4_step4c_extra)),
+            annual_gross=request.annual_gross,
+            pay_frequency=request.pay_frequency,
+            filing_status=request.filing_status,
+            w4_step2_checkbox=request.w4_step2_checkbox,
+            w4_step3_dependents=request.w4_step3_dependents,
+            w4_step4a_other_income=request.w4_step4a_other_income,
+            w4_step4b_deductions=request.w4_step4b_deductions,
+            w4_step4c_extra=request.w4_step4c_extra,
             year=year,
         )
 
         return {
-            "annual_gross": annual_gross,
+            "annual_gross": float(request.annual_gross),
             "estimated_annual_withholding": float(annual_withholding),
             "year": year,
         }
@@ -220,4 +157,6 @@ async def estimate_withholding(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Withholding estimation failed: {e!s}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Withholding estimation failed: {e!s}"
+        ) from e

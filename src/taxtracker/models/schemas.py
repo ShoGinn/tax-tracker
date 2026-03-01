@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from dateutil import parser
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 
 def _validate_flexible_date(value: date | str | int | datetime) -> date:
@@ -126,6 +126,29 @@ class PaycheckBase(BaseModel):
 
 class PaycheckCreate(PaycheckBase):
     """Schema for creating a paycheck."""
+
+    @model_validator(mode="after")
+    def warn_deductions_exceed_gross(self) -> PaycheckCreate:
+        """Warn if total pre-tax deductions exceed gross wages + bonus."""
+        total_pretax = (
+            self.deduction_401k
+            + self.deduction_403b
+            + self.deduction_health_insurance
+            + self.deduction_dental_insurance
+            + self.deduction_vision_insurance
+            + self.deduction_hsa
+            + self.deduction_fsa
+            + self.deduction_dependent_care_fsa
+            + self.deduction_commuter
+            + self.deduction_other_pretax
+        )
+        gross_plus_bonus = self.gross_wages + self.bonus
+        if total_pretax > gross_plus_bonus:
+            raise ValueError(
+                f"Total pre-tax deductions (${total_pretax:,.2f}) exceed "
+                f"gross wages + bonus (${gross_plus_bonus:,.2f})"
+            )
+        return self
 
 
 class PaycheckUpdate(BaseModel):

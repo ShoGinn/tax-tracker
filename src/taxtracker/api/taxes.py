@@ -58,7 +58,7 @@ async def calculate_taxes(
         return calculator.calculate_taxes(request)
     except TaxCalculationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
+    except DataLoadError as e:
         raise HTTPException(status_code=500, detail=f"Tax calculation failed: {e!s}") from e
 
 
@@ -104,7 +104,7 @@ async def calculate_from_database(
 
     except TaxCalculationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
+    except DataLoadError as e:
         raise HTTPException(
             status_code=500, detail=f"Database tax calculation failed: {e!s}"
         ) from e
@@ -112,7 +112,7 @@ async def calculate_from_database(
 
 @router.get("/fica/{year}")
 async def get_fica_info(
-    year: int,
+    year: int,  # noqa: ARG001 — path param consumed by get_tax_data dependency
     tax_data: Annotated[tuple[TaxBrackets, FICALimits], Depends(get_tax_data)],
 ) -> FICALimits:
     """Get FICA limits and rates for a given year.
@@ -124,16 +124,13 @@ async def get_fica_info(
     Returns:
         FICA limits data
     """
-    try:
-        _, fica_limits = tax_data
-        return fica_limits
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"FICA data not found for {year}: {e!s}") from e
+    _, fica_limits = tax_data
+    return fica_limits
 
 
 @router.get("/brackets/{year}")
 async def get_tax_brackets(
-    year: int,
+    year: int,  # noqa: ARG001 — path param consumed by get_tax_data dependency
     tax_data: Annotated[tuple[TaxBrackets, FICALimits], Depends(get_tax_data)],
 ) -> TaxBrackets:
     """Get tax brackets for a given year.
@@ -145,13 +142,8 @@ async def get_tax_brackets(
     Returns:
         Tax brackets and standard deductions
     """
-    try:
-        tax_brackets, _ = tax_data
-        return tax_brackets
-    except Exception as e:
-        raise HTTPException(
-            status_code=404, detail=f"Tax bracket data not found for {year}: {e!s}"
-        ) from e
+    tax_brackets, _ = tax_data
+    return tax_brackets
 
 
 @router.get("/tax-data/available-years")

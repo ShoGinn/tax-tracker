@@ -1,60 +1,46 @@
 """W-4 Withholding Calculator - Simulates federal withholding based on W-4 settings."""
 
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from taxtracker.models.tax_data import FilingStatus, TaxBracket
 from taxtracker.services.data_loader import load_tax_brackets_model
 
+if TYPE_CHECKING:
+    from taxtracker.models.tax_data import FilingStatus, TaxBrackets
 
-def load_tax_data(year: int) -> dict[str, Any]:
-    """Load tax bracket and deduction data.
+PAY_PERIODS: dict[str, int] = {
+    "weekly": 52,
+    "biweekly": 26,
+    "semimonthly": 24,
+    "monthly": 12,
+}
 
-    This function loads and validates the tax bracket data for the given year,
-    then converts it to the dict format needed for withholding calculations.
 
-    Args:
-        year: Tax year
+def _calculate_progressive_tax(
+    taxable_income: Decimal, brackets: TaxBrackets, filing_status: FilingStatus
+) -> Decimal:
+    """Calculate progressive tax using TaxBracket models directly."""
+    bracket_list = brackets.tax_brackets[filing_status]
+    previous_threshold = Decimal(0)
+    remaining = taxable_income
+    total_tax = Decimal(0)
 
-    Returns:
-        Dictionary with tax brackets and standard deductions
+    for bracket in bracket_list:
+        if remaining <= 0:
+            break
 
-    Raises:
-        DataLoadError: If tax data file cannot be loaded or is invalid
-    """
+        if bracket.threshold is not None:
+            bracket_size = bracket.threshold - previous_threshold
+        else:
+            bracket_size = remaining
+        taxable_in_bracket = min(remaining, bracket_size)
+        total_tax += taxable_in_bracket * bracket.rate
+        remaining -= taxable_in_bracket
 
-    tax_brackets_model = load_tax_brackets_model(year)
+        if bracket.threshold is not None:
+            previous_threshold = bracket.threshold
 
-    # Convert model back to dict format for compatibility with existing calculations
-    # Convert threshold-based brackets to min/max format for this function
-    def convert_brackets_to_legacy_format(brackets: list[TaxBracket]) -> list[dict[str, Any]]:
-        """Convert threshold-based brackets to legacy min/max format."""
-        legacy_brackets: list[dict[str, Any]] = []
-        previous_threshold = Decimal(0)
-
-        for bracket in brackets:
-            legacy_brackets.append(
-                {
-                    "min": float(previous_threshold),
-                    "max": float(bracket.threshold) if bracket.threshold is not None else None,
-                    "rate": float(bracket.rate),
-                }
-            )
-            if bracket.threshold is not None:
-                previous_threshold = bracket.threshold
-
-        return legacy_brackets
-
-    return {
-        "standard_deductions": {
-            status.value: tax_brackets_model.standard_deductions.amounts[status]
-            for status in FilingStatus
-        },
-        "tax_brackets": {
-            status.value: convert_brackets_to_legacy_format(tax_brackets_model.tax_brackets[status])
-            for status in FilingStatus
-        },
-    }
+    return total_tax
 
 
 def calculate_withholding_per_paycheck(
@@ -90,24 +76,12 @@ def calculate_withholding_per_paycheck(
     Returns:
         Dictionary with withholding amount and breakdown
     """
-    # Load tax data from JSON
-    tax_data = load_tax_data(year)
+    tax_brackets_model = load_tax_brackets_model(year)
 
-    # Pay periods per year
-    pay_periods = {
-        "weekly": 52,
-        "biweekly": 26,
-        "semimonthly": 24,
-        "monthly": 12,
-    }
-
-    if pay_frequency not in pay_periods:
+    if pay_frequency not in PAY_PERIODS:
         raise ValueError(f"Invalid pay_frequency: {pay_frequency}")
 
-    periods_per_year = pay_periods[pay_frequency]
-
-    # Use enum value so bracket key always matches JSON
-    filing_key = filing_status.value
+    periods_per_year = PAY_PERIODS[pay_frequency]
 
     # Step 1: Adjust gross pay based on Step 2(c) checkbox
     # IRS says to divide by 2 if checkbox is checked
@@ -119,38 +93,16 @@ def calculate_withholding_per_paycheck(
     # Step 3: Adjust for Step 4(a) other income
     annual_wages_adjusted = annual_wages + other_income_annual
 
-    # Step 4: Get standard deduction from JSON
-    standard_deduction = Decimal(str(tax_data["standard_deductions"][filing_key]))
+    # Step 4: Get standard deduction
+    standard_deduction = tax_brackets_model.standard_deductions.amounts[filing_status]
 
     # Step 5: Subtract deductions
     # Standard deduction + Step 4(b) extra deductions
     total_deductions = standard_deduction + deductions_annual
     annual_taxable = max(Decimal(0), annual_wages_adjusted - total_deductions)
 
-    # Step 6: Calculate annual withholding using tax brackets from JSON
-    brackets = tax_data["tax_brackets"][filing_key]
-
-    annual_tax = Decimal(0)
-    remaining = annual_taxable
-
-    for bracket in brackets:
-        if remaining <= 0:
-            break
-
-        bracket_min = Decimal(str(bracket["min"]))
-        bracket_max = Decimal(str(bracket["max"])) if bracket["max"] is not None else Decimal("inf")
-        rate = Decimal(str(bracket["rate"]))
-
-        # Amount in this bracket
-        if remaining + bracket_min <= bracket_max:
-            # All remaining income fits in this bracket
-            bracket_amount = remaining
-        else:
-            # Only part fits in this bracket
-            bracket_amount = bracket_max - bracket_min
-
-        annual_tax += bracket_amount * rate
-        remaining -= bracket_amount
+    # Step 6: Calculate annual withholding using progressive tax brackets
+    annual_tax = _calculate_progressive_tax(annual_taxable, tax_brackets_model, filing_status)
 
     # Step 7: Subtract dependent credits
     annual_tax = max(Decimal(0), annual_tax - dependents_amount)
@@ -204,14 +156,7 @@ def estimate_annual_withholding_from_w4(
     Returns:
         Estimated annual federal withholding
     """
-    pay_periods = {
-        "weekly": 52,
-        "biweekly": 26,
-        "semimonthly": 24,
-        "monthly": 12,
-    }
-
-    periods = pay_periods.get(pay_frequency, 26)
+    periods = PAY_PERIODS.get(pay_frequency, 26)
     gross_per_paycheck = annual_gross / periods
 
     result = calculate_withholding_per_paycheck(

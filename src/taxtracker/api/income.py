@@ -3,6 +3,7 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from taxtracker.api.dependencies import get_db
@@ -34,13 +35,10 @@ async def create_paycheck_entry(
         return await income_service.create_paycheck(db, paycheck)  # ty: ignore[invalid-return-type]
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        # Check for foreign key constraint errors
-        if "FOREIGN KEY constraint failed" in str(e) or "IntegrityError" in str(type(e).__name__):
-            raise HTTPException(status_code=404, detail="Referenced employer not found") from e
-        if isinstance(e, DatabaseError):
-            raise HTTPException(status_code=500, detail=str(e)) from e
-        raise
+    except IntegrityError as e:
+        raise HTTPException(status_code=404, detail="Referenced employer not found") from e
+    except DatabaseError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/paychecks")
@@ -104,7 +102,9 @@ async def import_paychecks_csv_endpoint(
             "total_rows": result["total_rows"],
             "errors": result["errors"],
         }
-    except Exception as e:
+    except UnicodeDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid file encoding: {e!s}") from e
+    except (ValidationError, DatabaseError) as e:
         raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}") from e
 
 
@@ -182,7 +182,9 @@ async def import_pension_csv_endpoint(
             "total_rows": result["total_rows"],
             "errors": result.get("errors", []),
         }
-    except Exception as e:
+    except UnicodeDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid file encoding: {e!s}") from e
+    except (ValidationError, DatabaseError) as e:
         raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}") from e
 
 
@@ -262,5 +264,7 @@ async def import_va_csv_endpoint(
             "total_rows": result["total_rows"],
             "errors": result.get("errors", []),
         }
-    except Exception as e:
+    except UnicodeDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid file encoding: {e!s}") from e
+    except (ValidationError, DatabaseError) as e:
         raise HTTPException(status_code=400, detail=f"CSV import failed: {e!s}") from e

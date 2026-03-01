@@ -9,6 +9,7 @@ These tests demonstrate the proper approach:
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+import pytest
 from fixtures.irs_test_data import (
     FICA_EXAMPLE_1,
     FICA_EXAMPLE_2,
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from taxtracker.services.tax_calculator import TaxCalculator
 
 
+@pytest.mark.unit
 class TestTaxCalculatorWithIRSData:
     """Tests using IRS-verified examples."""
 
@@ -37,7 +39,7 @@ class TestTaxCalculatorWithIRSData:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(IRS_EXAMPLE_1["gross_income"])),
+            w2_gross_income=Decimal(str(IRS_EXAMPLE_1["gross_income"])),
             num_children=IRS_EXAMPLE_1["num_children"],
             use_standard_deduction=IRS_EXAMPLE_1["use_standard_deduction"],
         )
@@ -67,7 +69,7 @@ class TestTaxCalculatorWithIRSData:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            gross_income=Decimal(str(IRS_EXAMPLE_2["gross_income"])),
+            w2_gross_income=Decimal(str(IRS_EXAMPLE_2["gross_income"])),
             num_children=IRS_EXAMPLE_2["num_children"],
             use_standard_deduction=IRS_EXAMPLE_2["use_standard_deduction"],
         )
@@ -84,6 +86,7 @@ class TestTaxCalculatorWithIRSData:
         assert abs(float(result.total_tax_liability) - IRS_EXAMPLE_2["expected_federal_tax"]) < 100
 
 
+@pytest.mark.unit
 class TestSimplifiedTaxCalculations:
     """Tests using simplified test data for easy verification."""
 
@@ -99,7 +102,7 @@ class TestSimplifiedTaxCalculations:
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(8000),
+            w2_gross_income=Decimal(8000),
             num_children=0,
         )
 
@@ -121,7 +124,7 @@ class TestSimplifiedTaxCalculations:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(30000),
+            w2_gross_income=Decimal(30000),
             num_children=0,
         )
 
@@ -153,7 +156,7 @@ class TestSimplifiedTaxCalculations:
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(60000),
+            w2_gross_income=Decimal(60000),
             num_children=2,
         )
 
@@ -167,6 +170,7 @@ class TestSimplifiedTaxCalculations:
         assert float(result.federal_tax_owed) >= 0
 
 
+@pytest.mark.unit
 class TestFICAWithIRSData:
     """Test FICA calculations using IRS examples."""
 
@@ -182,7 +186,7 @@ class TestFICAWithIRSData:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(FICA_EXAMPLE_1["gross_wages"])),
+            w2_gross_income=Decimal(str(FICA_EXAMPLE_1["gross_wages"])),
             num_children=0,
         )
 
@@ -213,7 +217,7 @@ class TestFICAWithIRSData:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(str(FICA_EXAMPLE_2["gross_wages"])),
+            w2_gross_income=Decimal(str(FICA_EXAMPLE_2["gross_wages"])),
             num_children=0,
         )
 
@@ -231,6 +235,7 @@ class TestFICAWithIRSData:
         assert abs(medicare_tax - FICA_EXAMPLE_2["expected_medicare_tax"]) < 1
 
 
+@pytest.mark.unit
 class TestDeterministicCalculations:
     """Tests that calculations are deterministic and repeatable."""
 
@@ -239,7 +244,7 @@ class TestDeterministicCalculations:
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(75000),
+            w2_gross_income=Decimal(75000),
             num_children=1,
         )
 
@@ -261,7 +266,7 @@ class TestDeterministicCalculations:
         request = TaxCalculationRequest(
             tax_year=2030,  # Year that doesn't exist in JSON files
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(50000),
+            w2_gross_income=Decimal(50000),
             num_children=0,
         )
 

@@ -3,7 +3,7 @@
 from datetime import date, datetime  # noqa: TC003
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, String, Text, func
+from sqlalchemy import ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -51,7 +51,12 @@ class Paycheck(Base):
     """W-2 paycheck from employer."""
 
     __tablename__ = "paychecks"
-    __table_args__ = ({"comment": "W-2 paycheck records"},)
+    __table_args__ = (
+        UniqueConstraint(
+            "employer_id", "pay_date", "gross_wages", name="uq_paycheck_identity"
+        ),
+        {"comment": "W-2 paycheck records"},
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     employer_id: Mapped[int] = mapped_column(ForeignKey("employers.id"), index=True)

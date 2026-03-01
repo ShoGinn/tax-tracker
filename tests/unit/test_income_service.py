@@ -4,6 +4,8 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+import pytest
+
 from taxtracker.models.schemas import (
     EmployerCreate,
     EmployerUpdate,
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
+@pytest.mark.unit
 class TestEmployerService:
     """Test employer CRUD operations."""
 
@@ -107,6 +110,7 @@ class TestEmployerService:
         assert retrieved is None
 
 
+@pytest.mark.unit
 class TestPaycheckService:
     """Test paycheck CRUD operations."""
 
@@ -291,6 +295,7 @@ class TestPaycheckService:
         assert retrieved is None
 
 
+@pytest.mark.unit
 class TestRetirement1099RService:
     """Test 1099-R retirement income CRUD operations."""
 
@@ -382,6 +387,7 @@ class TestRetirement1099RService:
         assert retrieved is None
 
 
+@pytest.mark.unit
 class TestNonTaxableIncomeService:
     """Test non-taxable income CRUD operations."""
 
@@ -468,6 +474,7 @@ class TestNonTaxableIncomeService:
         assert retrieved is None
 
 
+@pytest.mark.unit
 class TestYTDSummary:
     """Test YTD summary calculation."""
 

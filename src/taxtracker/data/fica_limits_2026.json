@@ -24,7 +24,8 @@
 		"thresholds": {
 			"single": 200000,
 			"married_filing_jointly": 250000,
-			"married_filing_separately": 125000
+			"married_filing_separately": 125000,
+			"head_of_household": 200000
 		},
 		"note": "Applies to wages above threshold, no employer match"
 	},

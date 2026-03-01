@@ -5,7 +5,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import pytest
-from pydantic import ValidationError
 
 from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
 from taxtracker.models.tax_data import (
@@ -120,11 +119,11 @@ class TestCalculateTaxesFromDatabase:
         async_db_session.add(employer)
         await async_db_session.commit()
 
-        # Two identical paychecks
-        for _ in range(2):
+        # Two paychecks on different dates
+        for day in (1, 15):
             paycheck = Paycheck(
                 employer_id=employer.id,
-                pay_date=date(2024, 2, 15),
+                pay_date=date(2024, 2, day),
                 gross_wages=Decimal(5000),
                 federal_withholding=Decimal(600),
                 social_security=Decimal(310),
@@ -147,7 +146,7 @@ class TestCalculateTaxesFromDatabase:
         manual_request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(10000),  # two paychecks, no pretax deductions
+            w2_gross_income=Decimal(10000),  # two paychecks, no pretax deductions
             num_children=0,
             use_standard_deduction=True,
         )
@@ -327,19 +326,18 @@ class TestCalculateTaxesFromDatabase:
     async def test_calculate_empty_database(
         self, async_db_session: AsyncSession, test_calculator: TaxCalculator
     ):
-        """Test calculation with no income records - should fail validation."""
+        """Test calculation with no income records - returns zero tax."""
 
-        # Use test_calculator fixture
+        result = await calculate_taxes_from_database(
+            db=async_db_session,
+            year=2030,
+            tax_calculator=test_calculator,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+        )
 
-        # Should raise validation error because gross_income must be > 0
-        with pytest.raises(ValidationError) as exc_info:
-            await calculate_taxes_from_database(
-                db=async_db_session,
-                year=2030,
-                tax_calculator=test_calculator,
-                filing_status=FilingStatus.SINGLE,
-                num_children=0,
-            )
-
-        # Verify it's the gross_income validation
-        assert "gross_income" in str(exc_info.value)
+        # With no income, everything should be zero
+        assert result.gross_income == Decimal(0)
+        assert result.taxable_income == Decimal(0)
+        assert result.federal_tax_owed == Decimal(0)
+        assert result.total_tax_liability == Decimal(0)

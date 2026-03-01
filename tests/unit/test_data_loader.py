@@ -114,7 +114,7 @@ class TestDataLoaderIntegration:
     def test_standard_deduction_amounts(self):
         """Test standard deduction amounts are reasonable."""
         data = load_tax_brackets(2025)
-        deductions = data["standard_deductions"]
+        deductions = data["standard_deductions"]["amounts"]
 
         # Married should be roughly 2x single
         married = deductions["married_filing_jointly"]

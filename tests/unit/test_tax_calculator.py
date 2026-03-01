@@ -2,9 +2,12 @@
 
 from decimal import Decimal
 
+import pytest
+
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
 
 
+@pytest.mark.unit
 class TestTaxCalculator:
     """Tests for TaxCalculator class."""
 
@@ -38,6 +41,7 @@ class TestTaxCalculator:
         assert hasattr(fica, "medicare")
 
 
+@pytest.mark.unit
 class TestFederalTaxCalculation:
     """Tests for federal tax calculation using IRS 2024 verified test data.
 
@@ -127,6 +131,7 @@ class TestFederalTaxCalculation:
         assert marginal_rate <= Decimal("0.10")
 
 
+@pytest.mark.unit
 class TestFICACalculation:
     """Tests for FICA tax calculation."""
 
@@ -178,6 +183,7 @@ class TestFICACalculation:
         assert abs(medicare_tax - 2900.0) < 1.0
 
 
+@pytest.mark.unit
 class TestFullTaxCalculation:
     """Tests for complete tax calculation using TaxCalculationRequest."""
 
@@ -186,7 +192,7 @@ class TestFullTaxCalculation:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(75000),
+            w2_gross_income=Decimal(75000),
             num_children=0,
             use_standard_deduction=True,
         )
@@ -208,7 +214,7 @@ class TestFullTaxCalculation:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            gross_income=Decimal(100000),
+            w2_gross_income=Decimal(100000),
             num_children=2,
             use_standard_deduction=True,
         )
@@ -228,7 +234,7 @@ class TestFullTaxCalculation:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(80000),
+            w2_gross_income=Decimal(80000),
             num_children=0,
             use_standard_deduction=False,
             itemized_deduction_amount=Decimal(25000),
@@ -244,6 +250,7 @@ class TestFullTaxCalculation:
         assert result.taxable_income == Decimal(55000)
 
 
+@pytest.mark.unit
 class TestTaxCalculatorEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
@@ -256,7 +263,7 @@ class TestTaxCalculatorEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(15000),
+            w2_gross_income=Decimal(15000),
             num_children=0,
         )
 
@@ -275,7 +282,7 @@ class TestTaxCalculatorEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(500000),
+            w2_gross_income=Decimal(500000),
             num_children=0,
         )
 
@@ -292,7 +299,7 @@ class TestTaxCalculatorEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(50000),
+            w2_gross_income=Decimal(50000),
             retirement_pretax_deductions=Decimal(5000),
             num_children=0,
         )
@@ -308,7 +315,7 @@ class TestTaxCalculatorEdgeCases:
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,
-            gross_income=Decimal(50000),
+            w2_gross_income=Decimal(50000),
             non_taxable_income=Decimal(20000),
             num_children=0,
         )

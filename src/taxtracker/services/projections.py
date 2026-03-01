@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from taxtracker.core.exceptions import ProjectionError
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
 
 if TYPE_CHECKING:
@@ -113,7 +114,17 @@ def project_year(
 
     Returns:
         YearProjection with full tax calculation
+
+    Raises:
+        ProjectionError: If tax_calculator year doesn't match projection year
     """
+    if tax_calculator.tax_year != year:
+        msg = (
+            f"Tax calculator year ({tax_calculator.tax_year}) "
+            f"does not match projection year ({year})"
+        )
+        raise ProjectionError(msg)
+
     # Calculate taxable amounts
     w2_taxable = w2_gross - w2_pretax_deductions
     pension_taxable = pension_gross - pension_pretax_deductions
@@ -123,7 +134,8 @@ def project_year(
     tax_request = TaxCalculationRequest(
         tax_year=year,
         filing_status=filing_status,
-        gross_income=total_taxable,
+        w2_gross_income=w2_taxable,
+        pension_gross_income=pension_taxable,
         num_children=num_children,
         use_standard_deduction=use_standard_deduction,
         itemized_deduction_amount=Decimal(str(itemized_deductions))
