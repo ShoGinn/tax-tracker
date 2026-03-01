@@ -1,8 +1,15 @@
 {
 	"tax_year": 2026,
 	"last_updated": "2026-01-02",
-	"source": "IRS https://www.irs.gov/pub/irs-drop/rp-25-32.pdf",
-	"notes": "Manually parsed",
+	"source": "IRS Revenue Procedure 2025-32",
+	"notes": "OBBB Act provisions continue; inflation-adjusted brackets per RP-25-32",
+	"citations": {
+		"tax_brackets": "https://www.irs.gov/filing/federal-income-tax-rates-and-brackets",
+		"standard_deductions": "https://www.irs.gov/newsroom/one-big-beautiful-bill-act-tax-deductions-for-working-americans-and-seniors",
+		"child_tax_credit": "https://www.irs.gov/newsroom/one-big-beautiful-bill-provisions-families",
+		"revenue_procedure": "https://www.irs.gov/pub/irs-drop/rp-25-32.pdf"
+	},
+	"verified_date": "2026-03-01",
 	"tax_brackets": {
 		"married_filing_jointly": [
 			{ "threshold": 24800, "rate": 0.1 },

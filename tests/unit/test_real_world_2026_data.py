@@ -84,7 +84,7 @@ def mock_tax_brackets_2026():
                 FilingStatus.MARRIED_FILING_SEPARATELY: Decimal(16100),
                 FilingStatus.HEAD_OF_HOUSEHOLD: Decimal(24150),
             },
-            additional_age_65_plus={"single": Decimal(2000), "married": Decimal(1600)},
+            additional_age_65_plus={"single": Decimal(2050), "married": Decimal(1650)},
         ),
         child_tax_credit=ChildTaxCredit(
             amount_per_child=Decimal(2200),
@@ -110,10 +110,10 @@ def mock_fica_limits_2026():
             employee_rate=Decimal("0.062"),
             employer_rate=Decimal("0.062"),
             total_rate=Decimal("0.124"),
-            wage_base_limit=Decimal(176100),
-            max_employee_tax=Decimal("10918.20"),
-            max_employer_tax=Decimal("10918.20"),
-            max_combined_tax=Decimal("21836.40"),
+            wage_base_limit=Decimal(184500),
+            max_employee_tax=Decimal("11439.00"),
+            max_employer_tax=Decimal("11439.00"),
+            max_combined_tax=Decimal("22878.00"),
         ),
         medicare=MedicareTax(
             employee_rate=Decimal("0.0145"),
@@ -176,8 +176,8 @@ def test_high_earner_fica_cap(mock_tax_brackets_2026, mock_fica_limits_2026):
     response = calc.calculate_taxes(request)
 
     fica = response.fica_taxes
-    # SS Tax should be capped at 176100 * 0.062 = 10918.20
-    assert fica["social_security_tax"] == Decimal("10918.20")
+    # SS Tax should be capped at 184500 * 0.062 = 11439.00
+    assert fica["social_security_tax"] == Decimal("11439.00")
     # Additional Medicare on (250,000 - 200,000) * 0.009 = 450.00
     assert fica["additional_medicare_tax"] == Decimal("450.00")
 
@@ -219,8 +219,8 @@ def test_child_tax_credit_limit(mock_tax_brackets_2026, mock_fica_limits_2026):
 
     response = calc.calculate_taxes(request)
 
-    # Taxable income = 40000 - 31500 = 8500
-    # Tax = 850
-    # Credits = 6600
+    # Taxable income = 40000 - 32200 = 7800
+    # Tax = 780 (10% of 7800)
+    # Credits = 6600 (3 * 2200)
     # Liability should be clamped to 0
     assert response.total_tax_liability == Decimal(0)

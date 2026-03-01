@@ -41,6 +41,11 @@ class TaxCalculator:
         self._tax_brackets = tax_brackets or load_tax_brackets_model(tax_year)
         self._fica_limits = fica_limits or load_fica_limits_model(tax_year)
 
+    @property
+    def tax_brackets(self) -> TaxBrackets:
+        """Public access to the loaded tax brackets data."""
+        return self._tax_brackets
+
     def calculate_federal_tax(
         self,
         taxable_income: Decimal,
