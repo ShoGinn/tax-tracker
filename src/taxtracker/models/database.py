@@ -52,9 +52,7 @@ class Paycheck(Base):
 
     __tablename__ = "paychecks"
     __table_args__ = (
-        UniqueConstraint(
-            "employer_id", "pay_date", "gross_wages", name="uq_paycheck_identity"
-        ),
+        UniqueConstraint("employer_id", "pay_date", "gross_wages", name="uq_paycheck_identity"),
         {"comment": "W-2 paycheck records"},
     )
 

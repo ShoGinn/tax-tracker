@@ -165,9 +165,7 @@ async def project_from_database(
             "effective_rate": str(result.effective_rate),
             "marginal_rate": str(result.marginal_rate),
             "data_sources": {
-                "pension": "from database average"
-                if request.use_database_pension
-                else "not used",
+                "pension": "from database average" if request.use_database_pension else "not used",
                 "va": "from database average" if request.use_database_va else "not used",
                 "w2": "from request",
             },
@@ -176,6 +174,4 @@ async def project_from_database(
     except ProjectionError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Database projection failed: {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Database projection failed: {e!s}") from e

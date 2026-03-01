@@ -121,9 +121,7 @@ async def calculate_withholding(request: WithholdingCalcRequest) -> dict[str, An
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Withholding calculation failed: {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Withholding calculation failed: {e!s}") from e
 
 
 @router.post("/estimate-annual-withholding")
@@ -157,6 +155,4 @@ async def estimate_withholding(request: AnnualWithholdingRequest) -> dict[str, A
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Withholding estimation failed: {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Withholding estimation failed: {e!s}") from e

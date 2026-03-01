@@ -93,7 +93,10 @@ class TestOptimizeW4:
         )
 
         assert result_refund.target_total_withholding > result_zero.target_total_withholding
-        assert result_refund.target_total_withholding - result_zero.target_total_withholding == Decimal(2000)
+        assert (
+            result_refund.target_total_withholding - result_zero.target_total_withholding
+            == Decimal(2000)
+        )
 
     def test_with_children(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """Children should add Step 3 dependents amount."""
@@ -150,9 +153,7 @@ class TestOptimizeW4:
         side_rec = next(r for r in result.w4_recommendations if r.employer_name == "Side Co")
         assert side_rec.step4a_other_income == Decimal(0)
 
-    def test_multiple_jobs_notes(
-        self, test_calculator: TaxCalculator, two_jobs: list
-    ) -> None:
+    def test_multiple_jobs_notes(self, test_calculator: TaxCalculator, two_jobs: list) -> None:
         """Multiple jobs should generate a note about Step 4."""
         result = optimize_w4(
             tax_calculator=test_calculator,
@@ -276,9 +277,7 @@ class TestW4OptimizationResultToDict:
         assert "adjustment_summary" in d
         assert "notes" in d
 
-    def test_to_dict_income_summary(
-        self, test_calculator: TaxCalculator, single_job: list
-    ) -> None:
+    def test_to_dict_income_summary(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """Income summary should contain all income types."""
         result = optimize_w4(
             tax_calculator=test_calculator,
