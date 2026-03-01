@@ -59,11 +59,13 @@ class TestFederalTax2025:
           12% on ($34,250 - $11,925) = $22,325        = $2,679.00
           Total federal tax:                          = $3,871.50
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(50000),
-            filing_status=FilingStatus.SINGLE,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(50000),
+                filing_status=FilingStatus.SINGLE,
+                tax_year=2025,
+            )
+        )
 
         assert result.taxable_income == Decimal(34250)
         assert result.federal_tax_owed == Decimal("3871.50")
@@ -84,12 +86,14 @@ class TestFederalTax2025:
           CTC: 2 children x $2,200 (OBBB Act)        = $4,400.00
           Federal tax after credits:                  = $5,743.00
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(120000),
-            filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            num_children=2,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(120000),
+                filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
+                num_children=2,
+                tax_year=2025,
+            )
+        )
 
         assert result.taxable_income == Decimal(88500)
         assert result.federal_tax_owed == Decimal("10143.00")
@@ -112,11 +116,13 @@ class TestFederalTax2025:
           35% on ($284,250 - $250,525) = $33,725      = $11,803.75
           Total federal tax:                          = $69,034.75
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(300000),
-            filing_status=FilingStatus.SINGLE,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(300000),
+                filing_status=FilingStatus.SINGLE,
+                tax_year=2025,
+            )
+        )
 
         assert result.taxable_income == Decimal(284250)
         assert result.federal_tax_owed == Decimal("69034.75")
@@ -136,11 +142,13 @@ class TestFederalTax2025:
           24% on ($218,500 - $206,700) = $11,800      = $2,832.00
           Total federal tax:                          = $38,134.00
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(250000),
-            filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(250000),
+                filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
+                tax_year=2025,
+            )
+        )
 
         assert result.taxable_income == Decimal(218500)
         assert result.federal_tax_owed == Decimal("38134.00")
@@ -251,14 +259,16 @@ class TestCombinedScenarios2025:
           SS:       $100,000 * 0.062  = $6,200.00
           Medicare: $100,000 * 0.0145 = $1,450.00
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(100000),
-            pension_gross_income=Decimal(30000),
-            non_taxable_income=Decimal(20000),
-            filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            num_children=2,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(100000),
+                pension_gross_income=Decimal(30000),
+                non_taxable_income=Decimal(20000),
+                filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
+                num_children=2,
+                tax_year=2025,
+            )
+        )
 
         assert result.adjusted_gross_income == Decimal(130000)
         assert result.taxable_income == Decimal(98500)
@@ -283,12 +293,14 @@ class TestCombinedScenarios2025:
 
           10% on $10,500 = $1,050.00
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            pension_gross_income=Decimal(45000),
-            retirement_pretax_deductions=Decimal(3000),
-            filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                pension_gross_income=Decimal(45000),
+                retirement_pretax_deductions=Decimal(3000),
+                filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
+                tax_year=2025,
+            )
+        )
 
         assert result.adjusted_gross_income == Decimal(42000)
         assert result.taxable_income == Decimal(10500)
@@ -309,13 +321,15 @@ class TestCombinedScenarios2025:
           22% on ($60,000 - $48,475) = $11,525        = $2,535.50
           Total federal tax:                          = $8,114.00
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(80000),
-            filing_status=FilingStatus.SINGLE,
-            use_standard_deduction=False,
-            itemized_deduction_amount=Decimal(20000),
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(80000),
+                filing_status=FilingStatus.SINGLE,
+                use_standard_deduction=False,
+                itemized_deduction_amount=Decimal(20000),
+                tax_year=2025,
+            )
+        )
 
         assert result.deduction_type == "Itemized Deduction"
         assert result.deduction_amount == Decimal(20000)
@@ -328,11 +342,13 @@ class TestEdgeCases:
 
     def test_income_equals_standard_deduction(self, calc_2025: TaxCalculator) -> None:
         """Income exactly equal to standard deduction => zero tax."""
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(15750),
-            filing_status=FilingStatus.SINGLE,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(15750),
+                filing_status=FilingStatus.SINGLE,
+                tax_year=2025,
+            )
+        )
 
         assert result.taxable_income == Decimal(0)
         assert result.federal_tax_owed == Decimal(0)
@@ -346,12 +362,14 @@ class TestEdgeCases:
         CTC: 3 x $2,200 = $6,600
         Liability: max($0, $850 - $6,600) = $0
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(40000),
-            filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
-            num_children=3,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(40000),
+                filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
+                num_children=3,
+                tax_year=2025,
+            )
+        )
 
         assert result.federal_tax_owed == Decimal("850.00")
         assert result.child_tax_credits == Decimal(6600)
@@ -370,12 +388,14 @@ class TestEdgeCases:
         CTC: 1 x $2,200                              = $2,200.00
         Federal tax after credits:                    = $3,625.00
         """
-        result = calc_2025.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(75000),
-            filing_status=FilingStatus.HEAD_OF_HOUSEHOLD,
-            num_children=1,
-            tax_year=2025,
-        ))
+        result = calc_2025.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(75000),
+                filing_status=FilingStatus.HEAD_OF_HOUSEHOLD,
+                num_children=1,
+                tax_year=2025,
+            )
+        )
 
         assert result.taxable_income == Decimal(51375)
         assert result.federal_tax_owed == Decimal("5825.00")
@@ -397,11 +417,13 @@ class TestFederalTax2026:
           12% on ($33,900 - $12,400) = $21,500        = $2,580.00
           Total federal tax:                          = $3,820.00
         """
-        result = calc_2026.calculate_taxes(TaxCalculationRequest(
-            w2_gross_income=Decimal(50000),
-            filing_status=FilingStatus.SINGLE,
-            tax_year=2026,
-        ))
+        result = calc_2026.calculate_taxes(
+            TaxCalculationRequest(
+                w2_gross_income=Decimal(50000),
+                filing_status=FilingStatus.SINGLE,
+                tax_year=2026,
+            )
+        )
 
         assert result.taxable_income == Decimal(33900)
         assert result.federal_tax_owed == Decimal("3820.00")

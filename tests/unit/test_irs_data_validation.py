@@ -294,7 +294,9 @@ class TestFICALimits2025:
 
     def test_ss_max_tax_consistent(self) -> None:
         """max_employee_tax must equal wage_base_limit * employee_rate."""
-        computed = self.data.social_security.wage_base_limit * self.data.social_security.employee_rate
+        computed = (
+            self.data.social_security.wage_base_limit * self.data.social_security.employee_rate
+        )
         assert self.data.social_security.max_employee_tax == computed
 
     def test_medicare_employee_rate(self) -> None:
@@ -342,7 +344,9 @@ class TestFICALimits2026:
         assert self.data.social_security.max_employee_tax == expected
 
     def test_ss_max_tax_consistent(self) -> None:
-        computed = self.data.social_security.wage_base_limit * self.data.social_security.employee_rate
+        computed = (
+            self.data.social_security.wage_base_limit * self.data.social_security.employee_rate
+        )
         assert self.data.social_security.max_employee_tax == computed
 
     def test_medicare_rate_unchanged(self) -> None:
@@ -373,8 +377,12 @@ class TestDataIntegrity:
     @pytest.mark.parametrize("year_attr", ["brackets_2025", "brackets_2026"])
     def test_all_four_statuses_present(self, year_attr: str) -> None:
         data = getattr(self, year_attr)
-        expected = {"single", "married_filing_jointly", "married_filing_separately",
-                    "head_of_household"}
+        expected = {
+            "single",
+            "married_filing_jointly",
+            "married_filing_separately",
+            "head_of_household",
+        }
         assert set(data.tax_brackets.keys()) == expected
 
     @pytest.mark.parametrize("year_attr", ["brackets_2025", "brackets_2026"])
@@ -387,8 +395,13 @@ class TestDataIntegrity:
     def test_rates_are_standard(self, year_attr: str) -> None:
         """All filing statuses use the same 7 rate tiers."""
         expected_rates = [
-            Decimal("0.10"), Decimal("0.12"), Decimal("0.22"), Decimal("0.24"),
-            Decimal("0.32"), Decimal("0.35"), Decimal("0.37"),
+            Decimal("0.10"),
+            Decimal("0.12"),
+            Decimal("0.22"),
+            Decimal("0.24"),
+            Decimal("0.32"),
+            Decimal("0.35"),
+            Decimal("0.37"),
         ]
         data = getattr(self, year_attr)
         for status, brackets in data.tax_brackets.items():
