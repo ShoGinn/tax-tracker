@@ -154,6 +154,7 @@ select = [
 ]
 
 "__init__.py" = ["F401"]
+"scripts/*" = ["T201", "DTZ011", "S310"]
 
 [dependency-groups]
 dev = [

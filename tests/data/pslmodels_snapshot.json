@@ -1,0 +1,384 @@
+{
+	"source": "PSLmodels Tax-Calculator policy_current_law.json",
+	"url": "https://raw.githubusercontent.com/PSLmodels/Tax-Calculator/master/taxcalc/policy_current_law.json",
+	"generated_date": "2026-03-01",
+	"notes": "Cross-reference data \u2014 NOT the source of truth. See docs/irs_data_sources.md for authoritative IRS sources.",
+	"years": {
+		"2025": {
+			"year": 2025,
+			"tax_brackets": {
+				"single": [
+					{
+						"threshold": 11925.0,
+						"rate": 0.1
+					},
+					{
+						"threshold": 48475.0,
+						"rate": 0.12
+					},
+					{
+						"threshold": 103350.0,
+						"rate": 0.22
+					},
+					{
+						"threshold": 197300.0,
+						"rate": 0.24
+					},
+					{
+						"threshold": 250525.0,
+						"rate": 0.32
+					},
+					{
+						"threshold": 626350.0,
+						"rate": 0.35
+					},
+					{
+						"threshold": null,
+						"rate": 0.37
+					}
+				],
+				"married_filing_jointly": [
+					{
+						"threshold": 23850.0,
+						"rate": 0.1
+					},
+					{
+						"threshold": 96950.0,
+						"rate": 0.12
+					},
+					{
+						"threshold": 206700.0,
+						"rate": 0.22
+					},
+					{
+						"threshold": 394600.0,
+						"rate": 0.24
+					},
+					{
+						"threshold": 501050.0,
+						"rate": 0.32
+					},
+					{
+						"threshold": 751600.0,
+						"rate": 0.35
+					},
+					{
+						"threshold": null,
+						"rate": 0.37
+					}
+				],
+				"married_filing_separately": [
+					{
+						"threshold": 11925.0,
+						"rate": 0.1
+					},
+					{
+						"threshold": 48475.0,
+						"rate": 0.12
+					},
+					{
+						"threshold": 103350.0,
+						"rate": 0.22
+					},
+					{
+						"threshold": 197300.0,
+						"rate": 0.24
+					},
+					{
+						"threshold": 250525.0,
+						"rate": 0.32
+					},
+					{
+						"threshold": 375800.0,
+						"rate": 0.35
+					},
+					{
+						"threshold": null,
+						"rate": 0.37
+					}
+				],
+				"head_of_household": [
+					{
+						"threshold": 17000.0,
+						"rate": 0.1
+					},
+					{
+						"threshold": 64850.0,
+						"rate": 0.12
+					},
+					{
+						"threshold": 103350.0,
+						"rate": 0.22
+					},
+					{
+						"threshold": 197300.0,
+						"rate": 0.24
+					},
+					{
+						"threshold": 250500.0,
+						"rate": 0.32
+					},
+					{
+						"threshold": 626350.0,
+						"rate": 0.35
+					},
+					{
+						"threshold": null,
+						"rate": 0.37
+					}
+				]
+			},
+			"tax_rates": [
+				0.1,
+				0.12,
+				0.22,
+				0.24,
+				0.32,
+				0.35,
+				0.37
+			],
+			"standard_deductions": {
+				"single": 15750,
+				"married_filing_jointly": 31500,
+				"married_filing_separately": 15750,
+				"head_of_household": 23625
+			},
+			"aged_deductions": {
+				"single": 2000,
+				"married": 1600
+			},
+			"fica": {
+				"social_security": {
+					"employee_rate": 0.062,
+					"employer_rate": 0.062,
+					"total_rate": 0.124,
+					"wage_base_limit": 176100,
+					"max_employee_tax": 10918.2,
+					"max_employer_tax": 10918.2,
+					"max_combined_tax": 21836.4
+				},
+				"medicare": {
+					"employee_rate": 0.0145,
+					"employer_rate": 0.0145,
+					"total_rate": 0.029,
+					"wage_base_limit": null,
+					"note": "No wage base limit - applies to all wages"
+				},
+				"additional_medicare": {
+					"rate": 0.009,
+					"employer_match": false,
+					"thresholds": {
+						"single": 200000,
+						"married_filing_jointly": 250000,
+						"married_filing_separately": 125000,
+						"head_of_household": 200000
+					},
+					"note": "Applies to wages above threshold, no employer match"
+				},
+				"combined_rates": {
+					"below_ss_wage_base": 0.0765,
+					"above_ss_wage_base": 0.0145,
+					"above_additional_medicare_threshold": 0.0235
+				}
+			},
+			"child_tax_credit": {
+				"amount_per_child": 2200,
+				"refundable_portion": 1700,
+				"phase_out_threshold": {
+					"single": 200000,
+					"married_filing_jointly": 400000,
+					"married_filing_separately": 200000,
+					"head_of_household": 200000
+				}
+			}
+		},
+		"2026": {
+			"year": 2026,
+			"tax_brackets": {
+				"single": [
+					{
+						"threshold": 12400.0,
+						"rate": 0.1
+					},
+					{
+						"threshold": 50400.0,
+						"rate": 0.12
+					},
+					{
+						"threshold": 105700.0,
+						"rate": 0.22
+					},
+					{
+						"threshold": 201775.0,
+						"rate": 0.24
+					},
+					{
+						"threshold": 256225.0,
+						"rate": 0.32
+					},
+					{
+						"threshold": 640600.0,
+						"rate": 0.35
+					},
+					{
+						"threshold": null,
+						"rate": 0.37
+					}
+				],
+				"married_filing_jointly": [
+					{
+						"threshold": 24800.0,
+						"rate": 0.1
+					},
+					{
+						"threshold": 100800.0,
+						"rate": 0.12
+					},
+					{
+						"threshold": 211400.0,
+						"rate": 0.22
+					},
+					{
+						"threshold": 403550.0,
+						"rate": 0.24
+					},
+					{
+						"threshold": 512450.0,
+						"rate": 0.32
+					},
+					{
+						"threshold": 768700.0,
+						"rate": 0.35
+					},
+					{
+						"threshold": null,
+						"rate": 0.37
+					}
+				],
+				"married_filing_separately": [
+					{
+						"threshold": 12400.0,
+						"rate": 0.1
+					},
+					{
+						"threshold": 50400.0,
+						"rate": 0.12
+					},
+					{
+						"threshold": 105700.0,
+						"rate": 0.22
+					},
+					{
+						"threshold": 201775.0,
+						"rate": 0.24
+					},
+					{
+						"threshold": 256225.0,
+						"rate": 0.32
+					},
+					{
+						"threshold": 384350.0,
+						"rate": 0.35
+					},
+					{
+						"threshold": null,
+						"rate": 0.37
+					}
+				],
+				"head_of_household": [
+					{
+						"threshold": 17700.0,
+						"rate": 0.1
+					},
+					{
+						"threshold": 67450.0,
+						"rate": 0.12
+					},
+					{
+						"threshold": 105700.0,
+						"rate": 0.22
+					},
+					{
+						"threshold": 201750.0,
+						"rate": 0.24
+					},
+					{
+						"threshold": 256200.0,
+						"rate": 0.32
+					},
+					{
+						"threshold": 640600.0,
+						"rate": 0.35
+					},
+					{
+						"threshold": null,
+						"rate": 0.37
+					}
+				]
+			},
+			"tax_rates": [
+				0.1,
+				0.12,
+				0.22,
+				0.24,
+				0.32,
+				0.35,
+				0.37
+			],
+			"standard_deductions": {
+				"single": 16100,
+				"married_filing_jointly": 32200,
+				"married_filing_separately": 16100,
+				"head_of_household": 24150
+			},
+			"aged_deductions": {
+				"single": 2050,
+				"married": 1650
+			},
+			"fica": {
+				"social_security": {
+					"employee_rate": 0.062,
+					"employer_rate": 0.062,
+					"total_rate": 0.124,
+					"wage_base_limit": 184500,
+					"max_employee_tax": 11439.0,
+					"max_employer_tax": 11439.0,
+					"max_combined_tax": 22878.0
+				},
+				"medicare": {
+					"employee_rate": 0.0145,
+					"employer_rate": 0.0145,
+					"total_rate": 0.029,
+					"wage_base_limit": null,
+					"note": "No wage base limit - applies to all wages"
+				},
+				"additional_medicare": {
+					"rate": 0.009,
+					"employer_match": false,
+					"thresholds": {
+						"single": 200000,
+						"married_filing_jointly": 250000,
+						"married_filing_separately": 125000,
+						"head_of_household": 200000
+					},
+					"note": "Applies to wages above threshold, no employer match"
+				},
+				"combined_rates": {
+					"below_ss_wage_base": 0.0765,
+					"above_ss_wage_base": 0.0145,
+					"above_additional_medicare_threshold": 0.0235
+				}
+			},
+			"child_tax_credit": {
+				"amount_per_child": 2200,
+				"refundable_portion": 1700,
+				"phase_out_threshold": {
+					"single": 200000,
+					"married_filing_jointly": 400000,
+					"married_filing_separately": 200000,
+					"head_of_household": 200000
+				}
+			}
+		}
+	}
+}

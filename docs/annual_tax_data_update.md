@@ -19,9 +19,34 @@ The IRS typically publishes inflation-adjusted tax parameters in **October** for
 - Check https://www.ssa.gov/oact/cola/cbbdet.html for the new contribution and benefit base
 - This determines the Social Security wage base limit
 
-### 3. Create Tax Brackets Data File
+### 3. Generate Draft Data Files from PSLmodels (Optional but Recommended)
 
-Create `src/taxtracker/data/tax_brackets_YYYY.json`:
+Use the PSLmodels fetch script to generate draft files pre-populated with values from PSLmodels Tax-Calculator. This gives you a starting point to verify against IRS publications rather than transcribing from scratch.
+
+```bash
+# Generate draft files for the new year
+uv run python scripts/fetch_pslmodels_data.py draft --year YYYY
+
+# Or dry-run to preview without writing files
+uv run python scripts/fetch_pslmodels_data.py draft --year YYYY --dry-run
+```
+
+This creates:
+- `src/taxtracker/data/tax_brackets_YYYY.json` (marked as DRAFT)
+- `src/taxtracker/data/fica_limits_YYYY.json` (marked as DRAFT)
+
+The script prints a verification checklist of every value to cross-check against IRS sources. **Do not skip verification** — PSLmodels is a cross-reference, not the source of truth.
+
+After verification:
+1. Update `"source"` and `"citations"` with actual IRS publication URLs
+2. Set `"verified_date"` to today's date
+3. Remove the DRAFT marker from `"source"`
+
+If PSLmodels doesn't yet have data for the new year, proceed with manual creation below.
+
+### 4. Create Tax Brackets Data File (Manual)
+
+Create `src/taxtracker/data/tax_brackets_YYYY.json` (or verify the draft from step 3):
 
 ```json
 {
@@ -54,9 +79,9 @@ Create `src/taxtracker/data/tax_brackets_YYYY.json`:
 }
 ```
 
-### 4. Create FICA Limits Data File
+### 5. Create FICA Limits Data File (Manual)
 
-Create `src/taxtracker/data/fica_limits_YYYY.json`:
+Create `src/taxtracker/data/fica_limits_YYYY.json` (or verify the draft from step 3):
 
 ```json
 {
@@ -86,7 +111,7 @@ Create `src/taxtracker/data/fica_limits_YYYY.json`:
 
 **Compute max taxes**: `max_employee_tax = wage_base_limit * 0.062`
 
-### 5. Cross-Verify Every Value
+### 6. Cross-Verify Every Value
 
 Check each value against:
 
@@ -104,7 +129,7 @@ Key verification checks:
 - [ ] Additional Medicare thresholds unchanged (not indexed for inflation)
 - [ ] CTC amount matches current law
 
-### 6. Add Validation Test Class
+### 7. Add Validation Test Class
 
 Add a new test class in `tests/unit/test_irs_data_validation.py`:
 
@@ -123,19 +148,33 @@ class TestTaxBracketsYYYY:
 
 Add the year to existing parametrized structural tests in `TestDataIntegrity`.
 
-### 7. Add Calculation Verification Scenarios
+### 8. Add Calculation Verification Scenarios
 
 Add at least 2-3 calculation scenarios to `tests/unit/test_irs_calculation_verification.py`:
 - Single filer with standard deduction
 - MFJ with children
 - FICA at the new wage base
 
-### 8. Update Documentation
+### 9. Update Documentation
 
 - Add the new year to `docs/irs_data_sources.md` with full citation tables
 - Update `test_scenarios.json` if needed
 
-### 9. Run Full Test Suite
+### 10. Update PSLmodels Snapshot
+
+Refresh the PSLmodels cross-validation snapshot to include the new year:
+
+```bash
+uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 2026 YYYY
+```
+
+Then run the cross-check tests to confirm alignment:
+
+```bash
+uv run pytest tests/unit/test_pslmodels_cross_check.py -v
+```
+
+### 11. Run Full Test Suite
 
 ```bash
 # Validation tests (quick check)
@@ -147,11 +186,14 @@ uv run pytest tests/unit/test_irs_calculation_verification.py -v
 # Full suite
 uv run pytest
 
+# PSLmodels cross-check
+uv run pytest tests/unit/test_pslmodels_cross_check.py -v
+
 # Lint
-uv run ruff check src/ tests/
+uv run ruff check src/ tests/ scripts/
 ```
 
-### 10. Manual Spot-Check
+### 12. Manual Spot-Check
 
 Run at least one withholding scenario through the IRS Tax Withholding Estimator:
 https://apps.irs.gov/app/tax-withholding-estimator
