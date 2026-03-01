@@ -71,6 +71,7 @@ This project is in initial development (pre-v1.0). Until we reach a stable relea
 - `uv run ruff check src/ tests/` — lint
 - `uv run ruff format src/ tests/` — format
 - `uv run ruff check --fix src/ tests/` — auto-fix lint issues
+- `uvx uv-secure` — scan dependencies for known CVEs
 
 ## Project Structure
 
