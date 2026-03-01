@@ -1,7 +1,7 @@
 """Tax data models for validation and type safety."""
 
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class FilingStatus(str, Enum):
+class FilingStatus(StrEnum):
     """Tax filing status options."""
 
     SINGLE = "single"
