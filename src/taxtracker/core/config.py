@@ -2,7 +2,7 @@
 
 import datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from importlib.resources import files
 from pathlib import Path
 from typing import Final
@@ -16,7 +16,7 @@ def _default_data_dir() -> Path:
     return Path(str(files("taxtracker") / "data"))
 
 
-class DataFileType(str, Enum):
+class DataFileType(StrEnum):
     """Types of data files in the data directory."""
 
     TAX_BRACKETS = "tax_brackets"
