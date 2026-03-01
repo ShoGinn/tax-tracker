@@ -68,10 +68,13 @@ This project is in initial development (pre-v1.0). Until we reach a stable relea
 - `uv run pytest tests/unit` — unit tests only
 - `uv run pytest tests/integration` — integration tests only
 - `uv run pytest -m "not slow"` — skip slow tests
-- `uv run ruff check src/ tests/` — lint
-- `uv run ruff format src/ tests/` — format
-- `uv run ruff check --fix src/ tests/` — auto-fix lint issues
+- `uv run ruff check src/ tests/ scripts/` — lint
+- `uv run ruff format src/ tests/ scripts/` — format
+- `uv run ruff check --fix src/ tests/ scripts/` — auto-fix lint issues
 - `uvx uv-secure` — scan dependencies for known CVEs
+- `uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 2026` — refresh PSLmodels cross-validation snapshot
+- `uv run python scripts/fetch_pslmodels_data.py draft --year YYYY` — generate draft tax data files from PSLmodels
+- `uv run pytest tests/unit/test_pslmodels_cross_check.py -v` — run PSLmodels cross-validation tests
 
 ## Project Structure
 
