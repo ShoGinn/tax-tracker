@@ -82,7 +82,7 @@ jobs:
 
             - name: Create pull request for PSL value drift
               if: steps.detect.outputs.value_drift == 'true'
-              uses: peter-evans/create-pull-request@v7
+              uses: peter-evans/create-pull-request@v8
               with:
                   branch: bot/pslmodels-snapshot-update
                   delete-branch: true
