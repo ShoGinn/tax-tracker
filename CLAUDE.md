@@ -166,6 +166,8 @@ When working with tax data, always cite the specific IRS source document and cro
 - **Always run quality checks after code changes.** Prefer `just check` for fast validation and `just ci` for full validation.
 - **Every logic component must have comprehensive tests.** This is tax/finance software — calculations must be verified against IRS data.
 - **Tests must verify correct behavior, not be adjusted to match incorrect code.** Do not create trivial tests or modify IRS-validated assertions to make failing tests pass. Fix the implementation. If unsure, ask for guidance.
+- **Keep README.md current.** Any change that affects behavior, setup, commands, supported features, or limitations must be reflected in `README.md` within the same change.
+- **Update documentation whenever appropriate.** When code changes impact usage, APIs, architecture, workflows, tax-data updates, or contributor processes, update the relevant docs in `docs/` (and `README.md` when applicable) as part of the same task.
 - **Be careful with tax calculations** (`src/taxtracker/services/tax_calculator.py`, `src/taxtracker/services/w4_calculator.py`, `src/taxtracker/services/w4_withholding.py`). These contain IRS-verified math. Changes require matching test updates with known-correct values.
 - **Be careful with data files** (`src/taxtracker/data/tax_brackets_*.json`, `src/taxtracker/data/fica_limits_*.json`). These are sourced from IRS publications. Do not modify without IRS source verification.
 - **Suggest commits** after completing tasks but don't auto-commit. Use conventional commit format: `type: message` (e.g., `feat:`, `fix:`, `chore:`, `test:`, `refactor:`).
@@ -223,5 +225,5 @@ The following IRS features are **not supported** and should not be added without
 - Education credits (AOTC, Lifetime Learning)
 - EITC (Earned Income Tax Credit)
 - Quarterly estimated tax payments
-- Mid-year W-4 change optimization (full-year assumption only)
+- Mid-year W-4 change optimization (planned; see `docs/mid_year_w4_change_optimization_plan.md`; until implemented, full-year assumption only)
 - 1099-R distribution code handling (all distributions treated as taxable minus pre-tax deductions)
