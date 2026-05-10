@@ -9,17 +9,17 @@ import { W4Page } from "../pages/W4Page";
 import { AppShell } from "./AppShell";
 
 export const router = createBrowserRouter([
-	{
-		path: "/",
-		element: <AppShell />,
-		children: [
-			{ index: true, element: <DashboardPage /> },
-			{ path: "income", element: <IncomePage /> },
-			{ path: "taxes", element: <TaxesPage /> },
-			{ path: "w4", element: <W4Page /> },
-			{ path: "projections", element: <ProjectionsPage /> },
-			{ path: "imports", element: <CsvImportPage /> },
-			{ path: "auth", element: <AuthPage /> },
-		],
-	},
+  {
+    path: "/",
+    element: <AppShell />,
+    children: [
+      { index: true, element: <DashboardPage /> },
+      { path: "income", element: <IncomePage /> },
+      { path: "taxes", element: <TaxesPage /> },
+      { path: "w4", element: <W4Page /> },
+      { path: "projections", element: <ProjectionsPage /> },
+      { path: "imports", element: <CsvImportPage /> },
+      { path: "auth", element: <AuthPage /> },
+    ],
+  },
 ]);

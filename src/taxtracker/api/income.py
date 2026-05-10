@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 from taxtracker.api.dependencies import get_db
 from taxtracker.core.exceptions import DatabaseError, ValidationError
 from taxtracker.models.schemas import (  # noqa: TC001
+    EmployerCreate,
+    EmployerResponse,
     NonTaxableIncomeCreate,
     NonTaxableIncomeResponse,
     PaycheckCreate,
@@ -22,6 +24,43 @@ router = APIRouter(prefix="/income", tags=["Income"])
 
 # Reusable query parameter type for optional year filtering
 _YearQuery = Annotated[int | None, Query(description="Filter by tax year (e.g. 2025, 2026)", examples=[2026])]
+
+
+# ============================================================================
+# Employer Endpoints
+# ============================================================================
+
+
+@router.get(
+    "/employers",
+    summary="List employers",
+    response_description="List of employer records",
+)
+async def list_employers(db: Annotated[AsyncSession, Depends(get_db)]) -> list[EmployerResponse]:
+    """List all employer records."""
+    try:
+        return await income_service.get_employers(db)  # ty: ignore[invalid-return-type]
+    except DatabaseError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post(
+    "/employers",
+    summary="Create employer",
+    response_description="Created employer record",
+    status_code=201,
+    responses={400: {"description": "Validation error"}},
+)
+async def create_employer_entry(
+    employer: EmployerCreate, db: Annotated[AsyncSession, Depends(get_db)]
+) -> EmployerResponse:
+    """Create a new employer record."""
+    try:
+        return await income_service.create_employer(db, employer)  # ty: ignore[invalid-return-type]
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except DatabaseError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ============================================================================
