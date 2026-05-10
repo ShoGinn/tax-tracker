@@ -31,8 +31,7 @@ build-backend = "uv_build"
 requires = ["uv_build>=0.11.12,<0.12"]
 
 [tool.semantic_release]
-build_command = "uv lock"
-build_command_env = ["PATH"]
+build_command = "pip install uv && uv lock"
 commit_parser = "conventional"
 tag_format = "v{version}"
 version_toml = ["pyproject.toml:project.version"]
