@@ -1,12 +1,14 @@
 """Unit tests for W-4 optimizer."""
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
 
+from taxtracker.models.database import Employer, Paycheck, Retirement1099R
 from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.tax_calculator import TaxCalculator  # noqa: TC001
-from taxtracker.services.w4_calculator import optimize_w4
+from taxtracker.services.w4_calculator import optimize_midyear_from_db, optimize_w4
 
 pytestmark = pytest.mark.unit
 
@@ -326,3 +328,94 @@ class TestW4OptimizationResultToDict:
         assert "step_4b_deductions" in rec
         assert "step_4c_extra_withholding" in rec
         assert "expected_results" in rec
+
+
+class TestMidYearOptimizeFromDB:
+    """Tests for DB-backed mid-year optimization workflow."""
+
+    async def test_extrapolates_remaining_income(self, async_db_session, test_calculator: TaxCalculator) -> None:
+        """Should extrapolate remaining gross from YTD average when no override is provided."""
+        employer = Employer(name="Acme", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        async_db_session.add_all(
+            [
+                Paycheck(
+                    employer_id=employer.id,
+                    pay_date=date(2024, 1, 15),
+                    gross_wages=Decimal(2000),
+                    federal_withholding=Decimal(200),
+                ),
+                Paycheck(
+                    employer_id=employer.id,
+                    pay_date=date(2024, 1, 31),
+                    gross_wages=Decimal(3000),
+                    federal_withholding=Decimal(300),
+                ),
+            ]
+        )
+        await async_db_session.commit()
+
+        result = await optimize_midyear_from_db(
+            db=async_db_session,
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            remaining_pay_periods=2,
+        )
+
+        employer_summary = result["ytd_summary"]["employers"][0]
+        # Avg gross is (2000 + 3000) / 2 = 2500; projected remaining = 2500 * 2 = 5000
+        assert Decimal(employer_summary["projected_remaining_gross"]) == Decimal(5000)
+
+    async def test_employer_override_replaces_extrapolation(
+        self, async_db_session, test_calculator: TaxCalculator
+    ) -> None:
+        """Override should replace YTD-average extrapolation for the specified employer."""
+        employer = Employer(name="Override Co", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        async_db_session.add(
+            Paycheck(
+                employer_id=employer.id,
+                pay_date=date(2024, 2, 15),
+                gross_wages=Decimal(2500),
+                federal_withholding=Decimal(200),
+            )
+        )
+        await async_db_session.commit()
+
+        result = await optimize_midyear_from_db(
+            db=async_db_session,
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            remaining_pay_periods=3,
+            employer_overrides={employer.id: Decimal(4000)},
+        )
+
+        employer_summary = result["ytd_summary"]["employers"][0]
+        assert Decimal(employer_summary["projected_remaining_gross"]) == Decimal(12000)
+        assert any("Used override" in note for note in result["assumptions"])
+
+    async def test_requires_paychecks_for_year(self, async_db_session, test_calculator: TaxCalculator) -> None:
+        """Should fail with clear error when no paychecks are available for the requested year."""
+        async_db_session.add(
+            Retirement1099R(
+                pay_date=date(2024, 1, 1),
+                gross_amount=Decimal(3000),
+                federal_withholding=Decimal(300),
+            )
+        )
+        await async_db_session.commit()
+
+        with pytest.raises(ValueError, match="No paychecks found"):
+            await optimize_midyear_from_db(
+                db=async_db_session,
+                tax_calculator=test_calculator,
+                year=2024,
+                filing_status=FilingStatus.SINGLE,
+                remaining_pay_periods=2,
+            )

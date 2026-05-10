@@ -24,6 +24,10 @@ class _D:
     step4c_extra = "W-4 Step 4c additional withholding per paycheck"
     use_standard_deduction = "Use IRS standard deduction; set false to supply itemized amount"
     itemized_deductions = "Total itemized deductions; only used when use_standard_deduction is false"
+    remaining_pay_periods = "Number of remaining pay periods to optimize across"
+    expected_remaining_pension_taxable = "Expected remaining taxable pension income (override DB extrapolation)"
+    employer_id = "Employer ID from the database"
+    expected_remaining_gross_per_paycheck = "Expected remaining gross per paycheck for this employer"
 
 
 class W4OptimizeRequest(BaseModel):
@@ -43,6 +47,39 @@ class W4OptimizeRequest(BaseModel):
         default=Decimal(0), description="Target refund amount (0 = break even, negative = owed)"
     )
     year: int | None = Field(default=None, description=_D.year_optional)
+
+
+class EmployerRemainingOverride(BaseModel):
+    """Optional per-employer override for projected remaining income."""
+
+    employer_id: int = Field(ge=1, description=_D.employer_id)
+    expected_remaining_gross_per_paycheck: Decimal = Field(
+        ge=0,
+        description=_D.expected_remaining_gross_per_paycheck,
+    )
+
+
+class MidYearDBW4OptimizeRequest(BaseModel):
+    """Request for mid-year W-4 optimization using database year-to-date data."""
+
+    tax_year: int = Field(ge=2024, le=2030, description="Tax year to optimize")
+    filing_status: FilingStatus = Field(description=_D.filing_status_full)
+    remaining_pay_periods: int = Field(ge=1, description=_D.remaining_pay_periods)
+    num_children: int = Field(default=0, ge=0, description=_D.num_children)
+    target_refund: Decimal = Field(
+        default=Decimal(0), description="Target refund amount (0 = break even, negative = owed)"
+    )
+    use_standard_deduction: bool = Field(default=True, description=_D.use_standard_deduction)
+    itemized_deductions: Decimal = Field(default=Decimal(0), ge=0, description=_D.itemized_deductions)
+    expected_remaining_pension_taxable: Decimal | None = Field(
+        default=None,
+        ge=0,
+        description=_D.expected_remaining_pension_taxable,
+    )
+    employer_overrides: list[EmployerRemainingOverride] = Field(
+        default_factory=list,
+        description="Optional per-employer remaining gross overrides",
+    )
 
 
 class WithholdingCalcRequest(BaseModel):
