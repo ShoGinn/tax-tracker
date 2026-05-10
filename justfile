@@ -4,9 +4,14 @@ set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 default:
     @just --list
 
-# Install project and dev dependencies.
+# Install project and dev dependencies, then install pre-commit hooks.
 install:
     uv sync --dev
+    uv run pre-commit install
+
+# Install pre-commit hooks only (run after cloning if hooks are missing).
+hooks:
+    uv run pre-commit install
 
 # Upgrade lockfile to latest compatible versions.
 update-lock:
