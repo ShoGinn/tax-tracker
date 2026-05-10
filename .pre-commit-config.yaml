@@ -15,10 +15,10 @@ repos:
 
   - repo: local
     hooks:
-      - id: biome-check
-        name: biome check (frontend)
+      - id: local-biome-check
+        name: biome check
         language: system
-        entry: bash -c 'cd frontend && node_modules/.bin/biome check --write .'
+        entry: npx biome check --write --files-ignore-unknown=true --no-errors-on-unmatched
         types_or: [javascript, jsx, ts, tsx, json]
         files: ^frontend/
         pass_filenames: false
