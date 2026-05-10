@@ -2,11 +2,13 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from taxtracker import __version__
@@ -21,6 +23,47 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+# Frontend dist directory — relative to the project root
+_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
+_FRONTEND_DIST = _PROJECT_ROOT / "frontend" / "dist"
+
+
+def _mount_frontend(app: FastAPI) -> None:
+    """Mount the built frontend SPA, or register a JSON fallback root."""
+    if not _FRONTEND_DIST.is_dir():
+
+        @app.get("/")
+        def root_fallback() -> dict[str, str]:
+            """Root endpoint (frontend not built)."""
+            return {
+                "name": "Tax Tracker API",
+                "version": __version__,
+                "status": "active",
+                "docs": "/docs",
+                "note": "Build the frontend with `pnpm build` in the frontend/ directory to serve the UI here.",
+            }
+
+        return
+
+    assets_dir = _FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    index = str(_FRONTEND_DIST / "index.html")
+
+    @app.get("/")
+    def root() -> FileResponse:
+        """Serve the frontend SPA."""
+        return FileResponse(index)
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str) -> FileResponse:
+        """Catch-all: serve the SPA for all unmatched routes."""
+        candidate = _FRONTEND_DIST / full_path
+        if candidate.is_file():
+            return FileResponse(str(candidate))
+        return FileResponse(index)
 
 
 def create_app(skip_db_init: bool = False) -> FastAPI:
@@ -91,16 +134,6 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
     app.include_router(income_router)
     app.include_router(projections_router)
 
-    @app.get("/")
-    def root() -> dict[str, str]:
-        """Root endpoint."""
-        return {
-            "name": "Tax Tracker API",
-            "version": __version__,
-            "status": "active",
-            "docs": "/docs",
-        }
-
     @app.get("/health")
     async def health() -> dict[str, str]:
         """Health check endpoint with database connectivity test."""
@@ -111,6 +144,9 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
             return {"status": "healthy", "database": "connected"}
         except Exception as e:
             return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
+    # Mount frontend SPA if the dist directory exists
+    _mount_frontend(app)
 
     return app
 

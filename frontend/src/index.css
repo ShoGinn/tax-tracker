@@ -269,3 +269,524 @@ a {
     grid-column: span 1;
   }
 }
+
+/* ============================================================
+   Pages
+   ============================================================ */
+
+.page {
+  max-width: 1200px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  gap: 1rem;
+}
+
+.page-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+}
+
+/* ============================================================
+   Tab bar
+   ============================================================ */
+
+.tab-bar {
+  display: flex;
+  gap: 0.3rem;
+  border-bottom: 2px solid rgba(20, 23, 31, 0.1);
+  margin-bottom: 1.4rem;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  padding: 0.6rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: var(--ink-700);
+  border-radius: 6px 6px 0 0;
+  transition: color 120ms ease;
+}
+
+.tab-btn:hover {
+  color: var(--teal-500);
+  background: rgba(0, 127, 133, 0.06);
+}
+
+.tab-btn.active {
+  color: var(--teal-500);
+  border-bottom-color: var(--teal-500);
+}
+
+/* ============================================================
+   Tab panels and panel header
+   ============================================================ */
+
+.tab-panel {
+  min-height: 200px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
+.btn-primary {
+  background: linear-gradient(130deg, var(--teal-500), #12687f);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-ghost {
+  background: none;
+  border: 1.5px solid rgba(20, 23, 31, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink-700);
+  transition: border-color 120ms ease;
+}
+
+.btn-ghost:hover {
+  border-color: var(--teal-500);
+  color: var(--teal-500);
+}
+
+.btn-ghost-sm {
+  background: none;
+  border: 1px solid rgba(20, 23, 31, 0.15);
+  border-radius: 6px;
+  padding: 0.25rem 0.55rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--ink-700);
+}
+
+.btn-ghost-sm:hover {
+  border-color: var(--error-500);
+  color: var(--error-500);
+}
+
+.btn-danger-sm {
+  background: var(--error-500);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.25rem 0.55rem;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.delete-confirm {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Data tables
+   ============================================================ */
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(20, 23, 31, 0.1);
+  background: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  background: var(--sand-50);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--ink-700);
+  border-bottom: 1px solid rgba(20, 23, 31, 0.1);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid rgba(20, 23, 31, 0.06);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table tbody tr:hover {
+  background: var(--sand-50);
+}
+
+.data-table th.num,
+.data-table td.num {
+  text-align: right;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.totals-row td {
+  background: var(--sand-100);
+  border-top: 1px solid rgba(20, 23, 31, 0.1);
+  padding: 0.55rem 0.85rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.88rem;
+}
+
+/* ============================================================
+   Forms
+   ============================================================ */
+
+.card {
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 1.2rem 1.4rem;
+  border: 1px solid rgba(20, 23, 31, 0.08);
+  box-shadow: var(--shadow-card);
+}
+
+.card-title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+}
+
+.income-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-700);
+}
+
+.form-input {
+  padding: 0.5rem 0.7rem;
+  border: 1.5px solid rgba(20, 23, 31, 0.2);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  background: #fff;
+  color: var(--ink-950);
+  transition: border-color 120ms ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--teal-500);
+}
+
+.form-error {
+  color: var(--error-500);
+  font-size: 0.88rem;
+  margin: 0.4rem 0 0;
+}
+
+.inline-form {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   Year selector
+   ============================================================ */
+
+.year-select {
+  padding: 0.45rem 0.8rem;
+  border: 1.5px solid rgba(20, 23, 31, 0.2);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  background: #fff;
+  cursor: pointer;
+}
+
+.year-select:focus {
+  outline: none;
+  border-color: var(--teal-500);
+}
+
+/* ============================================================
+   State messages
+   ============================================================ */
+
+.loading-text,
+.empty-text {
+  color: var(--ink-700);
+  font-size: 0.95rem;
+  padding: 1.5rem 0;
+}
+
+.error-text {
+  color: var(--error-500);
+  font-size: 0.95rem;
+  padding: 1rem 0;
+}
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+
+.mb-4 {
+  margin-bottom: 1.2rem;
+}
+
+.mt-2 {
+  margin-top: 0.6rem;
+}
+
+/* ============================================================
+   Tax result cards
+   ============================================================ */
+
+.result-card {
+  max-width: 600px;
+}
+
+.result-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(20, 23, 31, 0.06);
+  font-size: 0.95rem;
+}
+
+.result-row:last-child {
+  border-bottom: 0;
+}
+
+.result-divider {
+  border-top: 2px solid rgba(20, 23, 31, 0.12);
+  margin-top: 0.3rem;
+  padding-top: 0.5rem;
+}
+
+.result-highlight {
+  font-size: 1.05rem;
+}
+
+.result-notes {
+  margin: 0.8rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  color: var(--ink-700);
+}
+
+.reconciliation-card {
+  max-width: 600px;
+}
+
+.status-refund {
+  border-left: 4px solid var(--teal-500);
+}
+
+.status-owed {
+  border-left: 4px solid var(--error-500);
+}
+
+.status-even {
+  border-left: 4px solid var(--amber-500);
+}
+
+.text-refund {
+  color: var(--teal-500);
+}
+
+.text-owed {
+  color: var(--error-500);
+}
+
+.helper-text {
+  color: var(--ink-700);
+  font-size: 0.92rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+/* ============================================================
+   W-4 recommendation cards
+   ============================================================ */
+
+.w4-rec-card {
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(20, 23, 31, 0.08);
+}
+
+.w4-rec-title {
+  margin: 0 0 0.8rem;
+  font-size: 1rem;
+  color: var(--teal-500);
+}
+
+.w4-steps {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.w4-step {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 0.3rem 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(20, 23, 31, 0.06);
+}
+
+.w4-step:last-child {
+  border-bottom: 0;
+}
+
+.w4-step-label {
+  font-size: 0.88rem;
+  color: var(--ink-700);
+}
+
+.w4-step-value {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.w4-step-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink-700);
+  font-style: italic;
+}
+
+/* ============================================================
+   Projections
+   ============================================================ */
+
+.projections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ============================================================
+   CSV import
+   ============================================================ */
+
+.csv-drop-zone {
+  border: 2px dashed rgba(20, 23, 31, 0.2);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  margin-bottom: 1rem;
+}
+
+.csv-drop-zone:hover,
+.csv-drop-zone:focus {
+  border-color: var(--teal-500);
+  background: rgba(40, 167, 169, 0.04);
+  outline: none;
+}
+
+.csv-drop-hint {
+  color: var(--ink-700);
+  font-size: 0.95rem;
+}
+
+.csv-file-name {
+  color: var(--teal-500);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.csv-result {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.csv-result--ok {
+  background: rgba(40, 167, 169, 0.08);
+  border: 1px solid rgba(40, 167, 169, 0.25);
+}
+
+.csv-result--warn {
+  background: rgba(230, 160, 40, 0.08);
+  border: 1px solid rgba(230, 160, 40, 0.35);
+}
+
+.csv-result p {
+  margin: 0 0 0.25rem;
+}
+
+.csv-error-list {
+  margin: 0.25rem 0 0 1rem;
+  padding: 0;
+  font-size: 0.83rem;
+  color: var(--red-600, #c0392b);
+}
