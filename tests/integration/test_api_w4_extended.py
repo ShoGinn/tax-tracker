@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from taxtracker.models.database import Employer, Paycheck
+from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -265,6 +265,55 @@ class TestW4APIOptimize:
         employer_summary = data["ytd_summary"]["employers"][0]
         assert Decimal(employer_summary["ytd_gross"]) == Decimal(3000)
         assert data["ytd_summary"]["as_of_date"] == "2024-02-01"
+
+    async def test_optimize_midyear_from_db_with_split_remaining_periods(self, client: TestClient, async_db_session):
+        """Mid-year endpoint should support separate remaining periods for mixed pay cadences."""
+        employer = Employer(name="Mixed Cadence API Corp", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        async_db_session.add(
+            Paycheck(
+                employer_id=employer.id,
+                pay_date=date(2024, 4, 15),
+                gross_wages=Decimal(3000),
+                federal_withholding=Decimal(300),
+            )
+        )
+        async_db_session.add(
+            Retirement1099R(
+                pay_date=date(2024, 4, 1),
+                gross_amount=Decimal(1000),
+                federal_withholding=Decimal(100),
+            )
+        )
+        async_db_session.add(
+            NonTaxableIncome(
+                pay_date=date(2024, 4, 1),
+                amount=Decimal(500),
+                source_type="Non-taxable benefit",
+            )
+        )
+        await async_db_session.commit()
+
+        response = client.post(
+            "/w4/optimize-midyear-from-db",
+            json={
+                "tax_year": 2024,
+                "filing_status": "single",
+                "remaining_pay_periods": 10,
+                "remaining_pension_periods": 5,
+                "remaining_non_taxable_periods": 4,
+                "target_refund": 0,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ytd_summary"]["remaining_w2_pay_periods"] == 10
+        assert data["ytd_summary"]["remaining_pension_periods"] == 5
+        assert data["ytd_summary"]["remaining_non_taxable_periods"] == 4
+        assert Decimal(data["projection_summary"]["projected_remaining_pension_taxable"]) == Decimal(5000)
 
 
 @pytest.mark.integration

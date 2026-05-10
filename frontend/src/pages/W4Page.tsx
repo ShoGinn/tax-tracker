@@ -32,6 +32,41 @@ const PAY_FREQUENCIES = [
 const frequencyToCount = (freq: string): number =>
   ({ weekly: 52, biweekly: 26, semimonthly: 24, monthly: 12 })[freq] ?? 26;
 
+const parseIsoDate = (value: string): Date | null => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const monthsInclusiveToYearEnd = (date: Date): number => 12 - (date.getMonth() + 1) + 1;
+
+const suggestRemainingPeriods = (
+  asOfDate: Date,
+  frequency: "weekly" | "biweekly" | "semimonthly" | "monthly",
+): number => {
+  const yearEnd = new Date(asOfDate.getFullYear(), 11, 31);
+  const diffDays = Math.max(0, Math.ceil((yearEnd.getTime() - asOfDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+  switch (frequency) {
+    case "weekly":
+      return Math.max(1, Math.ceil(diffDays / 7));
+    case "biweekly":
+      return Math.max(1, Math.ceil(diffDays / 14));
+    case "monthly":
+      return Math.max(1, monthsInclusiveToYearEnd(asOfDate));
+    case "semimonthly": {
+      const months = monthsInclusiveToYearEnd(asOfDate);
+      const day = asOfDate.getDate();
+      return Math.max(1, months * 2 - (day > 15 ? 1 : 0));
+    }
+    default:
+      return 10;
+  }
+};
+
 // ---------------------------------------------------------------------------
 // W-4 optimizer result display
 // ---------------------------------------------------------------------------
@@ -50,10 +85,35 @@ const W4ResultCard = ({ result }: { result: W4OptimizeResponse }) => (
         <strong>{formatCurrency(parseDecimalString(result.target_total_withholding))}</strong>
       </div>
       <div className="result-row result-divider">
-        <span>Adjustment needed</span>
-        <strong className={parseDecimalString(result.adjustment_needed) < 0 ? "text-owed" : "text-refund"}>
+        <span>Annual withholding adjustment</span>
+        <strong
+          className={
+            parseDecimalString(result.adjustment_needed) > 0
+              ? "text-owed"
+              : parseDecimalString(result.adjustment_needed) < 0
+                ? "text-refund"
+                : ""
+          }
+        >
           {formatCurrency(Math.abs(parseDecimalString(result.adjustment_needed)))}
-          {parseDecimalString(result.adjustment_needed) < 0 ? " more/yr" : " less/yr"}
+        </strong>
+      </div>
+      <div className="result-row">
+        <span>Direction</span>
+        <strong
+          className={
+            parseDecimalString(result.adjustment_needed) > 0
+              ? "text-owed"
+              : parseDecimalString(result.adjustment_needed) < 0
+                ? "text-refund"
+                : ""
+          }
+        >
+          {parseDecimalString(result.adjustment_needed) > 0
+            ? "Need to withhold more this year"
+            : parseDecimalString(result.adjustment_needed) < 0
+              ? "Can withhold less this year"
+              : "Withholding is on target"}
         </strong>
       </div>
     </div>
@@ -89,7 +149,13 @@ const W4ResultCard = ({ result }: { result: W4OptimizeResponse }) => (
 
           <div className="w4-step result-highlight">
             <span className="w4-step-label">Step 4c — Extra per paycheck</span>
-            <span className="w4-step-value">{formatCurrency(parseDecimalString(rec.step4c_extra_withholding))}</span>
+            <span
+              className={`w4-step-value ${
+                parseDecimalString(rec.step4c_extra_withholding) > 0 ? "text-owed" : "text-refund"
+              }`}
+            >
+              {formatCurrency(parseDecimalString(rec.step4c_extra_withholding))}
+            </span>
             {rec.step4c_explanation && <p className="w4-step-note">{rec.step4c_explanation}</p>}
           </div>
 
@@ -275,90 +341,115 @@ const OptimizerTab = () => {
 // Mid-year optimizer tab
 // ---------------------------------------------------------------------------
 
-const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse }) => (
-  <div className="card result-card mt-2">
-    <h3 className="card-title">Year-to-Date Summary</h3>
+const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse }) => {
+  const ytdPension = parseDecimalString(result.ytd_summary.ytd_pension_taxable);
+  const remainingPension = parseDecimalString(result.projection_summary.projected_remaining_pension_taxable);
+  const annualPension = parseDecimalString(result.projection_summary.projected_full_year_pension_taxable);
+  const ytdNonTaxable = parseDecimalString(result.ytd_summary.ytd_non_taxable_income);
+  const annualNonTaxable = parseDecimalString(result.projection_summary.projected_full_year_non_taxable_income);
+  const remainingNonTaxable = annualNonTaxable - ytdNonTaxable;
 
-    <div className="result-grid mb-4">
-      <div className="result-row">
-        <span>As-of date</span>
-        <strong>{result.ytd_summary.as_of_date ?? "All records for tax year"}</strong>
-      </div>
-      <div className="result-row">
-        <span>Remaining pay periods</span>
-        <strong>{result.ytd_summary.remaining_pay_periods}</strong>
-      </div>
-      <div className="result-row">
-        <span>YTD total federal withholding</span>
-        <strong>{formatCurrency(parseDecimalString(result.ytd_summary.ytd_total_federal_withholding))}</strong>
-      </div>
-    </div>
+  return (
+    <div className="card result-card mt-2">
+      <h3 className="card-title">Year-to-Date Summary</h3>
 
-    <h4 className="w4-rec-title">Employer Breakdown</h4>
-    {result.ytd_summary.employers.length === 0 ? (
-      <p className="helper-text">No paycheck records found for the selected year and as-of date.</p>
-    ) : (
-      <div className="midyear-grid mb-4">
-        {result.ytd_summary.employers.map((employer) => (
-          <article key={employer.employer_id} className="w4-rec-card midyear-employer-card">
-            <h5 className="midyear-employer-title">{employer.employer_name}</h5>
-            <div className="result-grid">
-              <div className="result-row">
-                <span>Paychecks recorded</span>
-                <strong>{employer.paychecks_recorded}</strong>
-              </div>
-              <div className="result-row">
-                <span>YTD gross</span>
-                <strong>{formatCurrency(parseDecimalString(employer.ytd_gross))}</strong>
-              </div>
-              <div className="result-row">
-                <span>YTD federal withholding</span>
-                <strong>{formatCurrency(parseDecimalString(employer.ytd_federal_withholding))}</strong>
-              </div>
-              <div className="result-row">
-                <span>Projected remaining gross</span>
-                <strong>{formatCurrency(parseDecimalString(employer.projected_remaining_gross))}</strong>
-              </div>
-            </div>
-          </article>
-        ))}
+      <div className="result-grid mb-4">
+        <div className="result-row">
+          <span>As-of date</span>
+          <strong>{result.ytd_summary.as_of_date ?? "All records for tax year"}</strong>
+        </div>
+        <div className="result-row">
+          <span>Remaining periods in use</span>
+          <strong>
+            W-2 {result.ytd_summary.remaining_w2_pay_periods} • Pension {result.ytd_summary.remaining_pension_periods} •
+            Non-taxable {result.ytd_summary.remaining_non_taxable_periods}
+          </strong>
+        </div>
+        <div className="result-row">
+          <span>YTD total federal withholding</span>
+          <strong>{formatCurrency(parseDecimalString(result.ytd_summary.ytd_total_federal_withholding))}</strong>
+        </div>
       </div>
-    )}
 
-    <h4 className="w4-rec-title">Projection Summary</h4>
-    <div className="result-grid mb-4">
-      <div className="result-row">
-        <span>Remaining pension taxable projection</span>
-        <strong>
-          {formatCurrency(parseDecimalString(result.projection_summary.projected_remaining_pension_taxable))}
-        </strong>
-      </div>
-      <div className="result-row">
-        <span>Projected full-year pension taxable</span>
-        <strong>
-          {formatCurrency(parseDecimalString(result.projection_summary.projected_full_year_pension_taxable))}
-        </strong>
-      </div>
-      <div className="result-row">
-        <span>Projected full-year non-taxable income</span>
-        <strong>
-          {formatCurrency(parseDecimalString(result.projection_summary.projected_full_year_non_taxable_income))}
-        </strong>
-      </div>
-    </div>
-
-    {result.assumptions.length > 0 && (
-      <>
-        <h4 className="w4-rec-title">Assumptions</h4>
-        <ul className="result-notes">
-          {result.assumptions.map((assumption) => (
-            <li key={assumption}>{assumption}</li>
+      <h4 className="w4-rec-title">Employer Gross Equation</h4>
+      {result.ytd_summary.employers.length === 0 ? (
+        <p className="helper-text">No paycheck records found for the selected year and as-of date.</p>
+      ) : (
+        <div className="midyear-grid mb-4">
+          {result.ytd_summary.employers.map((employer) => (
+            <article key={employer.employer_id} className="w4-rec-card midyear-employer-card">
+              <h5 className="midyear-employer-title">{employer.employer_name}</h5>
+              <p className="helper-text midyear-meta">Paychecks recorded: {employer.paychecks_recorded}</p>
+              <div className="equation-grid">
+                <div className="equation-cell">
+                  <span>YTD gross</span>
+                  <strong>{formatCurrency(parseDecimalString(employer.ytd_gross))}</strong>
+                </div>
+                <div className="equation-operator">+</div>
+                <div className="equation-cell">
+                  <span>Projected remaining</span>
+                  <strong>{formatCurrency(parseDecimalString(employer.projected_remaining_gross))}</strong>
+                </div>
+                <div className="equation-operator">=</div>
+                <div className="equation-cell equation-total">
+                  <span>Projected annual gross</span>
+                  <strong>{formatCurrency(parseDecimalString(employer.projected_annual_gross))}</strong>
+                </div>
+              </div>
+            </article>
           ))}
-        </ul>
-      </>
-    )}
-  </div>
-);
+        </div>
+      )}
+
+      <h4 className="w4-rec-title">Pension Projection Equation</h4>
+      <div className="equation-grid mb-4">
+        <div className="equation-cell">
+          <span>YTD pension taxable</span>
+          <strong>{formatCurrency(ytdPension)}</strong>
+        </div>
+        <div className="equation-operator">+</div>
+        <div className="equation-cell">
+          <span>Projected remaining pension</span>
+          <strong>{formatCurrency(remainingPension)}</strong>
+        </div>
+        <div className="equation-operator">=</div>
+        <div className="equation-cell equation-total">
+          <span>Projected full-year pension</span>
+          <strong>{formatCurrency(annualPension)}</strong>
+        </div>
+      </div>
+
+      <h4 className="w4-rec-title">Non-taxable Projection Equation</h4>
+      <div className="equation-grid mb-4">
+        <div className="equation-cell">
+          <span>YTD non-taxable income</span>
+          <strong>{formatCurrency(ytdNonTaxable)}</strong>
+        </div>
+        <div className="equation-operator">+</div>
+        <div className="equation-cell">
+          <span>Projected remaining non-taxable</span>
+          <strong>{formatCurrency(remainingNonTaxable)}</strong>
+        </div>
+        <div className="equation-operator">=</div>
+        <div className="equation-cell equation-total">
+          <span>Projected full-year non-taxable</span>
+          <strong>{formatCurrency(annualNonTaxable)}</strong>
+        </div>
+      </div>
+
+      {result.assumptions.length > 0 && (
+        <>
+          <h4 className="w4-rec-title">Assumptions</h4>
+          <ul className="result-notes">
+            {result.assumptions.map((assumption) => (
+              <li key={assumption}>{assumption}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+};
 
 const MidYearTab = () => {
   type OverrideRow = EmployerRemainingOverride & { row_id: string };
@@ -381,6 +472,7 @@ const MidYearTab = () => {
   });
   const [asOfDate, setAsOfDate] = useState("");
   const [expectedRemainingPensionTaxable, setExpectedRemainingPensionTaxable] = useState("");
+  const [w2PayFrequency, setW2PayFrequency] = useState<"weekly" | "biweekly" | "semimonthly" | "monthly">("biweekly");
   const [employerOverrides, setEmployerOverrides] = useState<OverrideRow[]>([]);
 
   const employersQuery = useQuery({
@@ -394,6 +486,16 @@ const MidYearTab = () => {
 
   const set = <K extends keyof MidYearDBW4OptimizeRequest>(key: K, val: MidYearDBW4OptimizeRequest[K]) =>
     setFields((prev) => ({ ...prev, [key]: val }));
+
+  const handleAutoSuggestPeriods = () => {
+    const effectiveDate = parseIsoDate(asOfDate) ?? new Date();
+    const suggestedW2 = suggestRemainingPeriods(effectiveDate, w2PayFrequency);
+    const suggestedMonthly = suggestRemainingPeriods(effectiveDate, "monthly");
+
+    set("remaining_pay_periods", suggestedW2);
+    set("remaining_pension_periods", suggestedMonthly);
+    set("remaining_non_taxable_periods", suggestedMonthly);
+  };
 
   return (
     <div className="tab-panel">
@@ -416,6 +518,8 @@ const MidYearTab = () => {
                 employer_id: override.employer_id,
                 expected_remaining_gross_per_paycheck: override.expected_remaining_gross_per_paycheck,
               })),
+            remaining_pension_periods: fields.remaining_pension_periods ?? fields.remaining_pay_periods,
+            remaining_non_taxable_periods: fields.remaining_non_taxable_periods ?? fields.remaining_pay_periods,
           };
 
           mutation.mutate(payload);
@@ -424,6 +528,37 @@ const MidYearTab = () => {
         <p className="helper-text">
           Uses year-to-date entries from your database, projects the remaining year, and recommends W-4 adjustments.
         </p>
+        <p className="helper-text">
+          Remaining periods are editable. Auto-suggest provides a starting point, especially when W-2 and pension
+          cadences differ.
+        </p>
+
+        <div className="midyear-autosuggest card">
+          <div className="panel-header">
+            <h3 className="panel-title">Auto-suggest Remaining Periods</h3>
+          </div>
+          <div className="midyear-override-row">
+            <label className="form-label">
+              W-2 pay frequency
+              <select
+                className="form-input"
+                value={w2PayFrequency}
+                onChange={(e) => setW2PayFrequency(e.target.value as "weekly" | "biweekly" | "semimonthly" | "monthly")}
+              >
+                {PAY_FREQUENCIES.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="midyear-autosuggest-action">
+              <button type="button" className="btn-ghost" onClick={handleAutoSuggestPeriods}>
+                Auto-suggest
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="form-grid">
           <label className="form-label">
@@ -462,13 +597,37 @@ const MidYearTab = () => {
           </label>
 
           <label className="form-label">
-            Remaining pay periods
+            Remaining W-2 pay periods
             <input
               type="number"
               min="1"
               className="form-input"
               value={fields.remaining_pay_periods}
               onChange={(e) => set("remaining_pay_periods", Number(e.target.value))}
+              required
+            />
+          </label>
+
+          <label className="form-label">
+            Remaining pension periods (monthly typical)
+            <input
+              type="number"
+              min="1"
+              className="form-input"
+              value={fields.remaining_pension_periods ?? fields.remaining_pay_periods}
+              onChange={(e) => set("remaining_pension_periods", Number(e.target.value))}
+              required
+            />
+          </label>
+
+          <label className="form-label">
+            Remaining non-taxable periods (monthly typical)
+            <input
+              type="number"
+              min="1"
+              className="form-input"
+              value={fields.remaining_non_taxable_periods ?? fields.remaining_pay_periods}
+              onChange={(e) => set("remaining_non_taxable_periods", Number(e.target.value))}
               required
             />
           </label>
@@ -580,7 +739,12 @@ const MidYearTab = () => {
                   const value = e.target.value;
                   setEmployerOverrides((prev) =>
                     prev.map((row) =>
-                      row.row_id === override.row_id ? { ...row, expected_remaining_gross_per_paycheck: value } : row,
+                      row.row_id === override.row_id
+                        ? {
+                            ...row,
+                            expected_remaining_gross_per_paycheck: value,
+                          }
+                        : row,
                     ),
                   );
                 }}

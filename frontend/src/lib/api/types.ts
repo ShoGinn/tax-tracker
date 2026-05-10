@@ -233,6 +233,8 @@ export interface MidYearDBW4OptimizeRequest {
   filing_status: FilingStatus;
   as_of_date?: string;
   remaining_pay_periods: number;
+  remaining_pension_periods?: number;
+  remaining_non_taxable_periods?: number;
   num_children?: number;
   target_refund?: DecimalString;
   use_standard_deduction?: boolean;
@@ -256,6 +258,9 @@ export interface MidYearYTDSummary {
   tax_year: number;
   as_of_date: string | null;
   remaining_pay_periods: number;
+  remaining_w2_pay_periods: number;
+  remaining_pension_periods: number;
+  remaining_non_taxable_periods: number;
   employers: MidYearEmployerSummary[];
   ytd_pension_taxable: DecimalString;
   ytd_pension_federal_withholding: DecimalString;

@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from taxtracker.models.database import Employer, Paycheck, Retirement1099R
+from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
 from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.tax_calculator import TaxCalculator  # noqa: TC001
 from taxtracker.services.w4_calculator import optimize_midyear_from_db, optimize_w4
@@ -196,6 +196,25 @@ class TestOptimizeW4:
 
         assert result.current_refund_or_owed < 0
         assert any("underpaying" in note.lower() for note in result.notes)
+        expected_amount = f"${result.w4_recommendations[0].step4c_extra_withholding:,.2f}"
+        assert any(expected_amount in note for note in result.notes)
+
+    def test_overpaying_note_uses_adjustment_per_period(self, test_calculator: TaxCalculator, single_job: list) -> None:
+        """Overpaying note should report reduction per period from adjustment math, not a fixed divisor."""
+        result = optimize_w4(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_jobs=single_job,
+            pension_taxable=Decimal(0),
+            va_disability=Decimal(0),
+            current_federal_withholding=Decimal(50000),
+        )
+
+        expected_reduction = sum((abs(v) for v in result.adjustment_per_paycheck.values() if v < 0), Decimal(0))
+        expected_amount = f"${expected_reduction:,.2f}"
+        assert any(expected_amount in note for note in result.notes)
 
     def test_perfect_withholding_notes(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """When withholding is close to perfect, note should say so."""
@@ -457,3 +476,53 @@ class TestMidYearOptimizeFromDB:
         assert Decimal(employer_summary["ytd_gross"]) == Decimal(2000)
         assert result["ytd_summary"]["as_of_date"] == "2024-02-01"
         assert any("as_of_date cutoff" in note for note in result["assumptions"])
+
+    async def test_split_remaining_periods_for_mixed_cadence(
+        self,
+        async_db_session,
+        test_calculator: TaxCalculator,
+    ) -> None:
+        """W-2, pension, and non-taxable projections should honor separate remaining period counts."""
+        employer = Employer(name="Mixed Cadence Co", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        async_db_session.add(
+            Paycheck(
+                employer_id=employer.id,
+                pay_date=date(2024, 4, 15),
+                gross_wages=Decimal(3000),
+                federal_withholding=Decimal(300),
+            )
+        )
+        async_db_session.add(
+            Retirement1099R(
+                pay_date=date(2024, 4, 1),
+                gross_amount=Decimal(1000),
+                federal_withholding=Decimal(100),
+            )
+        )
+        async_db_session.add(
+            NonTaxableIncome(
+                pay_date=date(2024, 4, 1),
+                amount=Decimal(500),
+                source_type="Non-taxable benefit",
+            )
+        )
+        await async_db_session.commit()
+
+        result = await optimize_midyear_from_db(
+            db=async_db_session,
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            remaining_pay_periods=10,
+            remaining_pension_periods=5,
+            remaining_non_taxable_periods=4,
+        )
+
+        assert result["ytd_summary"]["remaining_w2_pay_periods"] == 10
+        assert result["ytd_summary"]["remaining_pension_periods"] == 5
+        assert result["ytd_summary"]["remaining_non_taxable_periods"] == 4
+        assert Decimal(result["projection_summary"]["projected_remaining_pension_taxable"]) == Decimal(5000)
+        assert Decimal(result["projection_summary"]["projected_full_year_non_taxable_income"]) == Decimal(2500)

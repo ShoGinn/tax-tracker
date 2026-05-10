@@ -316,18 +316,22 @@ def optimize_w4(
         w4_recommendations.append(rec)
 
     # Generate notes
+    combined_step4c_extra = sum((rec.step4c_extra_withholding for rec in w4_recommendations), Decimal(0))
+    combined_reduction = sum(
+        (abs(v) for v in adjustment_per_paycheck.values() if v < 0),
+        Decimal(0),
+    )
+
     notes = []
     if current_refund > settings.w4_threshold:
-        per_check = abs(adjustment_needed / 26)
         notes.append(
             f"⚠️ You're currently overpaying by ${current_refund:,.0f}. "
-            f"These W-4 changes will give you ${per_check:,.2f} more per paycheck."
+            f"These W-4 changes target about ${combined_reduction:,.2f} less withholding per pay period."
         )
     elif current_refund < -settings.w4_threshold:
-        per_check = adjustment_needed / 26
         notes.append(
             f"⚠️ You're currently underpaying by ${abs(current_refund):,.0f}. "
-            f"These W-4 changes will withhold ${per_check:,.2f} more per paycheck."
+            f"These W-4 changes will withhold about ${combined_step4c_extra:,.2f} more per pay period."
         )
     else:
         notes.append("✅ Your current withholding is close to perfect. Minor adjustments will fine-tune it.")
@@ -370,7 +374,7 @@ def _filter_records_by_as_of_date(records: list[Any], as_of_date: datetime.date 
 def _project_remaining_pension(
     retirement_1099rs: list[Any],
     ytd_pension_taxable: Decimal,
-    remaining_pay_periods: int,
+    remaining_pension_periods: int,
     expected_remaining_pension_taxable: Decimal | None,
 ) -> tuple[Decimal, str]:
     """Project remaining pension taxable income and return an assumptions note."""
@@ -382,11 +386,11 @@ def _project_remaining_pension(
 
     if retirement_1099rs:
         avg_pension_taxable = ytd_pension_taxable / len(retirement_1099rs)
-        projected_remaining_pension = avg_pension_taxable * remaining_pay_periods
+        projected_remaining_pension = avg_pension_taxable * remaining_pension_periods
         return (
             projected_remaining_pension,
             "Extrapolated remaining pension taxable income using "
-            f"YTD average ${avg_pension_taxable:,.2f} for {remaining_pay_periods} remaining periods.",
+            f"YTD average ${avg_pension_taxable:,.2f} for {remaining_pension_periods} remaining periods.",
         )
 
     return (Decimal(0), "No pension records found in DB; projected remaining pension taxable income as $0.00.")
@@ -395,17 +399,18 @@ def _project_remaining_pension(
 def _project_remaining_non_taxable(
     non_taxable_payments: list[Any],
     ytd_va_income: Decimal,
-    remaining_pay_periods: int,
+    remaining_non_taxable_periods: int,
 ) -> tuple[Decimal, str | None]:
     """Project remaining non-taxable income and optional assumptions note."""
     if not non_taxable_payments:
         return (Decimal(0), None)
 
     avg_va = ytd_va_income / len(non_taxable_payments)
-    projected_va_remaining = avg_va * remaining_pay_periods
+    projected_va_remaining = avg_va * remaining_non_taxable_periods
     return (
         projected_va_remaining,
-        f"Extrapolated non-taxable income using YTD average ${avg_va:,.2f} for {remaining_pay_periods} periods.",
+        "Extrapolated non-taxable income using "
+        f"YTD average ${avg_va:,.2f} for {remaining_non_taxable_periods} periods.",
     )
 
 
@@ -415,6 +420,8 @@ async def optimize_midyear_from_db(
     year: int,
     filing_status: FilingStatus,
     remaining_pay_periods: int,
+    remaining_pension_periods: int | None = None,
+    remaining_non_taxable_periods: int | None = None,
     as_of_date: datetime.date | None = None,
     num_children: int = 0,
     target_refund: Decimal = Decimal(0),
@@ -448,12 +455,18 @@ async def optimize_midyear_from_db(
     )
 
     overrides = employer_overrides or {}
+    pension_periods = remaining_pension_periods or remaining_pay_periods
+    non_taxable_periods = remaining_non_taxable_periods or remaining_pay_periods
     employer_stats: dict[int, dict[str, Any]] = {}
     assumptions: list[str] = []
     assumptions.append(
         f"Using as_of_date cutoff: included records with pay_date <= {as_of_date.isoformat()}."
         if as_of_date
         else "No as_of_date provided: included all records in the tax year as YTD."
+    )
+    assumptions.append(
+        "Remaining period assumptions: "
+        f"W-2={remaining_pay_periods}, Pension={pension_periods}, Non-taxable={non_taxable_periods}."
     )
 
     for paycheck in paychecks:
@@ -531,7 +544,7 @@ async def optimize_midyear_from_db(
     projected_remaining_pension, pension_note = _project_remaining_pension(
         retirement_1099rs,
         ytd_pension_taxable,
-        remaining_pay_periods,
+        pension_periods,
         expected_remaining_pension_taxable,
     )
     assumptions.append(pension_note)
@@ -539,7 +552,7 @@ async def optimize_midyear_from_db(
     projected_va_remaining, non_taxable_note = _project_remaining_non_taxable(
         non_taxable_payments,
         ytd_va_income,
-        remaining_pay_periods,
+        non_taxable_periods,
     )
     if non_taxable_note:
         assumptions.append(non_taxable_note)
@@ -574,6 +587,9 @@ async def optimize_midyear_from_db(
             "tax_year": year,
             "as_of_date": as_of_date.isoformat() if as_of_date else None,
             "remaining_pay_periods": remaining_pay_periods,
+            "remaining_w2_pay_periods": remaining_pay_periods,
+            "remaining_pension_periods": pension_periods,
+            "remaining_non_taxable_periods": non_taxable_periods,
             "employers": employer_breakdown,
             "ytd_pension_taxable": str(ytd_pension_taxable),
             "ytd_pension_federal_withholding": str(ytd_pension_withholding),
