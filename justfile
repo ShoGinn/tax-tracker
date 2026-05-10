@@ -110,3 +110,6 @@ ci: lint typecheck test frontend-check
 # Remove common local caches and coverage outputs.
 clean:
     rm -rf .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage
+
+# Full App Run that includes frontend build with api static hosting
+app: frontend-build run

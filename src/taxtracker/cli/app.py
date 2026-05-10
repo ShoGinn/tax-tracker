@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -60,17 +60,31 @@ def _mount_frontend(app: FastAPI) -> None:
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str) -> FileResponse:
         """Catch-all: serve the SPA for all unmatched routes."""
+        api_like_prefixes = (
+            "income",
+            "taxes",
+            "w4",
+            "projections",
+            "health",
+            "docs",
+            "redoc",
+            "openapi.json",
+        )
+        if full_path.startswith(api_like_prefixes):
+            raise HTTPException(status_code=404, detail="Not Found")
+
         candidate = _FRONTEND_DIST / full_path
         if candidate.is_file():
             return FileResponse(str(candidate))
         return FileResponse(index)
 
 
-def create_app(skip_db_init: bool = False) -> FastAPI:
+def create_app(skip_db_init: bool = False, *, serve_frontend: bool = True) -> FastAPI:
     """Create and configure FastAPI application.
 
     Args:
         skip_db_init: If True, skip database initialization (for tests)
+        serve_frontend: If True, mount built SPA when frontend/dist exists
     """
 
     # Create lifespan with conditional DB init
@@ -145,8 +159,20 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
         except Exception as e:
             return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
-    # Mount frontend SPA if the dist directory exists
-    _mount_frontend(app)
+    # Mount frontend SPA if enabled and dist exists
+    if serve_frontend:
+        _mount_frontend(app)
+    else:
+
+        @app.get("/")
+        def root() -> dict[str, str]:
+            """Root endpoint."""
+            return {
+                "name": "Tax Tracker API",
+                "version": __version__,
+                "status": "active",
+                "docs": "/docs",
+            }
 
     return app
 

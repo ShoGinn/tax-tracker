@@ -7,6 +7,24 @@ on:
     branches: [main]
 
 jobs:
+  frontend-check:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install frontend dependencies
+        run: cd frontend && pnpm install --frozen-lockfile
+      - name: Frontend quality gate
+        run: cd frontend && pnpm lint && pnpm typecheck && pnpm build
+
   lint:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]') }}
@@ -99,7 +117,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [lint, test, typecheck, security, pslmodels-cross-check]
+    needs: [frontend-check, lint, test, typecheck, security, pslmodels-cross-check]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]') }}
     permissions:
       contents: write

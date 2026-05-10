@@ -1,20 +1,32 @@
 version: 2
 
 updates:
-  # Python dependencies (uv)
-  - package-ecosystem: "uv"
-    directory: "/"
+  # Frontend dependencies (pnpm lockfile via npm ecosystem)
+  - package-ecosystem: 'npm'
+    directory: '/frontend'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     groups:
       production:
-        patterns: ["*"]
-        exclude-patterns: ["ruff", "ty", "pytest*", "httpx", "types-*"]
+        patterns: ['*']
+        exclude-patterns: ['@types/*', '@biomejs/*', 'typescript', 'vite', '@vitejs/*']
       dev:
-        patterns: ["ruff", "ty", "pytest*", "httpx", "types-*"]
+        patterns: ['@types/*', '@biomejs/*', 'typescript', 'vite', '@vitejs/*']
+
+  # Python dependencies (uv)
+  - package-ecosystem: 'uv'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    groups:
+      production:
+        patterns: ['*']
+        exclude-patterns: ['ruff', 'ty', 'pytest*', 'httpx', 'types-*']
+      dev:
+        patterns: ['ruff', 'ty', 'pytest*', 'httpx', 'types-*']
 
   # GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
