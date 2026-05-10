@@ -20,6 +20,9 @@ from taxtracker.services import csv_import, income_service
 
 router = APIRouter(prefix="/income", tags=["Income"])
 
+# Reusable query parameter type for optional year filtering
+_YearQuery = Annotated[int | None, Query(description="Filter by tax year (e.g. 2025, 2026)", examples=[2026])]
+
 
 # ============================================================================
 # Paycheck Endpoints
@@ -55,10 +58,7 @@ async def create_paycheck_entry(
     response_description="List of paycheck entries",
 )
 async def list_paychecks(
-    year: Annotated[
-        int | None,
-        Query(description="Filter by tax year (e.g. 2025, 2026)", examples=[2026]),
-    ] = None,
+    year: _YearQuery = None,
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[PaycheckResponse]:
@@ -170,10 +170,7 @@ async def create_pension_entry(
     response_description="List of 1099-R pension entries",
 )
 async def list_pension(
-    year: Annotated[
-        int | None,
-        Query(description="Filter by tax year (e.g. 2025, 2026)", examples=[2026]),
-    ] = None,
+    year: _YearQuery = None,
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[Retirement1099RResponse]:
@@ -280,10 +277,7 @@ async def create_va_entry(
     response_description="List of non-taxable income entries",
 )
 async def list_va_disability(
-    year: Annotated[
-        int | None,
-        Query(description="Filter by tax year (e.g. 2025, 2026)", examples=[2026]),
-    ] = None,
+    year: _YearQuery = None,
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[NonTaxableIncomeResponse]:
