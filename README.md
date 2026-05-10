@@ -65,10 +65,13 @@ The codebase is under active development and prioritizes correctness, maintainab
 - FastAPI
 - SQLAlchemy async ORM with SQLite and aiosqlite
 - Pydantic v2
+- React 19 + TypeScript + Vite (frontend in `frontend/`)
 - uv for package and environment workflows
 - just for local task automation
 - Ruff for linting and formatting
 - ty for static type checks
+- pnpm for frontend package management
+- Biome for frontend linting and formatting
 
 ## Quick Start
 
@@ -90,6 +93,16 @@ just install
 just run
 ```
 
+### Run The Frontend
+
+```bash
+just frontend-install
+just frontend-dev
+```
+
+The frontend accepts `VITE_API_BASE_URL` for explicit API targets.
+If not set, it uses same-origin requests and Vite dev proxy routes to `http://127.0.0.1:8000`.
+
 ## Development Commands
 
 Preferred workflow uses just recipes:
@@ -106,6 +119,14 @@ just lint-fix
 just format
 just format-check
 just typecheck
+just frontend-install
+just frontend-dev
+just frontend-build
+just frontend-typecheck
+just frontend-lint
+just frontend-lint-fix
+just frontend-format
+just frontend-check
 just security
 just psl-snapshot years="2025 2026"
 just psl-draft year=YYYY
