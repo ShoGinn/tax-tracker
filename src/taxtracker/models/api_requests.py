@@ -11,12 +11,20 @@ class W4OptimizeRequest(BaseModel):
     """Request for W-4 optimization."""
 
     total_annual_w2_income: Decimal = Field(ge=0, description="Total W-2 income across all jobs")
-    paychecks_per_year: int = Field(ge=1, description="Number of paychecks per year")
-    filing_status: FilingStatus
-    num_children: int = Field(default=0, ge=0)
-    other_annual_income: Decimal = Field(default=Decimal(0), ge=0)
-    itemized_deductions: Decimal = Field(default=Decimal(0), ge=0)
-    target_refund: Decimal = Field(default=Decimal(0))
+    paychecks_per_year: int = Field(ge=1, description="Number of paychecks per year (e.g. 26 biweekly, 24 semimonthly)")
+    filing_status: FilingStatus = Field(
+        description="IRS filing status (single, married_jointly, married_separately, head_of_household)"
+    )
+    num_children: int = Field(default=0, ge=0, description="Number of qualifying children for child tax credit")
+    other_annual_income: Decimal = Field(
+        default=Decimal(0), ge=0, description="Annual pension or other non-W-2 taxable income"
+    )
+    itemized_deductions: Decimal = Field(
+        default=Decimal(0), ge=0, description="Total itemized deductions; 0 uses standard deduction"
+    )
+    target_refund: Decimal = Field(
+        default=Decimal(0), description="Target refund amount (0 = break even, negative = owed)"
+    )
     year: int | None = Field(default=None, description="Tax year (defaults to current)")
 
 
@@ -24,13 +32,21 @@ class WithholdingCalcRequest(BaseModel):
     """Request for per-paycheck withholding calculation."""
 
     gross_pay_per_paycheck: Decimal = Field(ge=0, description="Gross pay per paycheck")
-    pay_frequency: str = Field(description="weekly, biweekly, semimonthly, or monthly")
-    filing_status: FilingStatus
-    multiple_jobs_checkbox: bool = False
-    dependents_amount: Decimal = Field(default=Decimal(0), ge=0)
-    other_income_annual: Decimal = Field(default=Decimal(0), ge=0)
-    deductions_annual: Decimal = Field(default=Decimal(0), ge=0)
-    extra_withholding: Decimal = Field(default=Decimal(0), ge=0)
+    pay_frequency: str = Field(description="Pay frequency: weekly, biweekly, semimonthly, or monthly")
+    filing_status: FilingStatus = Field(description="IRS filing status from W-4 Step 1")
+    multiple_jobs_checkbox: bool = Field(
+        default=False, description="W-4 Step 2 checkbox — check if you hold multiple jobs or spouse works"
+    )
+    dependents_amount: Decimal = Field(default=Decimal(0), ge=0, description="W-4 Step 3 dependents amount in dollars")
+    other_income_annual: Decimal = Field(
+        default=Decimal(0), ge=0, description="W-4 Step 4a annual other income (e.g. pension, interest)"
+    )
+    deductions_annual: Decimal = Field(
+        default=Decimal(0), ge=0, description="W-4 Step 4b annual deductions exceeding standard deduction"
+    )
+    extra_withholding: Decimal = Field(
+        default=Decimal(0), ge=0, description="W-4 Step 4c additional withholding per paycheck"
+    )
     year: int | None = Field(default=None, description="Tax year (defaults to current)")
 
 
@@ -38,50 +54,80 @@ class AnnualWithholdingRequest(BaseModel):
     """Request for annual withholding estimate."""
 
     annual_gross: Decimal = Field(ge=0, description="Annual gross income")
-    pay_frequency: str = Field(description="weekly, biweekly, semimonthly, or monthly")
-    filing_status: FilingStatus
-    w4_step2_checkbox: bool = False
-    w4_step3_dependents: Decimal = Field(default=Decimal(0), ge=0)
-    w4_step4a_other_income: Decimal = Field(default=Decimal(0), ge=0)
-    w4_step4b_deductions: Decimal = Field(default=Decimal(0), ge=0)
-    w4_step4c_extra: Decimal = Field(default=Decimal(0), ge=0)
+    pay_frequency: str = Field(description="Pay frequency: weekly, biweekly, semimonthly, or monthly")
+    filing_status: FilingStatus = Field(description="IRS filing status from W-4 Step 1")
+    w4_step2_checkbox: bool = Field(
+        default=False, description="W-4 Step 2 checkbox — check if you hold multiple jobs or spouse works"
+    )
+    w4_step3_dependents: Decimal = Field(
+        default=Decimal(0), ge=0, description="W-4 Step 3 dependents amount in dollars"
+    )
+    w4_step4a_other_income: Decimal = Field(
+        default=Decimal(0), ge=0, description="W-4 Step 4a annual other income (e.g. pension, interest)"
+    )
+    w4_step4b_deductions: Decimal = Field(
+        default=Decimal(0), ge=0, description="W-4 Step 4b annual deductions exceeding standard deduction"
+    )
+    w4_step4c_extra: Decimal = Field(
+        default=Decimal(0), ge=0, description="W-4 Step 4c additional withholding per paycheck"
+    )
     year: int | None = Field(default=None, description="Tax year (defaults to current)")
 
 
 class ProjectYearRequest(BaseModel):
     """Request for single-year tax projection."""
 
-    projection_year: int = Field(ge=2024, le=2030)
-    filing_status: FilingStatus
-    num_children: int = Field(default=0, ge=0)
-    w2_gross: Decimal = Field(default=Decimal(0), ge=0)
-    w2_pretax_deductions: Decimal = Field(default=Decimal(0), ge=0)
-    pension_gross: Decimal = Field(default=Decimal(0), ge=0)
-    pension_pretax_deductions: Decimal = Field(default=Decimal(0), ge=0)
-    va_disability: Decimal = Field(default=Decimal(0), ge=0)
-    use_standard_deduction: bool = True
-    itemized_deduction_amount: Decimal = Field(default=Decimal(0), ge=0)
+    projection_year: int = Field(ge=2024, le=2030, description="Year to project taxes for")
+    filing_status: FilingStatus = Field(description="IRS filing status")
+    num_children: int = Field(default=0, ge=0, description="Number of qualifying children for child tax credit")
+    w2_gross: Decimal = Field(default=Decimal(0), ge=0, description="Expected annual W-2 gross wages")
+    w2_pretax_deductions: Decimal = Field(
+        default=Decimal(0), ge=0, description="Expected annual W-2 pre-tax deductions (401k, HSA, etc.)"
+    )
+    pension_gross: Decimal = Field(default=Decimal(0), ge=0, description="Expected annual 1099-R gross distribution")
+    pension_pretax_deductions: Decimal = Field(
+        default=Decimal(0), ge=0, description="Expected annual pension pre-tax deductions (SBP, insurance)"
+    )
+    va_disability: Decimal = Field(
+        default=Decimal(0),
+        ge=0,
+        description="Expected annual VA disability income (non-taxable, tracked for household totals)",
+    )
+    use_standard_deduction: bool = Field(
+        default=True, description="Use IRS standard deduction; set false to supply itemized amount"
+    )
+    itemized_deduction_amount: Decimal = Field(
+        default=Decimal(0),
+        ge=0,
+        description="Total itemized deductions; only used when use_standard_deduction is false",
+    )
 
 
 class CompareYearsRequest(BaseModel):
     """Request for year-over-year tax comparison."""
 
-    base_year: int = Field(ge=2024, le=2030)
-    comparison_year: int = Field(ge=2024, le=2030)
-    filing_status: FilingStatus
-    num_children: int = Field(default=0, ge=0)
-    base_w2_gross: Decimal = Field(ge=0)
-    comparison_w2_gross: Decimal = Field(ge=0)
-    base_pension: Decimal = Field(default=Decimal(0), ge=0)
-    comparison_pension: Decimal = Field(default=Decimal(0), ge=0)
+    base_year: int = Field(ge=2024, le=2030, description="Base tax year to compare from")
+    comparison_year: int = Field(ge=2024, le=2030, description="Comparison tax year to compare to")
+    filing_status: FilingStatus = Field(description="IRS filing status (applied to both years)")
+    num_children: int = Field(default=0, ge=0, description="Number of qualifying children for child tax credit")
+    base_w2_gross: Decimal = Field(ge=0, description="Expected W-2 gross wages for the base year")
+    comparison_w2_gross: Decimal = Field(ge=0, description="Expected W-2 gross wages for the comparison year")
+    base_pension: Decimal = Field(default=Decimal(0), ge=0, description="Expected pension gross for the base year")
+    comparison_pension: Decimal = Field(
+        default=Decimal(0), ge=0, description="Expected pension gross for the comparison year"
+    )
 
 
 class ProjectFromDBRequest(BaseModel):
     """Request for database-driven tax projection."""
 
-    projection_year: int = Field(ge=2024, le=2030)
-    filing_status: FilingStatus
-    num_children: int = Field(default=0, ge=0)
-    expected_w2_gross: Decimal = Field(ge=0)
-    use_database_pension: bool = True
-    use_database_va: bool = True
+    projection_year: int = Field(ge=2024, le=2030, description="Year to project taxes for")
+    filing_status: FilingStatus = Field(description="IRS filing status")
+    num_children: int = Field(default=0, ge=0, description="Number of qualifying children for child tax credit")
+    expected_w2_gross: Decimal = Field(ge=0, description="Expected annual W-2 gross wages")
+    use_database_pension: bool = Field(
+        default=True, description="Use average of historical 1099-R pension entries from database"
+    )
+    use_database_va: bool = Field(
+        default=True, description="Use average of historical VA disability entries from database"
+    )

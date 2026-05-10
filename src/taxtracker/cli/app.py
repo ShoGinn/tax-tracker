@@ -50,9 +50,33 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
 
     app = FastAPI(
         title="Tax Tracker API",
-        description="Personal tax calculation and W-4 optimization system",
+        description="Personal federal tax calculation and W-4 optimization system. "
+        "Tracks W-2 paychecks, 1099-R pension income, and non-taxable income (VA disability, etc.) "
+        "to calculate federal tax liability, reconcile withholding, and optimize W-4 settings.",
         version="1.0.0",
         lifespan=app_lifespan,
+        openapi_tags=[
+            {
+                "name": "Income",
+                "description": "Create, list, and delete W-2 paychecks, 1099-R pension entries, "
+                "and non-taxable income (VA disability, SSA, gifts). Supports CSV bulk import.",
+            },
+            {
+                "name": "Taxes",
+                "description": "Calculate federal tax liability directly or from database income. "
+                "Retrieve IRS tax brackets and FICA limits. Upload custom tax data files.",
+            },
+            {
+                "name": "W-4",
+                "description": "Optimize W-4 form settings to hit a target refund, calculate "
+                "per-paycheck withholding (IRS Publication 15-T), and estimate annual withholding.",
+            },
+            {
+                "name": "Projections",
+                "description": "Project future-year tax liability from expected income, "
+                "compare taxes year-over-year, or use historical database averages.",
+            },
+        ],
     )
 
     @app.exception_handler(Exception)

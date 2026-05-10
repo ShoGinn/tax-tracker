@@ -20,7 +20,12 @@ from taxtracker.services.tax_calculator import TaxCalculator
 router = APIRouter(prefix="/projections", tags=["Projections"])
 
 
-@router.post("/project-year")
+@router.post(
+    "/project-year",
+    summary="Project taxes for a future year",
+    response_description="Tax projection with income breakdown and estimated liability",
+    responses={400: {"description": "Invalid input or unsupported tax year"}},
+)
 async def project_future_year(request: ProjectYearRequest) -> dict[str, Any]:
     """
     Project taxes for a future year based on expected income.
@@ -66,7 +71,12 @@ async def project_future_year(request: ProjectYearRequest) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Projection failed: {e!s}") from e
 
 
-@router.post("/compare-years")
+@router.post(
+    "/compare-years",
+    summary="Compare taxes across two years",
+    response_description="Year-over-year tax comparison with income and liability deltas",
+    responses={400: {"description": "Invalid input or unsupported tax year"}},
+)
 async def compare_tax_years(request: CompareYearsRequest) -> dict[str, Any]:
     """
     Compare taxes between two years.
@@ -107,7 +117,12 @@ async def compare_tax_years(request: CompareYearsRequest) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Comparison failed: {e!s}") from e
 
 
-@router.post("/from-database")
+@router.post(
+    "/from-database",
+    summary="Project taxes using historical database data",
+    response_description="Tax projection using historical pension and VA averages from database",
+    responses={400: {"description": "Invalid input or unsupported tax year"}},
+)
 async def project_from_database(
     request: ProjectFromDBRequest,
     *,
