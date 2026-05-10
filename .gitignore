@@ -62,6 +62,9 @@ downloads/
 eggs/
 .eggs/
 lib/
+# Keep frontend source libs tracked (the generic Python lib/ ignore would otherwise hide these)
+!frontend/src/lib/
+!frontend/src/lib/**
 lib64/
 parts/
 sdist/
