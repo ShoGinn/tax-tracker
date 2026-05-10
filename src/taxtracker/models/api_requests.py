@@ -1,5 +1,6 @@
 """Pydantic request models for W-4 and projection API endpoints."""
 
+import datetime  # noqa: TC003
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
@@ -28,6 +29,7 @@ class _D:
     expected_remaining_pension_taxable = "Expected remaining taxable pension income (override DB extrapolation)"
     employer_id = "Employer ID from the database"
     expected_remaining_gross_per_paycheck = "Expected remaining gross per paycheck for this employer"
+    as_of_date = "Optional YTD cutoff date; include only entries on or before this date"
 
 
 class W4OptimizeRequest(BaseModel):
@@ -64,6 +66,7 @@ class MidYearDBW4OptimizeRequest(BaseModel):
 
     tax_year: int = Field(ge=2024, le=2030, description="Tax year to optimize")
     filing_status: FilingStatus = Field(description=_D.filing_status_full)
+    as_of_date: datetime.date | None = Field(default=None, description=_D.as_of_date)
     remaining_pay_periods: int = Field(ge=1, description=_D.remaining_pay_periods)
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
     target_refund: Decimal = Field(

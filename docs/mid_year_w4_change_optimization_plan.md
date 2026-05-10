@@ -12,14 +12,13 @@ Implemented backend path:
 
 - Endpoint: `POST /w4/optimize-midyear-from-db`
 - Data source: all entries already recorded in the database for the requested tax year
-- YTD model: uses all paychecks in that tax year (no as-of-date cutoff in v1)
+- YTD model: supports optional `as_of_date` cutoff (includes entries with `pay_date <= as_of_date`); if omitted, uses all entries in tax year
 - Remaining income model: extrapolates from YTD per-employer averages by default, with optional per-employer overrides
 - Output: full W-4 recommendations plus YTD breakdown, projection summary, and assumptions
 
 Still planned:
 
 - Manual YTD-input endpoint mode
-- As-of-date cutoff support
 - Variable per-period schedule support
 
 ## Problem Statement

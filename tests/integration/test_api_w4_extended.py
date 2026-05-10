@@ -225,6 +225,47 @@ class TestW4APIOptimize:
         projected_remaining = Decimal(data["ytd_summary"]["employers"][0]["projected_remaining_gross"])
         assert projected_remaining == Decimal(20000)
 
+    async def test_optimize_midyear_from_db_with_as_of_date(self, client: TestClient, async_db_session):
+        """as_of_date should limit YTD records included in optimization."""
+        employer = Employer(name="Cutoff API Corp", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        async_db_session.add_all(
+            [
+                Paycheck(
+                    employer_id=employer.id,
+                    pay_date=date(2024, 1, 15),
+                    gross_wages=Decimal(3000),
+                    federal_withholding=Decimal(300),
+                ),
+                Paycheck(
+                    employer_id=employer.id,
+                    pay_date=date(2024, 3, 15),
+                    gross_wages=Decimal(4000),
+                    federal_withholding=Decimal(400),
+                ),
+            ]
+        )
+        await async_db_session.commit()
+
+        response = client.post(
+            "/w4/optimize-midyear-from-db",
+            json={
+                "tax_year": 2024,
+                "as_of_date": "2024-02-01",
+                "filing_status": "single",
+                "remaining_pay_periods": 4,
+                "target_refund": 0,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        employer_summary = data["ytd_summary"]["employers"][0]
+        assert Decimal(employer_summary["ytd_gross"]) == Decimal(3000)
+        assert data["ytd_summary"]["as_of_date"] == "2024-02-01"
+
 
 @pytest.mark.integration
 class TestW4APIWithholding:

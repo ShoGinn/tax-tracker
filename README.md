@@ -128,7 +128,7 @@ The service includes endpoints for:
 - Tax calculations from direct payload input
 - Database-backed reconciliation of withholding versus liability
 - W-4 optimization and withholding estimates
-- Mid-year W-4 optimization from DB-backed YTD actuals via `POST /w4/optimize-midyear-from-db`
+- Mid-year W-4 optimization from DB-backed YTD actuals via `POST /w4/optimize-midyear-from-db` with optional `as_of_date` cutoff
 - Tax projections based on expected or historical income patterns
 
 For implementation details and route handlers, see source packages under src/taxtracker/api.
