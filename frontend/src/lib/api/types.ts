@@ -272,6 +272,11 @@ export interface MidYearProjectionSummary {
   projected_remaining_pension_taxable: DecimalString;
   projected_full_year_pension_taxable: DecimalString;
   projected_full_year_non_taxable_income: DecimalString;
+  projected_remaining_w2_withholding: DecimalString;
+  projected_remaining_pension_withholding: DecimalString;
+  projected_annual_w2_withholding: DecimalString;
+  projected_annual_pension_withholding: DecimalString;
+  projected_annual_total_withholding: DecimalString;
 }
 
 export interface MidYearW4OptimizeResponse extends W4OptimizeResponse {

@@ -100,6 +100,10 @@ exclude_lines = [
 line-length = 120
 target-version = "py314"
 
+[tool.ruff.format]
+indent-style = "space"
+skip-magic-trailing-comma = false
+
 [tool.ruff.lint]
 ignore = ["FBT001", "FBT002", "PLR0913", "PLR0915"]
 select = [

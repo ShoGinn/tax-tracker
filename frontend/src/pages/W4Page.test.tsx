@@ -95,6 +95,11 @@ const midYearResponse = {
     projected_remaining_pension_taxable: "0.00",
     projected_full_year_pension_taxable: "0.00",
     projected_full_year_non_taxable_income: "0.00",
+    projected_remaining_w2_withholding: "3750.00",
+    projected_remaining_pension_withholding: "0.00",
+    projected_annual_w2_withholding: "5750.00",
+    projected_annual_pension_withholding: "0.00",
+    projected_annual_total_withholding: "5750.00",
   },
   assumptions: ["Used YTD average gross for remaining periods."],
 };
