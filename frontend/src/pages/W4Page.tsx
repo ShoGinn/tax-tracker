@@ -376,6 +376,18 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
   const annualNonTaxable = parseDecimalString(result.projection_summary.projected_full_year_non_taxable_income);
   const remainingNonTaxable = annualNonTaxable - ytdNonTaxable;
 
+  const ytdW2Withholding =
+    parseDecimalString(result.ytd_summary.ytd_total_federal_withholding) -
+    parseDecimalString(result.ytd_summary.ytd_pension_federal_withholding);
+  const ytdPensionWithholding = parseDecimalString(result.ytd_summary.ytd_pension_federal_withholding);
+  const remainingW2Withholding = parseDecimalString(result.projection_summary.projected_remaining_w2_withholding);
+  const remainingPensionWithholding = parseDecimalString(
+    result.projection_summary.projected_remaining_pension_withholding,
+  );
+  const annualW2Withholding = parseDecimalString(result.projection_summary.projected_annual_w2_withholding);
+  const annualPensionWithholding = parseDecimalString(result.projection_summary.projected_annual_pension_withholding);
+  const annualTotalWithholding = parseDecimalString(result.projection_summary.projected_annual_total_withholding);
+
   return (
     <div className="card result-card mt-2">
       <h3 className="card-title">Year-to-Date Summary</h3>
@@ -463,6 +475,79 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
           <strong>{formatCurrency(annualNonTaxable)}</strong>
         </div>
       </div>
+
+      <h4 className="w4-rec-title">W-2 Federal Withholding Projection</h4>
+      <div className="equation-grid mb-4">
+        <div className="equation-cell">
+          <span>YTD federal withholding</span>
+          <strong>{formatCurrency(ytdW2Withholding)}</strong>
+        </div>
+        <div className="equation-operator">+</div>
+        <div className="equation-cell">
+          <span>Projected remaining</span>
+          <strong>{formatCurrency(remainingW2Withholding)}</strong>
+        </div>
+        <div className="equation-operator">=</div>
+        <div className="equation-cell equation-total">
+          <span>Projected annual</span>
+          <strong>{formatCurrency(annualW2Withholding)}</strong>
+        </div>
+      </div>
+
+      <h4 className="w4-rec-title">Pension Federal Withholding Projection</h4>
+      <div className="equation-grid mb-4">
+        <div className="equation-cell">
+          <span>YTD federal withholding</span>
+          <strong>{formatCurrency(ytdPensionWithholding)}</strong>
+        </div>
+        <div className="equation-operator">+</div>
+        <div className="equation-cell">
+          <span>Projected remaining</span>
+          <strong>{formatCurrency(remainingPensionWithholding)}</strong>
+        </div>
+        <div className="equation-operator">=</div>
+        <div className="equation-cell equation-total">
+          <span>Projected annual</span>
+          <strong>{formatCurrency(annualPensionWithholding)}</strong>
+        </div>
+      </div>
+
+      <h4 className="w4-rec-title">Total Projected Federal Withholding for Year</h4>
+      <div className="result-row" style={{ fontSize: "1.1em", fontWeight: "bold", padding: "0.75rem 0" }}>
+        <span>W-2 + Pension</span>
+        <strong className="text-good">{formatCurrency(annualTotalWithholding)}</strong>
+      </div>
+
+      <h4 className="w4-rec-title" style={{ marginTop: "1.5rem" }}>
+        Tax Liability vs. Withholding Comparison
+      </h4>
+      <div className="equation-grid mb-4">
+        <div className="equation-cell">
+          <span>Estimated annual tax liability</span>
+          <strong>{formatCurrency(parseDecimalString(result.estimated_tax_liability))}</strong>
+        </div>
+        <div className="equation-operator">−</div>
+        <div className="equation-cell">
+          <span>Projected annual withholding</span>
+          <strong>{formatCurrency(annualTotalWithholding)}</strong>
+        </div>
+        <div className="equation-operator">=</div>
+        <div className="equation-cell equation-total">
+          <span>{parseDecimalString(result.current_refund_or_owed) > 0 ? "Amount owed" : "Refund estimate"}</span>
+          <strong
+            style={{
+              color: parseDecimalString(result.current_refund_or_owed) > 0 ? "#d9534f" : "#5cb85c",
+            }}
+          >
+            {formatCurrency(Math.abs(parseDecimalString(result.current_refund_or_owed)))}
+          </strong>
+        </div>
+      </div>
+      <p className="helper-text">
+        {parseDecimalString(result.current_refund_or_owed) > 0
+          ? "Your projected withholding is below your tax liability. You will owe this amount at tax time unless you adjust your W-4."
+          : "Your projected withholding covers your tax liability. The remaining amount will be refunded after filing."}
+      </p>
 
       {result.assumptions.length > 0 && (
         <>

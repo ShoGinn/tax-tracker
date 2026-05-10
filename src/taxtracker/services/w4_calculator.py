@@ -567,6 +567,29 @@ async def optimize_midyear_from_db(
         + ytd_pension_withholding
     )
 
+    # Calculate projected federal withholding for remaining periods
+    ytd_w2_withholding = sum(
+        (stats["ytd_federal_withholding"] for stats in employer_stats.values()),
+        Decimal(0),
+    )
+    ytd_w2_paychecks = sum(
+        (stats["paycheck_count"] for stats in employer_stats.values()),
+        0,
+    )
+    projected_remaining_w2_withholding = Decimal(0)
+    if ytd_w2_paychecks > 0:
+        per_paycheck_withholding = ytd_w2_withholding / Decimal(ytd_w2_paychecks)
+        projected_remaining_w2_withholding = per_paycheck_withholding * Decimal(remaining_pay_periods)
+
+    projected_remaining_pension_withholding = Decimal(0)
+    if len(retirement_1099rs) > 0 and ytd_pension_withholding > 0:
+        per_pension_withholding = ytd_pension_withholding / Decimal(len(retirement_1099rs))
+        projected_remaining_pension_withholding = per_pension_withholding * Decimal(pension_periods)
+
+    projected_annual_w2_withholding = ytd_w2_withholding + projected_remaining_w2_withholding
+    projected_annual_pension_withholding = ytd_pension_withholding + projected_remaining_pension_withholding
+    projected_annual_total_withholding = projected_annual_w2_withholding + projected_annual_pension_withholding
+
     optimization = optimize_w4(
         tax_calculator=tax_calculator,
         year=year,
@@ -600,6 +623,11 @@ async def optimize_midyear_from_db(
             "projected_remaining_pension_taxable": str(projected_remaining_pension),
             "projected_full_year_pension_taxable": str(projected_pension_taxable),
             "projected_full_year_non_taxable_income": str(projected_va_income),
+            "projected_remaining_w2_withholding": str(projected_remaining_w2_withholding),
+            "projected_remaining_pension_withholding": str(projected_remaining_pension_withholding),
+            "projected_annual_w2_withholding": str(projected_annual_w2_withholding),
+            "projected_annual_pension_withholding": str(projected_annual_pension_withholding),
+            "projected_annual_total_withholding": str(projected_annual_total_withholding),
         },
         "assumptions": assumptions,
     }
