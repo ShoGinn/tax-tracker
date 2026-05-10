@@ -1,0 +1,271 @@
+@import url("https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+:root {
+  --ink-950: #14171f;
+  --ink-800: #202533;
+  --ink-700: #3a4054;
+  --ink-100: #f7f7f2;
+  --sand-50: #fdfaf3;
+  --sand-100: #f5efdf;
+  --amber-500: #d97a20;
+  --amber-600: #b95f0f;
+  --teal-500: #007f85;
+  --teal-100: #d6f2f3;
+  --error-500: #b42318;
+
+  --radius-xl: 22px;
+  --radius-md: 14px;
+  --shadow-card: 0 18px 40px rgba(26, 30, 42, 0.1);
+
+  font-family: "Chivo", "Trebuchet MS", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--ink-950);
+  background:
+    radial-gradient(circle at 8% 10%, rgba(0, 127, 133, 0.13), transparent 36%),
+    radial-gradient(circle at 94% 90%, rgba(217, 122, 32, 0.17), transparent 40%),
+    linear-gradient(160deg, var(--sand-100), var(--sand-50) 28%, #fff 100%);
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  border-right: 1px solid rgba(20, 23, 31, 0.08);
+  padding: 2rem 1.4rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(12px);
+}
+
+.brand-kicker {
+  margin: 0;
+  color: var(--teal-500);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.sidebar h1 {
+  margin: 0.5rem 0;
+  font-size: clamp(1.8rem, 4vw, 2.3rem);
+  line-height: 1.03;
+}
+
+.brand-copy {
+  margin: 0 0 1.6rem;
+  color: var(--ink-700);
+}
+
+.sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.44rem;
+}
+
+.nav-link {
+  display: block;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.72rem 0.84rem;
+  border-radius: 10px;
+  color: var(--ink-800);
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease;
+}
+
+.nav-link:hover {
+  transform: translateX(3px);
+  background: rgba(0, 127, 133, 0.08);
+}
+
+.nav-link.active {
+  background: linear-gradient(130deg, var(--teal-500), #12687f);
+  color: var(--ink-100);
+}
+
+.content-area {
+  padding: 1.6rem;
+}
+
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.1rem;
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--ink-700);
+}
+
+.content-header p {
+  margin: 0;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.metric-card,
+.module-card {
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 1.1rem;
+  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(20, 23, 31, 0.08);
+}
+
+.metric-card.feature {
+  grid-column: span 2;
+  background: linear-gradient(130deg, #033f53, #056b70);
+  color: #e8ffff;
+}
+
+.metric-card.compact {
+  background: linear-gradient(130deg, #fff, #fff9ef);
+}
+
+.metric-label {
+  margin: 0;
+  font-size: 0.9rem;
+  color: inherit;
+  opacity: 0.88;
+}
+
+.metric-value {
+  margin: 0.45rem 0;
+  font-size: clamp(1.35rem, 2.6vw, 2rem);
+  font-weight: 700;
+}
+
+.metric-caption {
+  margin: 0;
+  color: inherit;
+  opacity: 0.88;
+  line-height: 1.45;
+}
+
+.module-card h2 {
+  margin-top: 0;
+}
+
+.module-card h3 {
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+}
+
+.module-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--ink-700);
+}
+
+.auth-card {
+  max-width: 600px;
+}
+
+.auth-form {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.auth-form input,
+.auth-form button {
+  padding: 0.7rem 0.78rem;
+  border-radius: 10px;
+  border: 1px solid rgba(20, 23, 31, 0.2);
+  font: inherit;
+}
+
+.auth-form button {
+  background: var(--amber-500);
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+}
+
+.status-message {
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--teal-100);
+}
+
+.status-message.error {
+  background: #fff3f1;
+  color: var(--error-500);
+}
+
+@media (max-width: 1024px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid rgba(20, 23, 31, 0.08);
+  }
+
+  .sidebar ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-card.feature {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .content-area {
+    padding: 1rem;
+  }
+
+  .sidebar ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card.feature {
+    grid-column: span 1;
+  }
+}

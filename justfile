@@ -21,6 +21,31 @@ update-lock:
 run:
     uv run taxtracker
 
+# Frontend workflows (pnpm + Biome).
+frontend-install:
+    cd frontend && pnpm install
+
+frontend-dev:
+    cd frontend && pnpm dev
+
+frontend-build:
+    cd frontend && pnpm build
+
+frontend-typecheck:
+    cd frontend && pnpm typecheck
+
+frontend-lint:
+    cd frontend && pnpm lint
+
+frontend-lint-fix:
+    cd frontend && pnpm lint:fix
+
+frontend-format:
+    cd frontend && pnpm format:fix
+
+frontend-check:
+    cd frontend && pnpm lint && pnpm typecheck && pnpm build
+
 # Run API with explicit host/port overrides.
 run-host host="127.0.0.1" port="8000":
     uv run uvicorn taxtracker.cli.app:app --reload --host {{host}} --port {{port}}
