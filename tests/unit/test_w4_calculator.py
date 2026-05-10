@@ -419,3 +419,41 @@ class TestMidYearOptimizeFromDB:
                 filing_status=FilingStatus.SINGLE,
                 remaining_pay_periods=2,
             )
+
+    async def test_as_of_date_filters_ytd_records(self, async_db_session, test_calculator: TaxCalculator) -> None:
+        """as_of_date should only include paycheck records up to that date."""
+        employer = Employer(name="Cutoff Co", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        async_db_session.add_all(
+            [
+                Paycheck(
+                    employer_id=employer.id,
+                    pay_date=date(2024, 1, 15),
+                    gross_wages=Decimal(2000),
+                    federal_withholding=Decimal(200),
+                ),
+                Paycheck(
+                    employer_id=employer.id,
+                    pay_date=date(2024, 3, 15),
+                    gross_wages=Decimal(5000),
+                    federal_withholding=Decimal(500),
+                ),
+            ]
+        )
+        await async_db_session.commit()
+
+        result = await optimize_midyear_from_db(
+            db=async_db_session,
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            remaining_pay_periods=2,
+            as_of_date=date(2024, 2, 1),
+        )
+
+        employer_summary = result["ytd_summary"]["employers"][0]
+        assert Decimal(employer_summary["ytd_gross"]) == Decimal(2000)
+        assert result["ytd_summary"]["as_of_date"] == "2024-02-01"
+        assert any("as_of_date cutoff" in note for note in result["assumptions"])
