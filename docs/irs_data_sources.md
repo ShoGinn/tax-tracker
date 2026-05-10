@@ -162,6 +162,20 @@ https://www.irs.gov/pub/irs-drop/rp-25-32.pdf
 4. **Automated**: `tests/unit/test_irs_data_validation.py` asserts every value in data files
 5. **Calculation**: `tests/unit/test_irs_calculation_verification.py` verifies end-to-end computations
 
+## Test Data Provenance Standard
+
+Use a balanced standard for tax-calculation tests:
+
+- **Numeric correctness assertions** must use canonical data (IRS/SSA sourced fixtures or values directly derived from loaded tax models).
+- **Behavioral or structural assertions** may use synthetic inputs when the test goal is control-flow behavior rather than authoritative numeric validation.
+- **Opaque expected numeric literals should be avoided** when they can be derived from canonical fixture/model values.
+
+### W-4 Specific Guidance
+
+- For Step 3 dependents/credits assertions, derive expected values from the child tax credit amount in the active tax data model instead of hardcoding totals.
+- For withholding expectations, prefer scenario values traceable to IRS Publication 15-T methodology or direct model derivations.
+- Keep one-line provenance notes in tests when a value is intentionally synthetic and not meant to represent an IRS-verified numeric result.
+
 ## Note on PSLmodels Tax-Calculator
 
 The PSLmodels [Tax-Calculator](https://github.com/PSLmodels/Tax-Calculator) is a valuable cross-reference but **not a primary source**. It independently processes the same IRS publications, so agreement provides additional confidence. However, it could itself have errors. IRS publications are always the source of truth.

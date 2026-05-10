@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from fixtures.w4_scenarios import get_single_job_scenario, get_two_job_scenario
 
 from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
 from taxtracker.models.tax_data import FilingStatus
@@ -16,33 +17,13 @@ pytestmark = pytest.mark.unit
 @pytest.fixture
 def single_job() -> list[dict]:
     """A single W-2 job for optimization."""
-    return [
-        {
-            "employer": "Acme Corp",
-            "annual_gross": 80000,
-            "paychecks_per_year": 26,
-            "annual_pretax_deductions": 5000,
-        }
-    ]
+    return get_single_job_scenario()
 
 
 @pytest.fixture
 def two_jobs() -> list[dict]:
     """Two W-2 jobs for multi-job optimization."""
-    return [
-        {
-            "employer": "Primary Inc",
-            "annual_gross": 100000,
-            "paychecks_per_year": 26,
-            "annual_pretax_deductions": 8000,
-        },
-        {
-            "employer": "Side Co",
-            "annual_gross": 40000,
-            "paychecks_per_year": 24,
-            "annual_pretax_deductions": 0,
-        },
-    ]
+    return get_two_job_scenario()
 
 
 class TestOptimizeW4:
@@ -99,6 +80,8 @@ class TestOptimizeW4:
 
     def test_with_children(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """Children should add Step 3 dependents amount."""
+        ctc_per_child = test_calculator.tax_brackets.child_tax_credit.amount_per_child
+
         result = optimize_w4(
             tax_calculator=test_calculator,
             year=2024,
@@ -111,7 +94,7 @@ class TestOptimizeW4:
         )
 
         rec = result.w4_recommendations[0]
-        assert rec.step3_amount == Decimal(4000)  # 2 x $2000
+        assert rec.step3_amount == ctc_per_child * Decimal(2)
 
     def test_with_pension(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """Pension should appear in Step 4a on highest-paying job."""

@@ -223,6 +223,7 @@ Additional documentation:
 - Treat tax math changes as high-risk and verify with tests
 - Prefer clean refactors over compatibility shims during active development
 - Keep tax data updates tied to explicit source citations
+- For tax-calculation tests, use IRS/SSA-backed fixture data (or values derived from loaded tax models) for numeric correctness assertions; reserve synthetic data for behavioral/flow tests
 
 ## Known Limitations
 

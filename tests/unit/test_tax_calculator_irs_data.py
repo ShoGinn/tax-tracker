@@ -130,15 +130,20 @@ class TestSimplifiedTaxCalculations:
 
         result = test_calculator.calculate_taxes(request)
 
+        standard_deduction = test_calculator.tax_brackets.standard_deductions.amounts[FilingStatus.SINGLE]
+        expected_taxable_income = Decimal(30000) - standard_deduction
+        first_bracket_threshold = test_calculator.tax_brackets.tax_brackets[FilingStatus.SINGLE][0].threshold
+        first_bracket_rate = test_calculator.tax_brackets.tax_brackets[FilingStatus.SINGLE][0].rate
+        second_bracket_rate = test_calculator.tax_brackets.tax_brackets[FilingStatus.SINGLE][1].rate
+        expected_tax = (first_bracket_threshold * first_bracket_rate) + (
+            (expected_taxable_income - first_bracket_threshold) * second_bracket_rate
+        )
+
         # Verify taxable income
-        assert float(result.taxable_income) == 15400
+        assert result.taxable_income == expected_taxable_income
 
         # Verify tax calculation
-        # First $11,600 at 10% = $1,160
-        # Next $3,800 at 12% = $456 (rounded)
-        # Total = ~$1,616
-        expected_tax = 1616
-        assert abs(float(result.federal_tax_owed) - expected_tax) < 1
+        assert abs(result.federal_tax_owed - expected_tax) < Decimal("1.00")
 
         # Marginal rate should be 12%
         assert float(result.marginal_tax_rate) == 12
@@ -162,8 +167,11 @@ class TestSimplifiedTaxCalculations:
 
         result = test_calculator.calculate_taxes(request)
 
+        ctc_per_child = test_calculator.tax_brackets.child_tax_credit.amount_per_child
+        expected_child_credits = ctc_per_child * Decimal(2)
+
         # Verify child credits applied
-        assert float(result.child_tax_credits) == 4000
+        assert result.child_tax_credits == expected_child_credits
 
         # Credits reduce tax liability
         assert float(result.child_tax_credits) > 0

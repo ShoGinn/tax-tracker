@@ -257,9 +257,7 @@ def optimize_w4(
         # Step 4(b): Deductions (if itemizing, only on highest paying job)
         if not use_standard_deduction and is_highest_paying:
             # Calculate excess over standard deduction
-            standard_ded = (
-                Decimal(str(tax_result.deduction_amount)) if use_standard_deduction else Decimal(31500)
-            )  # 2025 MFJ
+            standard_ded = tax_calculator.tax_brackets.standard_deductions.amounts[filing_status]
             itemized_ded = Decimal(str(itemized_deductions))
             excess = max(Decimal(0), itemized_ded - standard_ded)
             step4b_deductions = excess
