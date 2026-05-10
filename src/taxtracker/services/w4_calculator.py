@@ -6,8 +6,11 @@ from typing import TYPE_CHECKING, Any
 
 from taxtracker.core.config import settings
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
+from taxtracker.services.income_service import get_non_taxable_payments, get_paychecks, get_retirement_1099rs
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
     from taxtracker.services.tax_calculator import TaxCalculator
 
 
@@ -354,3 +357,173 @@ def optimize_w4(
         adjustment_per_paycheck=adjustment_per_paycheck,
         notes=notes,
     )
+
+
+async def optimize_midyear_from_db(
+    db: AsyncSession,
+    tax_calculator: TaxCalculator,
+    year: int,
+    filing_status: FilingStatus,
+    remaining_pay_periods: int,
+    num_children: int = 0,
+    target_refund: Decimal = Decimal(0),
+    use_standard_deduction: bool = True,
+    itemized_deductions: float = 0.0,
+    employer_overrides: dict[int, Decimal] | None = None,
+    expected_remaining_pension_taxable: Decimal | None = None,
+) -> dict[str, Any]:
+    """Optimize W-4 settings mid-year using already-entered database records.
+
+    This projects full-year income from year-to-date actuals plus remaining-period assumptions,
+    then reuses the existing full-year optimizer to produce W-4 recommendations.
+    """
+
+    paychecks = await get_paychecks(db, year=year, limit=None)
+    if not paychecks:
+        raise ValueError(f"No paychecks found in database for tax year {year}")
+
+    retirement_1099rs = await get_retirement_1099rs(db, year=year, limit=None)
+    non_taxable_payments = await get_non_taxable_payments(db, year=year, limit=None)
+
+    overrides = employer_overrides or {}
+    employer_stats: dict[int, dict[str, Any]] = {}
+    assumptions: list[str] = []
+
+    for paycheck in paychecks:
+        employer_name = paycheck.employer.name if paycheck.employer else f"Employer {paycheck.employer_id}"
+        stats = employer_stats.setdefault(
+            paycheck.employer_id,
+            {
+                "employer_name": employer_name,
+                "paycheck_count": 0,
+                "ytd_gross": Decimal(0),
+                "ytd_pretax": Decimal(0),
+                "ytd_federal_withholding": Decimal(0),
+            },
+        )
+        stats["paycheck_count"] += 1
+        stats["ytd_gross"] += paycheck.gross_wages + paycheck.bonus + paycheck.taxable_benefit
+        stats["ytd_pretax"] += paycheck.total_pretax_deductions
+        stats["ytd_federal_withholding"] += paycheck.federal_withholding
+
+    w2_jobs: list[dict[str, Any]] = []
+    employer_breakdown: list[dict[str, Any]] = []
+
+    for employer_id, stats in employer_stats.items():
+        paycheck_count = stats["paycheck_count"]
+        ytd_gross = stats["ytd_gross"]
+        ytd_pretax = stats["ytd_pretax"]
+        ytd_withholding = stats["ytd_federal_withholding"]
+        avg_gross = ytd_gross / paycheck_count
+        avg_pretax = ytd_pretax / paycheck_count
+
+        if employer_id in overrides:
+            remaining_gross_per_paycheck = overrides[employer_id]
+            assumptions.append(
+                f"Used override for {stats['employer_name']}: "
+                f"${remaining_gross_per_paycheck:,.2f} per remaining paycheck."
+            )
+        else:
+            remaining_gross_per_paycheck = avg_gross
+            assumptions.append(
+                f"Extrapolated {stats['employer_name']} remaining gross using "
+                f"YTD average ${avg_gross:,.2f} per paycheck."
+            )
+
+        projected_remaining_gross = remaining_gross_per_paycheck * remaining_pay_periods
+        projected_remaining_pretax = avg_pretax * remaining_pay_periods
+        projected_annual_gross = ytd_gross + projected_remaining_gross
+        projected_annual_pretax = ytd_pretax + projected_remaining_pretax
+        projected_paychecks = paycheck_count + remaining_pay_periods
+
+        w2_jobs.append(
+            {
+                "employer": stats["employer_name"],
+                "annual_gross": projected_annual_gross,
+                "annual_pretax_deductions": projected_annual_pretax,
+                "paychecks_per_year": projected_paychecks,
+            }
+        )
+        employer_breakdown.append(
+            {
+                "employer_id": employer_id,
+                "employer_name": stats["employer_name"],
+                "paychecks_recorded": paycheck_count,
+                "ytd_gross": str(ytd_gross),
+                "ytd_pretax_deductions": str(ytd_pretax),
+                "ytd_federal_withholding": str(ytd_withholding),
+                "projected_remaining_gross": str(projected_remaining_gross),
+                "projected_annual_gross": str(projected_annual_gross),
+            }
+        )
+
+    ytd_pension_taxable = sum((p.taxable_amount for p in retirement_1099rs), Decimal(0))
+    ytd_pension_withholding = sum((p.federal_withholding for p in retirement_1099rs), Decimal(0))
+    ytd_va_income = sum((p.amount for p in non_taxable_payments), Decimal(0))
+
+    if expected_remaining_pension_taxable is not None:
+        projected_remaining_pension = expected_remaining_pension_taxable
+        assumptions.append(
+            f"Used provided remaining pension taxable income: ${expected_remaining_pension_taxable:,.2f}."
+        )
+    elif retirement_1099rs:
+        avg_pension_taxable = ytd_pension_taxable / len(retirement_1099rs)
+        projected_remaining_pension = avg_pension_taxable * remaining_pay_periods
+        assumptions.append(
+            "Extrapolated remaining pension taxable income using "
+            f"YTD average ${avg_pension_taxable:,.2f} for {remaining_pay_periods} remaining periods."
+        )
+    else:
+        projected_remaining_pension = Decimal(0)
+        assumptions.append("No pension records found in DB; projected remaining pension taxable income as $0.00.")
+
+    projected_va_remaining = Decimal(0)
+    if non_taxable_payments:
+        avg_va = ytd_va_income / len(non_taxable_payments)
+        projected_va_remaining = avg_va * remaining_pay_periods
+        assumptions.append(
+            f"Extrapolated non-taxable income using YTD average ${avg_va:,.2f} for {remaining_pay_periods} periods."
+        )
+
+    projected_pension_taxable = ytd_pension_taxable + projected_remaining_pension
+    projected_va_income = ytd_va_income + projected_va_remaining
+    ytd_total_federal_withholding = (
+        sum(
+            (stats["ytd_federal_withholding"] for stats in employer_stats.values()),
+            Decimal(0),
+        )
+        + ytd_pension_withholding
+    )
+
+    optimization = optimize_w4(
+        tax_calculator=tax_calculator,
+        year=year,
+        filing_status=filing_status,
+        num_children=num_children,
+        w2_jobs=w2_jobs,
+        pension_taxable=projected_pension_taxable,
+        va_disability=projected_va_income,
+        current_federal_withholding=ytd_total_federal_withholding,
+        target_refund=target_refund,
+        use_standard_deduction=use_standard_deduction,
+        itemized_deductions=itemized_deductions,
+    )
+
+    return {
+        "optimization": optimization,
+        "ytd_summary": {
+            "tax_year": year,
+            "remaining_pay_periods": remaining_pay_periods,
+            "employers": employer_breakdown,
+            "ytd_pension_taxable": str(ytd_pension_taxable),
+            "ytd_pension_federal_withholding": str(ytd_pension_withholding),
+            "ytd_non_taxable_income": str(ytd_va_income),
+            "ytd_total_federal_withholding": str(ytd_total_federal_withholding),
+        },
+        "projection_summary": {
+            "projected_remaining_pension_taxable": str(projected_remaining_pension),
+            "projected_full_year_pension_taxable": str(projected_pension_taxable),
+            "projected_full_year_non_taxable_income": str(projected_va_income),
+        },
+        "assumptions": assumptions,
+    }

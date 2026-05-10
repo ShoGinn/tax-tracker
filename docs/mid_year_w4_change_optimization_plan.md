@@ -6,6 +6,22 @@ Add support for W-4 optimization when withholding settings change partway throug
 
 Current behavior assumes a single full-year withholding profile. This feature will model year-to-date actuals plus remaining-pay-period recommendations.
 
+## Current Implementation Status (May 2026)
+
+Implemented backend path:
+
+- Endpoint: `POST /w4/optimize-midyear-from-db`
+- Data source: all entries already recorded in the database for the requested tax year
+- YTD model: uses all paychecks in that tax year (no as-of-date cutoff in v1)
+- Remaining income model: extrapolates from YTD per-employer averages by default, with optional per-employer overrides
+- Output: full W-4 recommendations plus YTD breakdown, projection summary, and assumptions
+
+Still planned:
+
+- Manual YTD-input endpoint mode
+- As-of-date cutoff support
+- Variable per-period schedule support
+
 ## Problem Statement
 
 A full-year W-4 assumption can produce inaccurate recommendations when any of these occur during the year:

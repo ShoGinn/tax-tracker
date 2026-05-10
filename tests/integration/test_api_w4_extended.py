@@ -1,8 +1,12 @@
 """Additional tests for W4 API endpoints."""
 
+from datetime import date
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import pytest
+
+from taxtracker.models.database import Employer, Paycheck
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -140,6 +144,86 @@ class TestW4APIOptimize:
         # Should recommend extra withholding
         rec = data["w4_recommendations"][0]
         assert float(rec["step4c_extra_withholding"]) > 0
+
+    async def test_optimize_midyear_from_db(self, client: TestClient, async_db_session):
+        """Mid-year endpoint should use DB paychecks and return YTD breakdown."""
+        employer = Employer(name="DB Corp", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        async_db_session.add_all(
+            [
+                Paycheck(
+                    employer_id=employer.id,
+                    pay_date=date(2024, 1, 15),
+                    gross_wages=Decimal(3000),
+                    federal_withholding=Decimal(320),
+                ),
+                Paycheck(
+                    employer_id=employer.id,
+                    pay_date=date(2024, 1, 31),
+                    gross_wages=Decimal(3100),
+                    federal_withholding=Decimal(330),
+                ),
+            ]
+        )
+        await async_db_session.commit()
+
+        response = client.post(
+            "/w4/optimize-midyear-from-db",
+            json={
+                "tax_year": 2024,
+                "filing_status": "single",
+                "remaining_pay_periods": 10,
+                "num_children": 0,
+                "target_refund": 0,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "w4_recommendations" in data
+        assert "ytd_summary" in data
+        assert len(data["ytd_summary"]["employers"]) == 1
+        assert data["ytd_summary"]["employers"][0]["employer_name"] == "DB Corp"
+
+    async def test_optimize_midyear_from_db_with_override(self, client: TestClient, async_db_session):
+        """Employer override should drive projected remaining gross in API response."""
+        employer = Employer(name="Override API Corp", start_date=date(2024, 1, 1))
+        async_db_session.add(employer)
+        await async_db_session.commit()
+
+        async_db_session.add(
+            Paycheck(
+                employer_id=employer.id,
+                pay_date=date(2024, 2, 15),
+                gross_wages=Decimal(2500),
+                federal_withholding=Decimal(250),
+            )
+        )
+        await async_db_session.commit()
+
+        response = client.post(
+            "/w4/optimize-midyear-from-db",
+            json={
+                "tax_year": 2024,
+                "filing_status": "single",
+                "remaining_pay_periods": 4,
+                "num_children": 0,
+                "target_refund": 0,
+                "employer_overrides": [
+                    {
+                        "employer_id": employer.id,
+                        "expected_remaining_gross_per_paycheck": 5000,
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        projected_remaining = Decimal(data["ytd_summary"]["employers"][0]["projected_remaining_gross"])
+        assert projected_remaining == Decimal(20000)
 
 
 @pytest.mark.integration
