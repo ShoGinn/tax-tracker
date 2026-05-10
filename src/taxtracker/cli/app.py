@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 # Frontend dist directory — relative to the project root
-_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _FRONTEND_DIST = _PROJECT_ROOT / "frontend" / "dist"
 
 
