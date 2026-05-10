@@ -16,7 +16,7 @@ jobs:
         with:
           enable-cache: true
           cache-suffix: ${{ github.job }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.14'
       - run: uv sync --dev
