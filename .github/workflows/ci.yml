@@ -15,6 +15,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: ${{ github.job }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.14'
@@ -29,6 +30,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: ${{ github.job }}
       - run: uv run pytest
 
   typecheck:
@@ -39,6 +41,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: ${{ github.job }}
       - run: uv run ty check
 
   security:
@@ -49,6 +52,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: ${{ github.job }}
       - name: Scan dependencies for known vulnerabilities
         run: uvx uv-secure
 
@@ -60,6 +64,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: ${{ github.job }}
       - name: Fetch fresh PSLmodels snapshot
         run: uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 --years 2026
       - name: Run cross-validation tests against fresh snapshot
@@ -106,6 +111,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: ${{ github.job }}
       - name: Release with python-semantic-release action
         id: semantic-release
         uses: python-semantic-release/python-semantic-release@v10.5.3
