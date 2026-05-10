@@ -29,6 +29,10 @@ from taxtracker.services.tax_calculator import TaxCalculator
 
 router = APIRouter(prefix="/taxes", tags=["Taxes"])
 
+# Reusable path parameter types for year-scoped endpoints
+_TaxYearPath = Annotated[int, Path(description="Tax year (e.g. 2025, 2026)", ge=2020, le=2030)]
+_UploadYearPath = Annotated[int, Path(description="Tax year this data applies to (e.g. 2025, 2026)", ge=2020, le=2030)]
+
 
 @router.post(
     "/calculate",
@@ -134,9 +138,7 @@ async def calculate_from_database(
     responses={404: {"description": "Tax data not available for requested year"}},
 )
 async def get_fica_info(
-    year: Annotated[  # noqa: ARG001 — path param consumed by get_tax_data dependency
-        int, Path(description="Tax year (e.g. 2025, 2026)", ge=2020, le=2030)
-    ],
+    year: _TaxYearPath,  # noqa: ARG001 — path param consumed by get_tax_data dependency
     tax_data: Annotated[tuple[TaxBrackets, FICALimits], Depends(get_tax_data)],
 ) -> FICALimits:
     """Get FICA limits and rates for a given year.
@@ -159,9 +161,7 @@ async def get_fica_info(
     responses={404: {"description": "Tax data not available for requested year"}},
 )
 async def get_tax_brackets(
-    year: Annotated[  # noqa: ARG001 — path param consumed by get_tax_data dependency
-        int, Path(description="Tax year (e.g. 2025, 2026)", ge=2020, le=2030)
-    ],
+    year: _TaxYearPath,  # noqa: ARG001 — path param consumed by get_tax_data dependency
     tax_data: Annotated[tuple[TaxBrackets, FICALimits], Depends(get_tax_data)],
 ) -> TaxBrackets:
     """Get tax brackets for a given year.
@@ -199,10 +199,7 @@ async def list_available_years() -> dict[str, Any]:
     responses={400: {"description": "Invalid JSON or data validation failure"}},
 )
 async def upload_tax_data(
-    year: Annotated[
-        int,
-        Path(description="Tax year this data applies to (e.g. 2025, 2026)", ge=2020, le=2030),
-    ],
+    year: _UploadYearPath,
     file: Annotated[UploadFile, File()],
 ) -> dict[str, Any]:
     """
@@ -226,10 +223,7 @@ async def upload_tax_data(
     responses={400: {"description": "Invalid JSON or data validation failure"}},
 )
 async def upload_fica_data(
-    year: Annotated[
-        int,
-        Path(description="Tax year this data applies to (e.g. 2025, 2026)", ge=2020, le=2030),
-    ],
+    year: _UploadYearPath,
     file: Annotated[UploadFile, File()],
 ) -> dict[str, Any]:
     """
