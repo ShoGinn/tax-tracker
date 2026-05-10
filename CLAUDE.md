@@ -2,12 +2,13 @@
 
 Personal federal tax calculation and W-4 optimization system. FastAPI backend with SQLAlchemy/SQLite. Tracks W-2 paychecks, 1099-R pension income, and non-taxable income (VA disability, etc.) to calculate federal tax liability, reconcile withholding, and optimize W-4 settings.
 
-## Development Phase
+## Development Status
 
-This project is in initial development (pre-v1.0). Until we reach a stable release:
-- **No backward compatibility required.** APIs, models, schemas, and data formats can be freely restructured.
-- **Prefer clean design over compatibility shims.** If a better approach exists, refactor — don't add adapters or legacy wrappers.
-- **Breaking changes are expected.** There are no external consumers of this API.
+This project is actively developed and currently versioned as v1.0.0.
+
+- **Internal compatibility is not required.** APIs, models, schemas, and data formats may be restructured when the design improves.
+- **Prefer clean design over compatibility shims.** If a better approach exists, refactor instead of adding adapters or legacy wrappers.
+- **Breaking changes are acceptable during active development.** Prioritize correctness and maintainability.
 - Remove dead code, legacy validators, and format converters when found rather than maintaining them.
 
 ## Project Direction
@@ -60,21 +61,36 @@ This project is in initial development (pre-v1.0). Until we reach a stable relea
 - Python 3.14, FastAPI, SQLAlchemy (async), aiosqlite/SQLite
 - Pydantic v2 for validation and schemas
 - uv for dependency management
+- just for task recipes and local CI-style workflows
 - Ruff for linting/formatting, ty for type checking
 
 ## Commands
 
-- `uv run pytest` — run full test suite (80% coverage minimum enforced)
-- `uv run pytest tests/unit` — unit tests only
-- `uv run pytest tests/integration` — integration tests only
-- `uv run pytest -m "not slow"` — skip slow tests
-- `uv run ruff check src/ tests/ scripts/` — lint
-- `uv run ruff format src/ tests/ scripts/` — format
-- `uv run ruff check --fix src/ tests/ scripts/` — auto-fix lint issues
-- `uvx uv-secure` — scan dependencies for known CVEs
-- `uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 2026` — refresh PSLmodels cross-validation snapshot
-- `uv run python scripts/fetch_pslmodels_data.py draft --year YYYY` — generate draft tax data files from PSLmodels
-- `uv run pytest tests/unit/test_pslmodels_cross_check.py -v` — run PSLmodels cross-validation tests
+Preferred workflow uses just recipes:
+
+- `just install` — install project and dev dependencies
+- `just run` — run API with project defaults
+- `just test` — run full test suite (80% coverage minimum enforced)
+- `just test-unit` — unit tests only
+- `just test-integration` — integration tests only
+- `just test-fast` — skip slow tests
+- `just lint` — run Ruff checks
+- `just lint-fix` — auto-fix Ruff issues
+- `just format` — format with Ruff
+- `just format-check` — formatting check only
+- `just typecheck` — run ty static checks
+- `just security` — run dependency vulnerability scan
+- `just psl-snapshot years="2025 2026"` — refresh PSLmodels cross-validation snapshot
+- `just psl-draft year=YYYY` — generate draft tax data files from PSLmodels
+- `just test-psl` — run PSLmodels cross-validation tests
+- `just check` — local fast quality gate (format-check, lint, typecheck, test-fast)
+- `just ci` — local full CI gate (lint, typecheck, full tests)
+
+Direct uv equivalents remain valid when needed:
+
+- `uv run pytest`
+- `uv run ruff check src/ tests/ scripts/`
+- `uv run ty check`
 
 ## Project Structure
 
@@ -91,11 +107,15 @@ tests/
 ├── integration/  # Full API endpoint tests via TestClient
 ├── fixtures/     # IRS test data (irs_test_data.py)
 ├── data/         # Test scenario JSON files
+justfile           # Canonical developer task recipes
+pyproject.toml     # Tooling config: pytest, ruff, ty, package metadata
 ```
 
 ## Architecture
 
-Layered: API routes → Services (business logic) → Models/DB. Dependency injection via FastAPI `Depends()` for DB sessions and tax data loading. All DB operations are async.
+Layered: API routes -> Services (business logic) -> Models/DB. Dependency injection via FastAPI `Depends()` for DB sessions and tax data loading. All DB operations are async.
+
+`src/taxtracker/cli/app.py` wires the FastAPI app, middleware, exception handlers, and route inclusion.
 
 Key domain concept: three income types with different tax treatments:
 - **W-2 (Paycheck)** — subject to income tax + FICA, has pre/post-tax deductions
@@ -132,6 +152,10 @@ Tax bracket and FICA data is **manually extracted** from IRS publications and cr
 **Automated validation:**
 - `tests/unit/test_irs_data_validation.py` — asserts every value in data files matches IRS-published constants (run: `uv run pytest tests/unit/test_irs_data_validation.py -v`)
 - `tests/unit/test_irs_calculation_verification.py` — end-to-end calculation tests with hand-computed audit trails
+- `tests/unit/test_irs_examples_comprehensive.py` — broader IRS scenario coverage
+- `tests/unit/test_tax_calculator_irs_data.py` and `tests/unit/test_tax_calculator_2026.py` — tax calculator behavior and year-specific verification
+- `tests/unit/test_real_world_2026_data.py` — real-world 2026 validation cases
+- `tests/unit/test_w4_calculator.py` and `tests/unit/test_w4_withholding.py` — W-4 recommendation and withholding math coverage
 
 **Full documentation:** `docs/irs_data_sources.md` (per-value citations), `docs/annual_tax_data_update.md` (how to add new tax years)
 
@@ -139,11 +163,11 @@ When working with tax data, always cite the specific IRS source document and cro
 
 ## Critical Rules
 
-- **Always run tests and lint after code changes.** Run `uv run pytest` and `uv run ruff check src/ tests/` to verify.
+- **Always run quality checks after code changes.** Prefer `just check` for fast validation and `just ci` for full validation.
 - **Every logic component must have comprehensive tests.** This is tax/finance software — calculations must be verified against IRS data.
 - **Tests must verify correct behavior, not be adjusted to match incorrect code.** Do not create trivial tests or modify IRS-validated assertions to make failing tests pass. Fix the implementation. If unsure, ask for guidance.
-- **Be careful with tax calculations** (`services/tax_calculator.py`, `services/w4_calculator.py`, `services/w4_withholding.py`). These contain IRS-verified math. Changes require matching test updates with known-correct values.
-- **Be careful with data files** (`data/tax_brackets_*.json`, `data/fica_limits_*.json`). These are sourced from IRS publications. Do not modify without IRS source verification.
+- **Be careful with tax calculations** (`src/taxtracker/services/tax_calculator.py`, `src/taxtracker/services/w4_calculator.py`, `src/taxtracker/services/w4_withholding.py`). These contain IRS-verified math. Changes require matching test updates with known-correct values.
+- **Be careful with data files** (`src/taxtracker/data/tax_brackets_*.json`, `src/taxtracker/data/fica_limits_*.json`). These are sourced from IRS publications. Do not modify without IRS source verification.
 - **Suggest commits** after completing tasks but don't auto-commit. Use conventional commit format: `type: message` (e.g., `feat:`, `fix:`, `chore:`, `test:`, `refactor:`).
 - **State taxes are out of scope.** Do not add state tax logic.
 
@@ -169,26 +193,23 @@ Or use `/plugin` interactively → Discover tab → search "astral".
 
 ### Project-level config
 
-The plugin can be enabled for all contributors via `.claude/settings.json`:
+Current repository includes `.claude/settings.local.json` for local tool permissions.
 
-```json
-{
-  "enabledPlugins": {
-    "astral@astral-sh": true
-  }
-}
-```
+- Keep local permission allow/deny lists there.
+- If team-wide plugin enablement is needed, add a project-level Claude settings file explicitly in a separate change.
 
 ## Conventions
 
 - Line length: 120 characters
-- Type hints on all functions (enforced by Ruff ANN rules)
+- Type hints on all functions (enforced by Ruff ANN rules with test-specific exceptions)
 - Snake_case for all Python identifiers and JSON fields
 - Async-first for all DB operations
 - Custom exceptions in `core/exceptions.py` — use the hierarchy (TaxTrackerError base)
 - Pydantic schemas for all API request/response validation
 - Test markers: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.slow`
 - Flexible date/decimal parsing via custom Annotated types in schemas
+- Ruff configured in `pyproject.toml` with broad rule selection plus explicit ignore/per-file-ignore policy
+- ty configured in `pyproject.toml`; use `just typecheck` (or `uv run ty check`) during verification
 
 ## Known Limitations / Out of Scope
 
