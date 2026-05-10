@@ -120,6 +120,18 @@ uv run ruff check src/ tests/ scripts/
 uv run ty check
 ```
 
+### Automated PSL Snapshot Monitoring
+
+This repository includes an automated monitor workflow at [`.github/workflows/pslmodels-snapshot-monitor.yml`](.github/workflows/pslmodels-snapshot-monitor.yml):
+
+- Runs weekly and also supports manual execution via `workflow_dispatch`
+- Regenerates `tests/data/pslmodels_snapshot.json` from PSLmodels
+- Runs `tests/unit/test_pslmodels_cross_check.py`
+- Opens or updates a pull request automatically only when tax values drift
+- Ignores date-only `generated_date` churn to avoid noisy metadata-only PRs
+
+The existing CI PSL check still runs on push and pull request, but now distinguishes tax-value drift from date-only metadata updates.
+
 ## API Capabilities
 
 The service includes endpoints for:
