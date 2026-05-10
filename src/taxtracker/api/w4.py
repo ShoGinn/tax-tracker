@@ -133,6 +133,8 @@ async def optimize_midyear_w4_from_db(
             year=request.tax_year,
             filing_status=request.filing_status,
             remaining_pay_periods=request.remaining_pay_periods,
+            remaining_pension_periods=request.remaining_pension_periods,
+            remaining_non_taxable_periods=request.remaining_non_taxable_periods,
             as_of_date=request.as_of_date,
             num_children=request.num_children,
             target_refund=request.target_refund,

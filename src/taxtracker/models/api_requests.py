@@ -28,6 +28,8 @@ class _D:
     use_standard_deduction = "Use IRS standard deduction; set false to supply itemized amount"
     itemized_deductions = "Total itemized deductions; only used when use_standard_deduction is false"
     remaining_pay_periods = "Number of remaining pay periods to optimize across"
+    remaining_pension_periods = "Optional remaining pension periods (e.g., monthly cadence)"
+    remaining_non_taxable_periods = "Optional remaining non-taxable income periods (e.g., monthly cadence)"
     expected_remaining_pension_taxable = "Expected remaining taxable pension income (override DB extrapolation)"
     employer_id = "Employer ID from the database"
     expected_remaining_gross_per_paycheck = "Expected remaining gross per paycheck for this employer"
@@ -70,6 +72,12 @@ class MidYearDBW4OptimizeRequest(BaseModel):
     filing_status: FilingStatus = Field(description=_D.filing_status_full)
     as_of_date: datetime.date | None = Field(default=None, description=_D.as_of_date)
     remaining_pay_periods: int = Field(ge=1, description=_D.remaining_pay_periods)
+    remaining_pension_periods: int | None = Field(default=None, ge=1, description=_D.remaining_pension_periods)
+    remaining_non_taxable_periods: int | None = Field(
+        default=None,
+        ge=1,
+        description=_D.remaining_non_taxable_periods,
+    )
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
     target_refund: Decimal = Field(
         default=Decimal(0), description="Target refund amount (0 = break even, negative = owed)"

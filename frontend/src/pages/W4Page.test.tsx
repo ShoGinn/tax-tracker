@@ -69,6 +69,9 @@ const midYearResponse = {
     tax_year: 2026,
     as_of_date: "2026-05-01",
     remaining_pay_periods: 10,
+    remaining_w2_pay_periods: 10,
+    remaining_pension_periods: 5,
+    remaining_non_taxable_periods: 5,
     employers: [
       {
         employer_id: 1,
@@ -115,7 +118,9 @@ describe("W4Page", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Mid-Year Optimizer" }));
 
-    const submitButton = screen.getByRole("button", { name: "Optimize Mid-Year W-4" });
+    const submitButton = screen.getByRole("button", {
+      name: "Optimize Mid-Year W-4",
+    });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -125,6 +130,8 @@ describe("W4Page", () => {
     const payload = vi.mocked(apiClient.optimizeMidyearW4).mock.calls[0]?.[0];
     expect(payload?.filing_status).toBe("single");
     expect(payload?.remaining_pay_periods).toBe(10);
+    expect(payload?.remaining_pension_periods).toBe(10);
+    expect(payload?.remaining_non_taxable_periods).toBe(10);
     expect(payload?.as_of_date).toBeUndefined();
   });
 
@@ -136,9 +143,28 @@ describe("W4Page", () => {
 
     await screen.findByRole("heading", { name: "Year-to-Date Summary" });
 
-    expect(screen.getByText("Employer Breakdown")).toBeInTheDocument();
-    expect(screen.getByText("Projection Summary")).toBeInTheDocument();
+    expect(screen.getByText("Employer Gross Equation")).toBeInTheDocument();
+    expect(screen.getByText("Pension Projection Equation")).toBeInTheDocument();
+    expect(screen.getByText("Non-taxable Projection Equation")).toBeInTheDocument();
     expect(screen.getByText("Assumptions")).toBeInTheDocument();
     expect(screen.getByText("Used YTD average gross for remaining periods.")).toBeInTheDocument();
+  });
+
+  it("auto-suggests editable split remaining periods", async () => {
+    renderWithQueryClient();
+
+    fireEvent.click(screen.getByRole("button", { name: "Mid-Year Optimizer" }));
+
+    fireEvent.change(screen.getByLabelText("As-of date (optional)"), {
+      target: { value: "2026-05-10" },
+    });
+    fireEvent.change(screen.getByLabelText("W-2 pay frequency"), {
+      target: { value: "semimonthly" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Auto-suggest" }));
+
+    expect(screen.getByLabelText("Remaining W-2 pay periods")).toHaveValue(16);
+    expect(screen.getByLabelText("Remaining pension periods (monthly typical)")).toHaveValue(8);
+    expect(screen.getByLabelText("Remaining non-taxable periods (monthly typical)")).toHaveValue(8);
   });
 });
