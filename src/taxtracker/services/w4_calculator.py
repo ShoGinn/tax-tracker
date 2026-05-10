@@ -598,7 +598,7 @@ async def optimize_midyear_from_db(
         w2_jobs=w2_jobs,
         pension_taxable=projected_pension_taxable,
         va_disability=projected_va_income,
-        current_federal_withholding=ytd_total_federal_withholding,
+        current_federal_withholding=projected_annual_total_withholding,
         target_refund=target_refund,
         use_standard_deduction=use_standard_deduction,
         itemized_deductions=itemized_deductions,

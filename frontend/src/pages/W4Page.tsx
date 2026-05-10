@@ -104,15 +104,15 @@ const W4ResultCard = ({ result }: { result: W4OptimizeResponse }) => (
 
     <div className="result-grid mb-4">
       <div className="result-row">
-        <span>Estimated tax liability</span>
+        <span>Estimated total tax liability</span>
         <strong>{formatCurrency(parseDecimalString(result.estimated_tax_liability))}</strong>
       </div>
       <div className="result-row">
-        <span>Target withholding</span>
+        <span>Target total withholding</span>
         <strong>{formatCurrency(parseDecimalString(result.target_total_withholding))}</strong>
       </div>
       <div className="result-row result-divider">
-        <span>Annual withholding adjustment</span>
+        <span>Additional annual W-2 withholding needed</span>
         <strong
           className={
             parseDecimalString(result.adjustment_needed) > 0
@@ -137,13 +137,18 @@ const W4ResultCard = ({ result }: { result: W4OptimizeResponse }) => (
           }
         >
           {parseDecimalString(result.adjustment_needed) > 0
-            ? "Need to withhold more this year"
+            ? "Need to withhold more from W-2 paychecks"
             : parseDecimalString(result.adjustment_needed) < 0
-              ? "Can withhold less this year"
+              ? "Can withhold less from W-2 paychecks"
               : "Withholding is on target"}
         </strong>
       </div>
     </div>
+
+    <p className="helper-text">
+      This recommendation uses your total projected tax picture, but the lever you can change here is W-2 withholding.
+      Pension income is included in the calculation and can be audited in the projection details.
+    </p>
 
     {result.w4_recommendations.map((rec) => (
       <div key={rec.employer_name} className="w4-rec-card">
@@ -163,7 +168,7 @@ const W4ResultCard = ({ result }: { result: W4OptimizeResponse }) => (
           </div>
 
           <div className="w4-step">
-            <span className="w4-step-label">Step 4a — Other income</span>
+            <span className="w4-step-label">Step 4a — Other income / pension</span>
             <span className="w4-step-value">{formatCurrency(parseDecimalString(rec.step4a_other_income))}</span>
             {rec.step4a_explanation && <p className="w4-step-note">{rec.step4a_explanation}</p>}
           </div>
@@ -175,7 +180,7 @@ const W4ResultCard = ({ result }: { result: W4OptimizeResponse }) => (
           </div>
 
           <div className="w4-step result-highlight">
-            <span className="w4-step-label">Step 4c — Extra per paycheck</span>
+            <span className="w4-step-label">Step 4c — Extra per paycheck (W-2 only)</span>
             <span
               className={`w4-step-value ${
                 parseDecimalString(rec.step4c_extra_withholding) > 0 ? "text-owed" : "text-refund"
@@ -369,6 +374,8 @@ const OptimizerTab = () => {
 // ---------------------------------------------------------------------------
 
 const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse }) => {
+  const sumDecimals = (values: string[]) => values.reduce((total, value) => total + parseDecimalString(value), 0);
+
   const ytdPension = parseDecimalString(result.ytd_summary.ytd_pension_taxable);
   const remainingPension = parseDecimalString(result.projection_summary.projected_remaining_pension_taxable);
   const annualPension = parseDecimalString(result.projection_summary.projected_full_year_pension_taxable);
@@ -376,17 +383,34 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
   const annualNonTaxable = parseDecimalString(result.projection_summary.projected_full_year_non_taxable_income);
   const remainingNonTaxable = annualNonTaxable - ytdNonTaxable;
 
+  const ytdW2Gross = sumDecimals(result.ytd_summary.employers.map((employer) => employer.ytd_gross));
+  const projectedAnnualW2Gross = sumDecimals(
+    result.ytd_summary.employers.map((employer) => employer.projected_annual_gross),
+  );
+  const projectedRemainingW2Gross = projectedAnnualW2Gross - ytdW2Gross;
+  const ytdW2Pretax = sumDecimals(result.ytd_summary.employers.map((employer) => employer.ytd_pretax_deductions));
+
   const ytdW2Withholding =
     parseDecimalString(result.ytd_summary.ytd_total_federal_withholding) -
     parseDecimalString(result.ytd_summary.ytd_pension_federal_withholding);
   const ytdPensionWithholding = parseDecimalString(result.ytd_summary.ytd_pension_federal_withholding);
-  const remainingW2Withholding = parseDecimalString(result.projection_summary.projected_remaining_w2_withholding);
+  const projectedRemainingW2Withholding = parseDecimalString(
+    result.projection_summary.projected_remaining_w2_withholding,
+  );
   const remainingPensionWithholding = parseDecimalString(
     result.projection_summary.projected_remaining_pension_withholding,
   );
   const annualW2Withholding = parseDecimalString(result.projection_summary.projected_annual_w2_withholding);
   const annualPensionWithholding = parseDecimalString(result.projection_summary.projected_annual_pension_withholding);
   const annualTotalWithholding = parseDecimalString(result.projection_summary.projected_annual_total_withholding);
+  const estimatedTaxLiability = parseDecimalString(result.estimated_tax_liability);
+  const projectedTaxBalance = annualTotalWithholding - estimatedTaxLiability;
+  const projectedTaxBalanceLabel = projectedTaxBalance >= 0 ? "Refund estimate" : "Amount owed";
+  const projectedTaxBalanceClass = projectedTaxBalance >= 0 ? "text-refund" : "text-owed";
+  const projectedTaxBalanceHelper =
+    projectedTaxBalance >= 0
+      ? "Your projected withholding exceeds your projected tax liability. The difference should come back as a refund after filing."
+      : "Your projected withholding is below your projected tax liability. You will owe this amount at tax time unless you adjust your W-4.";
 
   return (
     <div className="card result-card mt-2">
@@ -410,7 +434,43 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
         </div>
       </div>
 
-      <h4 className="w4-rec-title">Employer Gross Equation</h4>
+      <p className="helper-text">
+        The W-4 recommendation below is based on the total tax picture. The sections below keep W-2, pension, and
+        non-taxable income separated so the rollup is easier to audit.
+      </p>
+
+      <h4 className="w4-rec-title">W-2 Projection Summary</h4>
+      <div className="result-grid mb-4">
+        <div className="result-row">
+          <span>YTD W-2 gross</span>
+          <strong>{formatCurrency(ytdW2Gross)}</strong>
+        </div>
+        <div className="result-row">
+          <span>YTD W-2 pretax deductions</span>
+          <strong>{formatCurrency(ytdW2Pretax)}</strong>
+        </div>
+        <div className="result-row">
+          <span>Projected remaining W-2 gross</span>
+          <strong>{formatCurrency(projectedRemainingW2Gross)}</strong>
+        </div>
+        <div className="result-row result-divider">
+          <span>Projected annual W-2 gross</span>
+          <strong>{formatCurrency(projectedAnnualW2Gross)}</strong>
+        </div>
+        <div className="result-row">
+          <span>YTD W-2 withholding</span>
+          <strong>{formatCurrency(ytdW2Withholding)}</strong>
+        </div>
+        <div className="result-row">
+          <span>Projected remaining W-2 withholding</span>
+          <strong>{formatCurrency(projectedRemainingW2Withholding)}</strong>
+        </div>
+        <div className="result-row result-divider">
+          <span>Projected annual W-2 withholding</span>
+          <strong>{formatCurrency(annualW2Withholding)}</strong>
+        </div>
+      </div>
+
       {result.ytd_summary.employers.length === 0 ? (
         <p className="helper-text">No paycheck records found for the selected year and as-of date.</p>
       ) : (
@@ -440,7 +500,7 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
         </div>
       )}
 
-      <h4 className="w4-rec-title">Pension Projection Equation</h4>
+      <h4 className="w4-rec-title">Pension Projection Summary</h4>
       <div className="equation-grid mb-4">
         <div className="equation-cell">
           <span>YTD pension taxable</span>
@@ -458,7 +518,7 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
         </div>
       </div>
 
-      <h4 className="w4-rec-title">Non-taxable Projection Equation</h4>
+      <h4 className="w4-rec-title">Non-taxable Projection Summary</h4>
       <div className="equation-grid mb-4">
         <div className="equation-cell">
           <span>YTD non-taxable income</span>
@@ -485,7 +545,7 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
         <div className="equation-operator">+</div>
         <div className="equation-cell">
           <span>Projected remaining</span>
-          <strong>{formatCurrency(remainingW2Withholding)}</strong>
+          <strong>{formatCurrency(projectedRemainingW2Withholding)}</strong>
         </div>
         <div className="equation-operator">=</div>
         <div className="equation-cell equation-total">
@@ -512,19 +572,19 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
         </div>
       </div>
 
-      <h4 className="w4-rec-title">Total Projected Federal Withholding for Year</h4>
+      <h4 className="w4-rec-title">Projected Total Federal Withholding</h4>
       <div className="result-row" style={{ fontSize: "1.1em", fontWeight: "bold", padding: "0.75rem 0" }}>
         <span>W-2 + Pension</span>
         <strong className="text-good">{formatCurrency(annualTotalWithholding)}</strong>
       </div>
 
       <h4 className="w4-rec-title" style={{ marginTop: "1.5rem" }}>
-        Tax Liability vs. Withholding Comparison
+        Projected Tax Rollup
       </h4>
       <div className="equation-grid mb-4">
         <div className="equation-cell">
           <span>Estimated annual tax liability</span>
-          <strong>{formatCurrency(parseDecimalString(result.estimated_tax_liability))}</strong>
+          <strong>{formatCurrency(estimatedTaxLiability)}</strong>
         </div>
         <div className="equation-operator">−</div>
         <div className="equation-cell">
@@ -533,21 +593,12 @@ const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse })
         </div>
         <div className="equation-operator">=</div>
         <div className="equation-cell equation-total">
-          <span>{parseDecimalString(result.current_refund_or_owed) > 0 ? "Amount owed" : "Refund estimate"}</span>
-          <strong
-            style={{
-              color: parseDecimalString(result.current_refund_or_owed) > 0 ? "#d9534f" : "#5cb85c",
-            }}
-          >
-            {formatCurrency(Math.abs(parseDecimalString(result.current_refund_or_owed)))}
-          </strong>
+          <span>{projectedTaxBalanceLabel}</span>
+          <strong className={projectedTaxBalanceClass}>{formatCurrency(Math.abs(projectedTaxBalance))}</strong>
         </div>
       </div>
-      <p className="helper-text">
-        {parseDecimalString(result.current_refund_or_owed) > 0
-          ? "Your projected withholding is below your tax liability. You will owe this amount at tax time unless you adjust your W-4."
-          : "Your projected withholding covers your tax liability. The remaining amount will be refunded after filing."}
-      </p>
+      <p className="helper-text">{projectedTaxBalanceHelper}</p>
+      <p className="helper-text">This rollup is what drives the W-4 recommendation below.</p>
 
       {result.assumptions.length > 0 && (
         <>
@@ -965,8 +1016,8 @@ const MidYearTab = () => {
 
       {mutation.data && (
         <>
-          <W4ResultCard result={mutation.data} />
           <MidYearResultDetails result={mutation.data} />
+          <W4ResultCard result={mutation.data} />
         </>
       )}
     </div>
