@@ -8,6 +8,9 @@ from pydantic import BaseModel, Field
 from taxtracker.models.tax_data import FilingStatus  # noqa: TC001
 
 
+_CURRENT_YEAR = datetime.date.today().year
+
+
 class _D:
     """Field description strings shared across request models."""
 
@@ -64,7 +67,7 @@ class EmployerRemainingOverride(BaseModel):
 class MidYearDBW4OptimizeRequest(BaseModel):
     """Request for mid-year W-4 optimization using database year-to-date data."""
 
-    tax_year: int = Field(ge=2024, le=2030, description="Tax year to optimize")
+    tax_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Tax year to optimize")
     filing_status: FilingStatus = Field(description=_D.filing_status_full)
     as_of_date: datetime.date | None = Field(default=None, description=_D.as_of_date)
     remaining_pay_periods: int = Field(ge=1, description=_D.remaining_pay_periods)
@@ -116,7 +119,7 @@ class AnnualWithholdingRequest(BaseModel):
 class ProjectYearRequest(BaseModel):
     """Request for single-year tax projection."""
 
-    projection_year: int = Field(ge=2024, le=2030, description="Year to project taxes for")
+    projection_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Year to project taxes for")
     filing_status: FilingStatus = Field(description=_D.filing_status)
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
     w2_gross: Decimal = Field(default=Decimal(0), ge=0, description="Expected annual W-2 gross wages")
@@ -139,8 +142,13 @@ class ProjectYearRequest(BaseModel):
 class CompareYearsRequest(BaseModel):
     """Request for year-over-year tax comparison."""
 
-    base_year: int = Field(ge=2024, le=2030, description="Base tax year to compare from")
-    comparison_year: int = Field(ge=2024, le=2030, description="Comparison tax year to compare to")
+    base_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Base tax year to compare from")
+    comparison_year: int = Field(
+        default=_CURRENT_YEAR,
+        ge=2024,
+        le=2030,
+        description="Comparison tax year to compare to",
+    )
     filing_status: FilingStatus = Field(description=_D.filing_status_both_years)
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
     base_w2_gross: Decimal = Field(ge=0, description="Expected W-2 gross wages for the base year")
@@ -154,7 +162,7 @@ class CompareYearsRequest(BaseModel):
 class ProjectFromDBRequest(BaseModel):
     """Request for database-driven tax projection."""
 
-    projection_year: int = Field(ge=2024, le=2030, description="Year to project taxes for")
+    projection_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Year to project taxes for")
     filing_status: FilingStatus = Field(description=_D.filing_status)
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
     expected_w2_gross: Decimal = Field(ge=0, description="Expected annual W-2 gross wages")
