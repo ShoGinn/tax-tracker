@@ -48,9 +48,7 @@ class EmployerBase(BaseModel):
     """Base employer fields."""
 
     name: str = Field(..., min_length=1, max_length=200)
-    ein: str | None = Field(
-        default=None, max_length=20, description="Employer Identification Number"
-    )
+    ein: str | None = Field(default=None, max_length=20, description="Employer Identification Number")
     start_date: FlexibleDate
     end_date: FlexibleDate | None = None
     notes: str | None = None
@@ -145,8 +143,7 @@ class PaycheckCreate(PaycheckBase):
         gross_plus_bonus = self.gross_wages + self.bonus
         if total_pretax > gross_plus_bonus:
             raise ValueError(
-                f"Total pre-tax deductions (${total_pretax:,.2f}) exceed "
-                f"gross wages + bonus (${gross_plus_bonus:,.2f})"
+                f"Total pre-tax deductions (${total_pretax:,.2f}) exceed gross wages + bonus (${gross_plus_bonus:,.2f})"
             )
         return self
 
@@ -222,9 +219,7 @@ class Retirement1099RBase(BaseModel):
     )
 
     # Taxes withheld
-    federal_withholding: CleanDecimal = Field(
-        default=Decimal(0), ge=0, description="Federal tax withheld (Box 4)"
-    )
+    federal_withholding: CleanDecimal = Field(default=Decimal(0), ge=0, description="Federal tax withheld (Box 4)")
     state_withholding: CleanDecimal = Field(default=Decimal(0), ge=0)
 
     # Optional categorization
@@ -269,9 +264,7 @@ class NonTaxableIncomeBase(BaseModel):
 
     pay_date: FlexibleDate
     amount: CleanDecimal = Field(..., ge=0)
-    source_type: str | None = Field(
-        default=None, description="Income source (e.g., 'VA Disability', 'SSA Disability')"
-    )
+    source_type: str | None = Field(default=None, description="Income source (e.g., 'VA Disability', 'SSA Disability')")
     notes: str | None = None
 
 

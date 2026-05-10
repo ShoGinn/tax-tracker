@@ -80,9 +80,7 @@ class TestPaycheckCSVImport:
     @pytest.mark.anyio
     async def test_import_row_error_handling(self, async_db_session) -> None:
         """Invalid rows should be tracked as errors."""
-        csv_content = (
-            "employer_name,pay_date,gross_wages,net_pay\nTest Corp,not-a-date,5000.00,4000.00\n"
-        )
+        csv_content = "employer_name,pay_date,gross_wages,net_pay\nTest Corp,not-a-date,5000.00,4000.00\n"
         result = await import_paychecks_csv(async_db_session, csv_content)
 
         assert result["error_count"] == 1
@@ -127,10 +125,7 @@ class TestPensionCSVImport:
     @pytest.mark.anyio
     async def test_basic_import(self, async_db_session) -> None:
         """Basic pension CSV import."""
-        csv_content = (
-            "pay_date,gross_amount,net_amount,federal_withholding\n"
-            "2024-01-01,3000.00,2700.00,300.00\n"
-        )
+        csv_content = "pay_date,gross_amount,net_amount,federal_withholding\n2024-01-01,3000.00,2700.00,300.00\n"
         result = await import_pension_csv(async_db_session, csv_content)
 
         assert result["success_count"] == 1

@@ -8,9 +8,7 @@ from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
 from taxtracker.services.tax_calculator import TaxCalculator
 
 
-def compute_progressive_tax(
-    taxable_income: Decimal, steps: list[tuple[Decimal | None, Decimal]]
-) -> Decimal:
+def compute_progressive_tax(taxable_income: Decimal, steps: list[tuple[Decimal | None, Decimal]]) -> Decimal:
     """Manual progressive tax calculator for expected values in tests."""
     total = Decimal(0)
     previous = Decimal(0)

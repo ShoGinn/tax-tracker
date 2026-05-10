@@ -77,9 +77,7 @@ class TestAdminAPI:
         assert "tax_brackets" in saved
         assert "standard_deductions" in saved
 
-    def test_upload_tax_data_year_mismatch(
-        self, client: TestClient, temp_upload_dir: Path, monkeypatch
-    ):
+    def test_upload_tax_data_year_mismatch(self, client: TestClient, temp_upload_dir: Path, monkeypatch):
         """Reject tax data when file year does not match path."""
 
         # Point settings to temp dir for this test only
@@ -145,9 +143,7 @@ class TestAdminAPI:
         assert "social_security" in saved
         assert "medicare" in saved
 
-    def test_upload_fica_data_missing_fields(
-        self, client: TestClient, temp_upload_dir: Path, monkeypatch
-    ):
+    def test_upload_fica_data_missing_fields(self, client: TestClient, temp_upload_dir: Path, monkeypatch):
         """Reject FICA upload when required fields are missing."""
 
         # Point settings to temp dir for this test only

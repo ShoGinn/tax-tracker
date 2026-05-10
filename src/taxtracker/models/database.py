@@ -36,9 +36,7 @@ class Employer(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
-    paychecks: Mapped[list[Paycheck]] = relationship(
-        back_populates="employer", cascade="all, delete-orphan"
-    )
+    paychecks: Mapped[list[Paycheck]] = relationship(back_populates="employer", cascade="all, delete-orphan")
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
@@ -213,18 +211,10 @@ class Retirement1099R(Base):
     @property
     def net_amount(self) -> Decimal:
         """Calculate net payment received based on deductions and taxes."""
-        return (
-            self.gross_amount
-            - self.pretax_deductions
-            - self.total_taxes_withheld
-            - self.posttax_deductions
-        )
+        return self.gross_amount - self.pretax_deductions - self.total_taxes_withheld - self.posttax_deductions
 
     def __repr__(self) -> str:
-        return (
-            f"<Retirement1099R(date={self.pay_date}, "
-            f"gross=${self.gross_amount}, taxable=${self.taxable_amount})>"
-        )
+        return f"<Retirement1099R(date={self.pay_date}, gross=${self.gross_amount}, taxable=${self.taxable_amount})>"
 
 
 class NonTaxableIncome(Base):
@@ -274,9 +264,7 @@ def create_async_session_factory(
     """
     url = database_url or settings.database_url
     eng = create_async_engine(url, echo=False)
-    return async_sessionmaker(
-        eng, class_=AsyncSession, expire_on_commit=False, autocommit=False, autoflush=False
-    )
+    return async_sessionmaker(eng, class_=AsyncSession, expire_on_commit=False, autocommit=False, autoflush=False)
 
 
 # Default async engine and session factory

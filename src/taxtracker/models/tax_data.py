@@ -50,9 +50,7 @@ class StandardDeductions(BaseModel):
 
     @field_validator("amounts", mode="after")
     @classmethod
-    def validate_amount_keys(
-        cls, value: dict[FilingStatus, Decimal]
-    ) -> dict[FilingStatus, Decimal]:
+    def validate_amount_keys(cls, value: dict[FilingStatus, Decimal]) -> dict[FilingStatus, Decimal]:
         """Ensure every filing status has a standard deduction."""
 
         missing_statuses = [status for status in FilingStatus if status not in value]
@@ -98,9 +96,7 @@ class StandardDeductions(BaseModel):
 
         adjusted_extra = extra
         if phase_out_fn and agi is not None:
-            adjusted_extra = phase_out_fn(
-                base=base, extra=extra, agi=agi, filing_status=filing_status
-            )
+            adjusted_extra = phase_out_fn(base=base, extra=extra, agi=agi, filing_status=filing_status)
 
         return base + adjusted_extra
 
@@ -134,9 +130,7 @@ class TaxBrackets(BaseModel):
 
     @field_validator("tax_brackets", mode="after")
     @classmethod
-    def validate_bracket_keys(
-        cls, value: dict[FilingStatus, list[TaxBracket]]
-    ) -> dict[FilingStatus, list[TaxBracket]]:
+    def validate_bracket_keys(cls, value: dict[FilingStatus, list[TaxBracket]]) -> dict[FilingStatus, list[TaxBracket]]:
         """Ensure every filing status has a bracket set."""
 
         missing_statuses = [status for status in FilingStatus if status not in value]
@@ -178,9 +172,7 @@ class TaxBrackets(BaseModel):
         try:
             return self.tax_brackets[filing_status]
         except KeyError as exc:  # pragma: no cover - guardrail for bad data
-            raise KeyError(
-                f"No tax brackets found for filing status '{filing_status.value}'"
-            ) from exc
+            raise KeyError(f"No tax brackets found for filing status '{filing_status.value}'") from exc
 
 
 class SocialSecurityTax(BaseModel):
@@ -234,18 +226,12 @@ class TaxCalculationRequest(BaseModel):
     - 1099-R pension income is NOT subject to FICA
     """
 
-    w2_gross_income: Decimal = Field(
-        default=Decimal(0), ge=0, description="W-2 gross wages (subject to FICA)"
-    )
-    pension_gross_income: Decimal = Field(
-        default=Decimal(0), ge=0, description="1099-R pension gross income (no FICA)"
-    )
+    w2_gross_income: Decimal = Field(default=Decimal(0), ge=0, description="W-2 gross wages (subject to FICA)")
+    pension_gross_income: Decimal = Field(default=Decimal(0), ge=0, description="1099-R pension gross income (no FICA)")
     filing_status: FilingStatus
     age_65_plus: bool = Field(default=False, description="Whether taxpayer is 65 or older")
     num_children: int = Field(default=0, ge=0, description="Number of qualifying children")
-    use_standard_deduction: bool = Field(
-        default=True, description="Use standard deduction vs itemized"
-    )
+    use_standard_deduction: bool = Field(default=True, description="Use standard deduction vs itemized")
     itemized_deduction_amount: Decimal | None = Field(
         default=None, ge=0, description="Itemized deduction amount if not using standard"
     )

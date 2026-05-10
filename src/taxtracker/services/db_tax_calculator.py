@@ -54,9 +54,7 @@ async def calculate_taxes_from_database(
         num_children=num_children,
         age_65_plus=age_65_plus,
         use_standard_deduction=use_standard_deduction,
-        itemized_deduction_amount=Decimal(str(itemized_deductions))
-        if not use_standard_deduction
-        else None,
+        itemized_deduction_amount=Decimal(str(itemized_deductions)) if not use_standard_deduction else None,
     )
 
     tax_result = tax_calculator.calculate_taxes(
@@ -69,9 +67,7 @@ async def calculate_taxes_from_database(
     fica_result = tax_calculator.calculate_fica(ytd.total_w2_gross, filing_status)
 
     # Combined liability: federal (after credits) + FICA
-    combined_liability = Decimal(str(tax_result.total_tax_liability)) + Decimal(
-        str(fica_result["total_fica"])
-    )
+    combined_liability = Decimal(str(tax_result.total_tax_liability)) + Decimal(str(fica_result["total_fica"]))
 
     # Total withheld (federal + FICA actually withheld)
     total_withheld = ytd.total_federal_withheld + ytd.total_w2_fica_withheld
@@ -80,9 +76,7 @@ async def calculate_taxes_from_database(
     refund_or_owed = total_withheld - combined_liability
 
     # Overpayment percentage (guard divide-by-zero)
-    overpayment_pct = (
-        (refund_or_owed / combined_liability * 100) if combined_liability > 0 else Decimal(0)
-    )
+    overpayment_pct = (refund_or_owed / combined_liability * 100) if combined_liability > 0 else Decimal(0)
 
     # Harmonize response for UI/clients
     return TaxReconciliationResponse(

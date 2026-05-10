@@ -132,9 +132,7 @@ class W4OptimizationResult:
             ],
             "adjustment_summary": {
                 "total_adjustment_needed": float(self.adjustment_needed),
-                "adjustment_per_paycheck": {
-                    k: float(v) for k, v in self.adjustment_per_paycheck.items()
-                },
+                "adjustment_per_paycheck": {k: float(v) for k, v in self.adjustment_per_paycheck.items()},
             },
             "notes": self.notes,
         }
@@ -146,9 +144,7 @@ def optimize_w4(
     filing_status: FilingStatus,
     num_children: int,
     # Income projections
-    w2_jobs: list[
-        dict[str, Any]
-    ],  # [{"employer": "Certus", "annual_gross": 155000, "paychecks_per_year": 26, ...}]
+    w2_jobs: list[dict[str, Any]],  # [{"employer": "Certus", "annual_gross": 155000, "paychecks_per_year": 26, ...}]
     pension_taxable: Decimal,
     va_disability: Decimal,
     # Current withholding (from actual data)
@@ -181,9 +177,7 @@ def optimize_w4(
 
     # Calculate total W-2 income
     total_w2_gross = sum(Decimal(str(job["annual_gross"])) for job in w2_jobs) or Decimal(0)
-    total_w2_pretax = sum(
-        Decimal(str(job.get("annual_pretax_deductions", 0))) for job in w2_jobs
-    ) or Decimal(0)
+    total_w2_pretax = sum(Decimal(str(job.get("annual_pretax_deductions", 0))) for job in w2_jobs) or Decimal(0)
     total_w2_taxable = total_w2_gross - total_w2_pretax
 
     # Total taxable income
@@ -197,9 +191,7 @@ def optimize_w4(
         pension_gross_income=pension_taxable,
         num_children=num_children,
         use_standard_deduction=use_standard_deduction,
-        itemized_deduction_amount=Decimal(str(itemized_deductions))
-        if not use_standard_deduction
-        else None,
+        itemized_deduction_amount=Decimal(str(itemized_deductions)) if not use_standard_deduction else None,
     )
 
     tax_result = tax_calculator.calculate_taxes(tax_request)
@@ -239,10 +231,7 @@ def optimize_w4(
         # Step 2: Multiple Jobs
         # New W-4: Don't check the box, use Step 4 instead for more control
         step2_checkbox = False
-        step2_note = (
-            "Leave UNCHECKED. We're using Step 4 for more accurate "
-            "withholding across multiple jobs."
-        )
+        step2_note = "Leave UNCHECKED. We're using Step 4 for more accurate withholding across multiple jobs."
 
         # Step 3: Dependents (only on highest paying job)
         step3_amount = child_tax_credit_total if is_highest_paying else Decimal(0)
@@ -265,24 +254,18 @@ def optimize_w4(
         if not use_standard_deduction and is_highest_paying:
             # Calculate excess over standard deduction
             standard_ded = (
-                Decimal(str(tax_result.deduction_amount))
-                if use_standard_deduction
-                else Decimal(31500)
+                Decimal(str(tax_result.deduction_amount)) if use_standard_deduction else Decimal(31500)
             )  # 2025 MFJ
             itemized_ded = Decimal(str(itemized_deductions))
             excess = max(Decimal(0), itemized_ded - standard_ded)
             step4b_deductions = excess
             step4b_explanation = (
-                f"Itemized (${itemized_ded:,.0f}) - "
-                f"Standard (${standard_ded:,.0f}) = "
-                f"${excess:,.0f} extra deduction"
+                f"Itemized (${itemized_ded:,.0f}) - Standard (${standard_ded:,.0f}) = ${excess:,.0f} extra deduction"
             )
         else:
             step4b_deductions = Decimal(0)
             step4b_explanation = (
-                "Using standard deduction"
-                if use_standard_deduction
-                else "Already accounted for on your other W-4"
+                "Using standard deduction" if use_standard_deduction else "Already accounted for on your other W-4"
             )
 
         # Step 4(c): Extra withholding (to hit target)
@@ -291,15 +274,13 @@ def optimize_w4(
             # Need to withhold MORE
             step4c_extra_withholding = job_adjustment
             step4c_explanation = (
-                f"Withhold extra ${job_adjustment:,.2f} per paycheck "
-                f"to reach target ${target_refund:,.0f} refund"
+                f"Withhold extra ${job_adjustment:,.2f} per paycheck to reach target ${target_refund:,.0f} refund"
             )
         elif job_adjustment < 0:
             # Need to withhold LESS (can't do with extra withholding)
             step4c_extra_withholding = Decimal(0)
             step4c_explanation = (
-                f"Reduce withholding by ${abs(job_adjustment):,.2f} per paycheck "
-                f"(adjust Steps 3-4b above)"
+                f"Reduce withholding by ${abs(job_adjustment):,.2f} per paycheck (adjust Steps 3-4b above)"
             )
         else:
             step4c_extra_withholding = Decimal(0)
@@ -345,22 +326,15 @@ def optimize_w4(
             f"These W-4 changes will withhold ${per_check:,.2f} more per paycheck."
         )
     else:
-        notes.append(
-            "✅ Your current withholding is close to perfect. Minor adjustments will fine-tune it."
-        )
+        notes.append("✅ Your current withholding is close to perfect. Minor adjustments will fine-tune it.")
 
     notes.append("💡 Fill out a new W-4 form for each employer using the values above.")
-    notes.append(
-        "📝 Submit the new W-4 to your payroll department. Changes typically take 1-2 pay periods."
-    )
-    notes.append(
-        "🔍 Check your first paycheck after the change to verify the new withholding amount."
-    )
+    notes.append("📝 Submit the new W-4 to your payroll department. Changes typically take 1-2 pay periods.")
+    notes.append("🔍 Check your first paycheck after the change to verify the new withholding amount.")
 
     if len(w2_jobs) > 1:
         notes.append(
-            "👥 With multiple jobs, it's critical to fill out Step 4 accurately "
-            "on your highest-paying job's W-4."
+            "👥 With multiple jobs, it's critical to fill out Step 4 accurately on your highest-paying job's W-4."
         )
 
     return W4OptimizationResult(

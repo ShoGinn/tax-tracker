@@ -123,13 +123,11 @@ class TestPSLmodelsBrackets:
 
         if psl_threshold is None:
             assert local_threshold is None, (
-                f"PSLmodels has no threshold for bracket {bracket_idx} "
-                f"but local has {local_threshold}"
+                f"PSLmodels has no threshold for bracket {bracket_idx} but local has {local_threshold}"
             )
         else:
             assert local_threshold == Decimal(str(int(psl_threshold))), (
-                f"Bracket {bracket_idx} ({status}, {year}): "
-                f"local={local_threshold}, PSLmodels={psl_threshold}"
+                f"Bracket {bracket_idx} ({status}, {year}): local={local_threshold}, PSLmodels={psl_threshold}"
             )
 
 
@@ -248,8 +246,7 @@ class TestPSLmodelsFICA:
 
         local = load_fica_limits_model(int(year))
         assert local.social_security.wage_base_limit == Decimal(str(psl_wage_base)), (
-            f"SS wage base ({year}): "
-            f"local={local.social_security.wage_base_limit}, PSLmodels={psl_wage_base}"
+            f"SS wage base ({year}): local={local.social_security.wage_base_limit}, PSLmodels={psl_wage_base}"
         )
 
     @pytest.mark.parametrize("year", SNAPSHOT_YEARS)
@@ -261,8 +258,7 @@ class TestPSLmodelsFICA:
 
         local = load_fica_limits_model(int(year))
         assert local.social_security.employee_rate == Decimal(str(psl_rate)), (
-            f"SS employee rate ({year}): "
-            f"local={local.social_security.employee_rate}, PSLmodels={psl_rate}"
+            f"SS employee rate ({year}): local={local.social_security.employee_rate}, PSLmodels={psl_rate}"
         )
 
     @pytest.mark.parametrize("year", SNAPSHOT_YEARS)
@@ -274,8 +270,7 @@ class TestPSLmodelsFICA:
 
         local = load_fica_limits_model(int(year))
         assert local.medicare.employee_rate == Decimal(str(psl_rate)), (
-            f"Medicare employee rate ({year}): "
-            f"local={local.medicare.employee_rate}, PSLmodels={psl_rate}"
+            f"Medicare employee rate ({year}): local={local.medicare.employee_rate}, PSLmodels={psl_rate}"
         )
 
     @pytest.mark.parametrize("year", SNAPSHOT_YEARS)
@@ -287,8 +282,7 @@ class TestPSLmodelsFICA:
 
         local = load_fica_limits_model(int(year))
         assert local.social_security.max_employee_tax == Decimal(str(psl_max)), (
-            f"SS max employee tax ({year}): "
-            f"local={local.social_security.max_employee_tax}, PSLmodels={psl_max}"
+            f"SS max employee tax ({year}): local={local.social_security.max_employee_tax}, PSLmodels={psl_max}"
         )
 
 
@@ -315,8 +309,7 @@ class TestPSLmodelsAdditionalMedicare:
 
         local = load_fica_limits_model(int(year))
         assert local.additional_medicare.rate == Decimal(str(psl_rate)), (
-            f"Additional Medicare rate ({year}): "
-            f"local={local.additional_medicare.rate}, PSLmodels={psl_rate}"
+            f"Additional Medicare rate ({year}): local={local.additional_medicare.rate}, PSLmodels={psl_rate}"
         )
 
     @pytest.mark.parametrize("year", SNAPSHOT_YEARS)
@@ -332,8 +325,7 @@ class TestPSLmodelsAdditionalMedicare:
         local_threshold = local.additional_medicare.thresholds[status]
 
         assert local_threshold == Decimal(str(psl_threshold)), (
-            f"Additional Medicare threshold ({status}, {year}): "
-            f"local={local_threshold}, PSLmodels={psl_threshold}"
+            f"Additional Medicare threshold ({status}, {year}): local={local_threshold}, PSLmodels={psl_threshold}"
         )
 
 
@@ -360,8 +352,7 @@ class TestPSLmodelsCTC:
 
         local = load_tax_brackets_model(int(year))
         assert local.child_tax_credit.amount_per_child == Decimal(str(psl_amount)), (
-            f"CTC amount ({year}): "
-            f"local={local.child_tax_credit.amount_per_child}, PSLmodels={psl_amount}"
+            f"CTC amount ({year}): local={local.child_tax_credit.amount_per_child}, PSLmodels={psl_amount}"
         )
 
     @pytest.mark.parametrize("year", SNAPSHOT_YEARS)
@@ -373,8 +364,7 @@ class TestPSLmodelsCTC:
 
         local = load_tax_brackets_model(int(year))
         assert local.child_tax_credit.refundable_portion == Decimal(str(psl_refund)), (
-            f"CTC refundable ({year}): "
-            f"local={local.child_tax_credit.refundable_portion}, PSLmodels={psl_refund}"
+            f"CTC refundable ({year}): local={local.child_tax_credit.refundable_portion}, PSLmodels={psl_refund}"
         )
 
     @pytest.mark.parametrize("year", SNAPSHOT_YEARS)
@@ -383,9 +373,7 @@ class TestPSLmodelsCTC:
         """CTC phase-out for {status} in {year} matches PSLmodels."""
         _skip_if_divergence(year, "ctc", f"phase_out_{status}")
 
-        psl_threshold = self.snapshot["years"][year]["child_tax_credit"]["phase_out_threshold"][
-            status
-        ]
+        psl_threshold = self.snapshot["years"][year]["child_tax_credit"]["phase_out_threshold"][status]
 
         local = load_tax_brackets_model(int(year))
         local_threshold = local.child_tax_credit.phase_out_threshold[FilingStatus(status)]
