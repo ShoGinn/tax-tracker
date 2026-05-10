@@ -108,8 +108,8 @@ If not set, it uses same-origin requests and Vite dev proxy routes to `http://12
 Preferred workflow uses just recipes:
 
 ```bash
-just check          # fast quality gate: format-check, lint, typecheck, test-fast
-just ci             # full local CI gate
+just check          # fast quality gate: format-check, lint, typecheck, test-fast, frontend-check
+just ci             # full local CI gate (includes frontend-check)
 just test           # full test suite (80% coverage minimum)
 just test-unit
 just test-integration
