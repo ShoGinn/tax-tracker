@@ -1,8 +1,17 @@
-"""Unit tests for W-4 withholding calculator."""
+"""Unit tests for W-4 withholding calculator.
+
+Numeric assertions derive from IRS-backed test fixtures in tests/fixtures/irs_test_data.py
+and from values returned by the mocked tax data loader.
+"""
 
 from decimal import Decimal
 
 import pytest
+from fixtures.w4_scenarios import (
+    CANONICAL_W4_WITHHOLDING_MFJ_TWO_CHILDREN,
+    CANONICAL_W4_WITHHOLDING_SINGLE_BIWEEKLY,
+    get_two_children_dependents_amount,
+)
 
 from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.w4_withholding import (
@@ -13,6 +22,11 @@ from taxtracker.services.w4_withholding import (
 pytestmark = pytest.mark.unit
 
 
+TWO_CHILDREN_DEPENDENTS_AMOUNT = get_two_children_dependents_amount()
+BASELINE_SINGLE_BIWEEKLY = CANONICAL_W4_WITHHOLDING_SINGLE_BIWEEKLY["inputs"]
+BASELINE_MFJ_TWO_CHILDREN = CANONICAL_W4_WITHHOLDING_MFJ_TWO_CHILDREN["inputs"]
+
+
 @pytest.mark.usefixtures("mock_tax_data_dependency")
 class TestWithholdingCalculation:
     """Tests for calculate_withholding_per_paycheck."""
@@ -20,15 +34,15 @@ class TestWithholdingCalculation:
     def test_basic_single_biweekly(self) -> None:
         """Basic withholding for single filer, biweekly pay."""
         result = calculate_withholding_per_paycheck(
-            gross_pay=Decimal(3000),
-            pay_frequency="biweekly",
+            gross_pay=BASELINE_SINGLE_BIWEEKLY["gross_pay"],
+            pay_frequency=BASELINE_SINGLE_BIWEEKLY["pay_frequency"],
             filing_status=FilingStatus.SINGLE,
             multiple_jobs_checkbox=False,
             dependents_amount=Decimal(0),
             other_income_annual=Decimal(0),
             deductions_annual=Decimal(0),
             extra_withholding=Decimal(0),
-            year=2024,
+            year=BASELINE_SINGLE_BIWEEKLY["year"],
         )
 
         assert result["withholding_per_paycheck"] > 0
@@ -40,27 +54,27 @@ class TestWithholdingCalculation:
     def test_married_filing_jointly(self) -> None:
         """Married filing jointly should have lower withholding than single."""
         single = calculate_withholding_per_paycheck(
-            gross_pay=Decimal(3000),
-            pay_frequency="biweekly",
+            gross_pay=BASELINE_SINGLE_BIWEEKLY["gross_pay"],
+            pay_frequency=BASELINE_SINGLE_BIWEEKLY["pay_frequency"],
             filing_status=FilingStatus.SINGLE,
             multiple_jobs_checkbox=False,
             dependents_amount=Decimal(0),
             other_income_annual=Decimal(0),
             deductions_annual=Decimal(0),
             extra_withholding=Decimal(0),
-            year=2024,
+            year=BASELINE_SINGLE_BIWEEKLY["year"],
         )
 
         married = calculate_withholding_per_paycheck(
-            gross_pay=Decimal(3000),
-            pay_frequency="biweekly",
+            gross_pay=BASELINE_SINGLE_BIWEEKLY["gross_pay"],
+            pay_frequency=BASELINE_SINGLE_BIWEEKLY["pay_frequency"],
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
             multiple_jobs_checkbox=False,
             dependents_amount=Decimal(0),
             other_income_annual=Decimal(0),
             deductions_annual=Decimal(0),
             extra_withholding=Decimal(0),
-            year=2024,
+            year=BASELINE_SINGLE_BIWEEKLY["year"],
         )
 
         # MFJ has larger standard deduction -> lower tax
@@ -131,27 +145,27 @@ class TestWithholdingCalculation:
     def test_with_dependents(self) -> None:
         """Dependents reduce withholding (Step 3 credit)."""
         no_deps = calculate_withholding_per_paycheck(
-            gross_pay=Decimal(4000),
-            pay_frequency="biweekly",
+            gross_pay=BASELINE_MFJ_TWO_CHILDREN["gross_pay"],
+            pay_frequency=BASELINE_MFJ_TWO_CHILDREN["pay_frequency"],
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
             multiple_jobs_checkbox=False,
             dependents_amount=Decimal(0),
             other_income_annual=Decimal(0),
             deductions_annual=Decimal(0),
             extra_withholding=Decimal(0),
-            year=2024,
+            year=BASELINE_MFJ_TWO_CHILDREN["year"],
         )
 
         with_deps = calculate_withholding_per_paycheck(
-            gross_pay=Decimal(4000),
-            pay_frequency="biweekly",
+            gross_pay=BASELINE_MFJ_TWO_CHILDREN["gross_pay"],
+            pay_frequency=BASELINE_MFJ_TWO_CHILDREN["pay_frequency"],
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
             multiple_jobs_checkbox=False,
-            dependents_amount=Decimal(4000),  # 2 children x $2000
+            dependents_amount=TWO_CHILDREN_DEPENDENTS_AMOUNT,
             other_income_annual=Decimal(0),
             deductions_annual=Decimal(0),
             extra_withholding=Decimal(0),
-            year=2024,
+            year=BASELINE_MFJ_TWO_CHILDREN["year"],
         )
 
         assert with_deps["withholding_per_paycheck"] < no_deps["withholding_per_paycheck"]
@@ -367,7 +381,7 @@ class TestEstimateAnnualWithholding:
             pay_frequency="monthly",
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
             w4_step2_checkbox=False,
-            w4_step3_dependents=Decimal(4000),
+            w4_step3_dependents=TWO_CHILDREN_DEPENDENTS_AMOUNT,
             w4_step4a_other_income=Decimal(0),
             w4_step4b_deductions=Decimal(0),
             w4_step4c_extra=Decimal(0),

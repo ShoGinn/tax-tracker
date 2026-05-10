@@ -63,7 +63,7 @@ class TestFederalTaxCalculation:
         - Total: $4,016
         """
         gross_income = Decimal(50000)
-        standard_deduction = Decimal(14600)
+        standard_deduction = test_calculator.tax_brackets.standard_deductions.amounts[FilingStatus.SINGLE]
         taxable_income = max(Decimal(0), gross_income - standard_deduction)
 
         federal_tax, marginal_rate, _breakdown = test_calculator.calculate_federal_tax(
@@ -99,7 +99,9 @@ class TestFederalTaxCalculation:
         - Total: $8,032
         """
         gross_income = Decimal(100000)
-        standard_deduction = Decimal(29200)
+        standard_deduction = test_calculator.tax_brackets.standard_deductions.amounts[
+            FilingStatus.MARRIED_FILING_JOINTLY
+        ]
         taxable_income = max(Decimal(0), gross_income - standard_deduction)
 
         federal_tax, marginal_rate, _breakdown = test_calculator.calculate_federal_tax(
@@ -211,6 +213,8 @@ class TestFullTaxCalculation:
 
     def test_married_with_children(self, test_calculator):
         """Test calculation with child tax credits."""
+        ctc_per_child = test_calculator.tax_brackets.child_tax_credit.amount_per_child
+
         request = TaxCalculationRequest(
             tax_year=2024,
             filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
@@ -223,8 +227,7 @@ class TestFullTaxCalculation:
 
         # Should have child tax credits
         assert result.child_tax_credits > 0
-        # 2 children * $2,000 = $4,000
-        assert result.child_tax_credits == Decimal(4000)
+        assert result.child_tax_credits == ctc_per_child * Decimal(2)
 
         # Credits should reduce total tax
         assert result.total_tax_liability < result.federal_tax_owed + result.child_tax_credits
