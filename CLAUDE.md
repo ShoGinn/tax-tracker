@@ -63,7 +63,7 @@ This project is actively developed and currently versioned as v1.0.0.
 - uv for dependency management
 - just for task recipes and local CI-style workflows
 - Ruff for linting/formatting, ty for type checking
-- React 19 + TypeScript + Vite (SPA in `frontend/`), pnpm, Biome
+- React 19 + TypeScript + Vite (SPA in `frontend/`), pnpm, Biome, Vitest + React Testing Library
 
 ## Commands
 
@@ -92,8 +92,15 @@ Frontend-specific recipes (run from repo root via just):
 - `just frontend-install` — install pnpm dependencies
 - `just frontend-dev` — start Vite dev server (proxies API to `http://127.0.0.1:8000`)
 - `just frontend-build` — production build to `frontend/dist`
-- `just frontend-check` — lint + typecheck + build (Biome + tsc + vite)
+- `just frontend-test` — run frontend unit/component tests (Vitest)
+- `just frontend-check` — lint + typecheck + test + build (Biome + tsc + Vitest + vite)
 - `just frontend-lint` / `just frontend-lint-fix` / `just frontend-format` — Biome wrappers
+
+CI/CD expectations:
+
+- `.github/workflows/ci.yml` includes a dedicated `frontend-check` job (pnpm install, lint, typecheck, test, build)
+- The `release` job depends on `frontend-check` in addition to backend gates
+- `.github/dependabot.yml` includes npm updates for `/frontend` plus uv and GitHub Actions updates
 
 Direct uv equivalents remain valid when needed:
 
@@ -174,6 +181,7 @@ When working with tax data, always cite the specific IRS source document and cro
 
 - **Always run quality checks after code changes.** Prefer `just check` for fast validation and `just ci` for full validation.
 - **Every logic component must have comprehensive tests.** This is tax/finance software — calculations must be verified against IRS data.
+- **Frontend changes require frontend tests when behavior changes.** Add/adjust Vitest + React Testing Library tests and run `just frontend-check`.
 - **Tests must verify correct behavior, not be adjusted to match incorrect code.** Do not create trivial tests or modify IRS-validated assertions to make failing tests pass. Fix the implementation. If unsure, ask for guidance.
 - **Keep README.md current.** Any change that affects behavior, setup, commands, supported features, or limitations must be reflected in `README.md` within the same change.
 - **Update documentation whenever appropriate.** When code changes impact usage, APIs, architecture, workflows, tax-data updates, or contributor processes, update the relevant docs in `docs/` (and `README.md` when applicable) as part of the same task.
