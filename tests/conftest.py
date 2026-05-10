@@ -230,7 +230,8 @@ def client(test_async_engine, mock_tax_data_dependency) -> Generator[TestClient]
     """
 
     # Create app with skip_db_init=True (tables already created by test_async_engine)
-    app = create_app(skip_db_init=True)
+    # Disable frontend static serving so API tests remain deterministic.
+    app = create_app(skip_db_init=True, serve_frontend=False)
 
     # Create AsyncSession maker using the shared test_async_engine
     _async_session_factory = sessionmaker(
