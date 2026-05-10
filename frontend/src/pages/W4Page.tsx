@@ -1,8 +1,16 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { apiClient } from "../lib/api/client";
-import type { FilingStatus, W4OptimizeRequest, W4OptimizeResponse, WithholdingCalcRequest } from "../lib/api/types";
+import type {
+  EmployerRemainingOverride,
+  FilingStatus,
+  MidYearDBW4OptimizeRequest,
+  MidYearW4OptimizeResponse,
+  W4OptimizeRequest,
+  W4OptimizeResponse,
+  WithholdingCalcRequest,
+} from "../lib/api/types";
 import { formatCurrency, parseDecimalString } from "../lib/money";
 
 const currentYear = new Date().getFullYear();
@@ -264,6 +272,359 @@ const OptimizerTab = () => {
 };
 
 // ---------------------------------------------------------------------------
+// Mid-year optimizer tab
+// ---------------------------------------------------------------------------
+
+const MidYearResultDetails = ({ result }: { result: MidYearW4OptimizeResponse }) => (
+  <div className="card result-card mt-2">
+    <h3 className="card-title">Year-to-Date Summary</h3>
+
+    <div className="result-grid mb-4">
+      <div className="result-row">
+        <span>As-of date</span>
+        <strong>{result.ytd_summary.as_of_date ?? "All records for tax year"}</strong>
+      </div>
+      <div className="result-row">
+        <span>Remaining pay periods</span>
+        <strong>{result.ytd_summary.remaining_pay_periods}</strong>
+      </div>
+      <div className="result-row">
+        <span>YTD total federal withholding</span>
+        <strong>{formatCurrency(parseDecimalString(result.ytd_summary.ytd_total_federal_withholding))}</strong>
+      </div>
+    </div>
+
+    <h4 className="w4-rec-title">Employer Breakdown</h4>
+    {result.ytd_summary.employers.length === 0 ? (
+      <p className="helper-text">No paycheck records found for the selected year and as-of date.</p>
+    ) : (
+      <div className="midyear-grid mb-4">
+        {result.ytd_summary.employers.map((employer) => (
+          <article key={employer.employer_id} className="w4-rec-card midyear-employer-card">
+            <h5 className="midyear-employer-title">{employer.employer_name}</h5>
+            <div className="result-grid">
+              <div className="result-row">
+                <span>Paychecks recorded</span>
+                <strong>{employer.paychecks_recorded}</strong>
+              </div>
+              <div className="result-row">
+                <span>YTD gross</span>
+                <strong>{formatCurrency(parseDecimalString(employer.ytd_gross))}</strong>
+              </div>
+              <div className="result-row">
+                <span>YTD federal withholding</span>
+                <strong>{formatCurrency(parseDecimalString(employer.ytd_federal_withholding))}</strong>
+              </div>
+              <div className="result-row">
+                <span>Projected remaining gross</span>
+                <strong>{formatCurrency(parseDecimalString(employer.projected_remaining_gross))}</strong>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+
+    <h4 className="w4-rec-title">Projection Summary</h4>
+    <div className="result-grid mb-4">
+      <div className="result-row">
+        <span>Remaining pension taxable projection</span>
+        <strong>
+          {formatCurrency(parseDecimalString(result.projection_summary.projected_remaining_pension_taxable))}
+        </strong>
+      </div>
+      <div className="result-row">
+        <span>Projected full-year pension taxable</span>
+        <strong>
+          {formatCurrency(parseDecimalString(result.projection_summary.projected_full_year_pension_taxable))}
+        </strong>
+      </div>
+      <div className="result-row">
+        <span>Projected full-year non-taxable income</span>
+        <strong>
+          {formatCurrency(parseDecimalString(result.projection_summary.projected_full_year_non_taxable_income))}
+        </strong>
+      </div>
+    </div>
+
+    {result.assumptions.length > 0 && (
+      <>
+        <h4 className="w4-rec-title">Assumptions</h4>
+        <ul className="result-notes">
+          {result.assumptions.map((assumption) => (
+            <li key={assumption}>{assumption}</li>
+          ))}
+        </ul>
+      </>
+    )}
+  </div>
+);
+
+const MidYearTab = () => {
+  type OverrideRow = EmployerRemainingOverride & { row_id: string };
+
+  const createOverrideRow = (): OverrideRow => ({
+    row_id: crypto.randomUUID(),
+    employer_id: 0,
+    expected_remaining_gross_per_paycheck: "",
+  });
+
+  const [fields, setFields] = useState<MidYearDBW4OptimizeRequest>({
+    tax_year: currentYear,
+    filing_status: "single",
+    remaining_pay_periods: 10,
+    num_children: 0,
+    target_refund: "0",
+    use_standard_deduction: true,
+    itemized_deductions: "0",
+    employer_overrides: [],
+  });
+  const [asOfDate, setAsOfDate] = useState("");
+  const [expectedRemainingPensionTaxable, setExpectedRemainingPensionTaxable] = useState("");
+  const [employerOverrides, setEmployerOverrides] = useState<OverrideRow[]>([]);
+
+  const employersQuery = useQuery({
+    queryKey: ["midyear-employers"],
+    queryFn: apiClient.listEmployers,
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: MidYearDBW4OptimizeRequest) => apiClient.optimizeMidyearW4(data),
+  });
+
+  const set = <K extends keyof MidYearDBW4OptimizeRequest>(key: K, val: MidYearDBW4OptimizeRequest[K]) =>
+    setFields((prev) => ({ ...prev, [key]: val }));
+
+  return (
+    <div className="tab-panel">
+      <div className="panel-header">
+        <h2 className="panel-title">Mid-Year W-4 Optimizer (Database-Backed)</h2>
+      </div>
+
+      <form
+        className="card income-form mb-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const payload: MidYearDBW4OptimizeRequest = {
+            ...fields,
+            as_of_date: asOfDate || undefined,
+            expected_remaining_pension_taxable: expectedRemainingPensionTaxable || undefined,
+            itemized_deductions: fields.use_standard_deduction ? "0" : (fields.itemized_deductions ?? "0"),
+            employer_overrides: employerOverrides
+              .filter((override) => override.employer_id > 0 && override.expected_remaining_gross_per_paycheck !== "")
+              .map((override) => ({
+                employer_id: override.employer_id,
+                expected_remaining_gross_per_paycheck: override.expected_remaining_gross_per_paycheck,
+              })),
+          };
+
+          mutation.mutate(payload);
+        }}
+      >
+        <p className="helper-text">
+          Uses year-to-date entries from your database, projects the remaining year, and recommends W-4 adjustments.
+        </p>
+
+        <div className="form-grid">
+          <label className="form-label">
+            Tax year
+            <select
+              className="form-input"
+              value={fields.tax_year}
+              onChange={(e) => set("tax_year", Number(e.target.value))}
+            >
+              {Array.from({ length: 4 }, (_, i) => currentYear - i + 1).map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="form-label">
+            Filing status
+            <select
+              className="form-input"
+              value={fields.filing_status}
+              onChange={(e) => set("filing_status", e.target.value as FilingStatus)}
+            >
+              {FILING_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="form-label">
+            As-of date (optional)
+            <input type="date" className="form-input" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} />
+          </label>
+
+          <label className="form-label">
+            Remaining pay periods
+            <input
+              type="number"
+              min="1"
+              className="form-input"
+              value={fields.remaining_pay_periods}
+              onChange={(e) => set("remaining_pay_periods", Number(e.target.value))}
+              required
+            />
+          </label>
+
+          <label className="form-label">
+            Qualifying children
+            <input
+              type="number"
+              min="0"
+              max="20"
+              className="form-input"
+              value={fields.num_children ?? 0}
+              onChange={(e) => set("num_children", Number(e.target.value))}
+            />
+          </label>
+
+          <label className="form-label">
+            Target refund (0 = break even)
+            <input
+              type="number"
+              step="0.01"
+              className="form-input"
+              value={fields.target_refund ?? "0"}
+              onChange={(e) => set("target_refund", e.target.value)}
+            />
+          </label>
+
+          <label className="form-label">
+            Expected remaining pension taxable (optional)
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="form-input"
+              value={expectedRemainingPensionTaxable}
+              onChange={(e) => setExpectedRemainingPensionTaxable(e.target.value)}
+              placeholder="Auto-project from YTD if blank"
+            />
+          </label>
+
+          <label
+            className="form-label"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={fields.use_standard_deduction ?? true}
+              onChange={(e) => set("use_standard_deduction", e.target.checked)}
+            />
+            Use standard deduction
+          </label>
+
+          {!(fields.use_standard_deduction ?? true) && (
+            <label className="form-label">
+              Itemized deductions
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="form-input"
+                value={fields.itemized_deductions ?? "0"}
+                onChange={(e) => set("itemized_deductions", e.target.value)}
+              />
+            </label>
+          )}
+        </div>
+
+        <div className="midyear-override-section">
+          <div className="panel-header">
+            <h3 className="panel-title">Employer Gross Overrides (Optional)</h3>
+          </div>
+          <p className="helper-text">
+            Override projected remaining gross per paycheck for a specific employer when YTD averages are not accurate.
+          </p>
+
+          {employersQuery.isError && <p className="form-error">Unable to load employers for overrides.</p>}
+
+          {employerOverrides.map((override) => (
+            <div key={override.row_id} className="midyear-override-row">
+              <select
+                className="form-input"
+                value={override.employer_id}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  setEmployerOverrides((prev) =>
+                    prev.map((row) => (row.row_id === override.row_id ? { ...row, employer_id: value } : row)),
+                  );
+                }}
+              >
+                <option value={0}>Select employer</option>
+                {(employersQuery.data ?? []).map((employer) => (
+                  <option key={employer.id} value={employer.id}>
+                    {employer.name}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="form-input"
+                value={override.expected_remaining_gross_per_paycheck}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEmployerOverrides((prev) =>
+                    prev.map((row) =>
+                      row.row_id === override.row_id ? { ...row, expected_remaining_gross_per_paycheck: value } : row,
+                    ),
+                  );
+                }}
+                placeholder="Remaining gross/paycheck"
+              />
+
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setEmployerOverrides((prev) => prev.filter((row) => row.row_id !== override.row_id))}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setEmployerOverrides((prev) => [...prev, createOverrideRow()])}
+            disabled={employersQuery.isLoading}
+          >
+            Add employer override
+          </button>
+        </div>
+
+        {mutation.isError && <p className="form-error">{mutation.error.message}</p>}
+
+        <button type="submit" className="btn-primary mt-2" disabled={mutation.isPending}>
+          {mutation.isPending ? "Optimizing…" : "Optimize Mid-Year W-4"}
+        </button>
+      </form>
+
+      {mutation.data && (
+        <>
+          <W4ResultCard result={mutation.data} />
+          <MidYearResultDetails result={mutation.data} />
+        </>
+      )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Withholding calculator tab
 // ---------------------------------------------------------------------------
 
@@ -471,7 +832,7 @@ const WithholdingTab = () => {
 // Page root
 // ---------------------------------------------------------------------------
 
-type W4Tab = "optimize" | "withholding";
+type W4Tab = "optimize" | "midyear" | "withholding";
 
 export const W4Page = () => {
   const [tab, setTab] = useState<W4Tab>("optimize");
@@ -492,6 +853,13 @@ export const W4Page = () => {
         </button>
         <button
           type="button"
+          className={`tab-btn${tab === "midyear" ? " active" : ""}`}
+          onClick={() => setTab("midyear")}
+        >
+          Mid-Year Optimizer
+        </button>
+        <button
+          type="button"
           className={`tab-btn${tab === "withholding" ? " active" : ""}`}
           onClick={() => setTab("withholding")}
         >
@@ -500,6 +868,7 @@ export const W4Page = () => {
       </div>
 
       {tab === "optimize" && <OptimizerTab />}
+      {tab === "midyear" && <MidYearTab />}
       {tab === "withholding" && <WithholdingTab />}
     </div>
   );
