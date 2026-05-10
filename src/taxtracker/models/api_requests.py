@@ -1,12 +1,11 @@
 """Pydantic request models for W-4 and projection API endpoints."""
 
-import datetime  # noqa: TC003
+import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
 from taxtracker.models.tax_data import FilingStatus  # noqa: TC001
-
 
 _CURRENT_YEAR = datetime.date.today().year
 
