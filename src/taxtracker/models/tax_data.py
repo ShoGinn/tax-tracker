@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-_CURRENT_YEAR = datetime.date.today().year
+_CURRENT_YEAR = datetime.datetime.now(datetime.UTC).year
 
 
 class FilingStatus(StrEnum):
