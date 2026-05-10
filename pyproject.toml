@@ -34,8 +34,8 @@ requires = ["uv_build>=0.11.12,<0.12"]
 python-version = "3.14"
 
 [tool.ty.src]
-include = ["src/**/*.py"]
 exclude = ["tests/**"]
+include = ["src/**/*.py"]
 
 [tool.ty.rules]
 possibly-unresolved-reference = "warn"
@@ -44,7 +44,6 @@ possibly-unresolved-reference = "warn"
 output-format = "full"
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
 addopts = [
     "--cov-fail-under=80",
     "--cov-report=html",
@@ -53,6 +52,7 @@ addopts = [
     "--strict-markers",
     "-v",
 ]
+asyncio_mode = "auto"
 markers = [
     "integration: Integration tests",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -78,7 +78,7 @@ exclude_lines = [
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py314"
 
 [tool.ruff.lint]
@@ -94,10 +94,10 @@ select = [
     "F",   # pyflakes
     "I",   # isort
     "N",   # PEP8 naming
+    "S",   # flake8-bandit
     "UP",  # pyupgrade
     "W",   # pycodestyle
     "YTT", # flake8-2020
-    "S",   # flake8-bandit
     # "BLE",  # flake8-blind-except
     "A",   # flake8-builtins
     "B",   # flake8-bugbear
@@ -132,10 +132,10 @@ select = [
     "PL",  # pylint
     # "TRY",  # tryceratops
     # "NPY",  # NumPy-specific rules
+    "FAST", # flake8-fastapi
     "FURB", # refurb
     "LOG",  # flake8-logging
     "PERF", # perflint
-    "FAST", # flake8-fastapi
     "RUF",  # Ruff-specific rules
 ]
 
@@ -154,7 +154,7 @@ select = [
 ]
 
 "__init__.py" = ["F401"]
-"scripts/*" = ["T201", "DTZ011", "S310"]
+"scripts/*" = ["DTZ011", "S310", "T201"]
 
 [dependency-groups]
 dev = [

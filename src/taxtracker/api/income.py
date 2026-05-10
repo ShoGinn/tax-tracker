@@ -2,7 +2,7 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
@@ -26,11 +26,19 @@ router = APIRouter(prefix="/income", tags=["Income"])
 # ============================================================================
 
 
-@router.post("/paychecks")
+@router.post(
+    "/paychecks",
+    summary="Create paycheck entry",
+    response_description="Created paycheck with all computed fields",
+    responses={
+        400: {"description": "Validation error"},
+        404: {"description": "Employer not found"},
+    },
+)
 async def create_paycheck_entry(
     paycheck: PaycheckCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> PaycheckResponse:
-    """Create a new paycheck entry."""
+    """Create a new W-2 paycheck entry with gross wages, deductions, and withholding."""
     try:
         return await income_service.create_paycheck(db, paycheck)  # ty: ignore[invalid-return-type]
     except ValidationError as e:
@@ -41,22 +49,40 @@ async def create_paycheck_entry(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/paychecks")
+@router.get(
+    "/paychecks",
+    summary="List paychecks",
+    response_description="List of paycheck entries",
+)
 async def list_paychecks(
-    year: int | None = None, *, db: Annotated[AsyncSession, Depends(get_db)]
+    year: Annotated[
+        int | None,
+        Query(description="Filter by tax year (e.g. 2025, 2026)", examples=[2026]),
+    ] = None,
+    *,
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[PaycheckResponse]:
-    """List all paychecks, optionally filtered by year."""
+    """List all W-2 paycheck entries, optionally filtered by tax year."""
     try:
         return await income_service.get_paychecks(db, employer_id=None, year=year)  # ty: ignore[invalid-return-type]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/paychecks/{paycheck_id}")
+@router.delete(
+    "/paychecks/{paycheck_id}",
+    summary="Delete paycheck entry",
+    response_description="Deletion confirmation",
+    responses={
+        404: {"description": "Paycheck not found"},
+        400: {"description": "Validation error"},
+    },
+)
 async def delete_paycheck_entry(
-    paycheck_id: int, db: Annotated[AsyncSession, Depends(get_db)]
+    paycheck_id: Annotated[int, Path(description="Unique paycheck record ID", ge=1)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, Any]:
-    """Delete a paycheck entry."""
+    """Delete a paycheck entry by ID."""
     try:
         deleted = await income_service.delete_paycheck(db, paycheck_id)
         if not deleted:
@@ -70,15 +96,23 @@ async def delete_paycheck_entry(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/paychecks/import-csv")
+@router.post(
+    "/paychecks/import-csv",
+    summary="Import paychecks from CSV",
+    response_description="Import result with success/error counts",
+    responses={400: {"description": "Invalid file or CSV format"}},
+)
 async def import_paychecks_csv_endpoint(
     file: UploadFile, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> dict[str, Any]:
     """
-    Import paychecks from CSV file.
+    Import paychecks from a CSV file.
 
-    CSV should have columns matching our field names, e.g.:
-    employer_name,pay_date,gross_wages,bonus,federal_withholding,social_security,medicare,net_pay
+    CSV should have columns matching field names, e.g.:
+    `employer_name,pay_date,gross_wages,bonus,federal_withholding,social_security,medicare,net_pay`
+
+    Flexible column mapping is applied automatically. Currency symbols and multiple date formats
+    are handled. Rows with errors are skipped and reported in the response.
     """
     try:
         content = await file.read()
@@ -91,8 +125,7 @@ async def import_paychecks_csv_endpoint(
             message = "Import failed - all rows had errors"
         else:
             message = (
-                f"Import partially successful - "
-                f"{result['success_count']} succeeded, {result['error_count']} failed"
+                f"Import partially successful - {result['success_count']} succeeded, {result['error_count']} failed"
             )
 
         return {
@@ -113,11 +146,16 @@ async def import_paychecks_csv_endpoint(
 # ============================================================================
 
 
-@router.post("/1099r")
+@router.post(
+    "/1099r",
+    summary="Create 1099-R pension entry",
+    response_description="Created 1099-R pension entry",
+    responses={400: {"description": "Validation error"}},
+)
 async def create_pension_entry(
     pension: Retirement1099RCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> Retirement1099RResponse:
-    """Create a new pension entry."""
+    """Create a new 1099-R pension/retirement income entry with gross distribution and withholding."""
     try:
         return await income_service.create_retirement_1099r(db, pension)  # ty: ignore[invalid-return-type]
     except ValidationError as e:
@@ -126,22 +164,40 @@ async def create_pension_entry(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/1099r")
+@router.get(
+    "/1099r",
+    summary="List 1099-R pension entries",
+    response_description="List of 1099-R pension entries",
+)
 async def list_pension(
-    year: int | None = None, *, db: Annotated[AsyncSession, Depends(get_db)]
+    year: Annotated[
+        int | None,
+        Query(description="Filter by tax year (e.g. 2025, 2026)", examples=[2026]),
+    ] = None,
+    *,
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[Retirement1099RResponse]:
-    """List all pension entries, optionally filtered by year."""
+    """List all 1099-R pension/retirement income entries, optionally filtered by tax year."""
     try:
         return await income_service.get_retirement_1099rs(db, year)  # ty: ignore[invalid-return-type]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/1099r/{retirement_id}")
+@router.delete(
+    "/1099r/{retirement_id}",
+    summary="Delete 1099-R pension entry",
+    response_description="Deletion confirmation",
+    responses={
+        404: {"description": "Pension entry not found"},
+        400: {"description": "Validation error"},
+    },
+)
 async def delete_pension_entry(
-    retirement_id: int, db: Annotated[AsyncSession, Depends(get_db)]
+    retirement_id: Annotated[int, Path(description="Unique 1099-R record ID", ge=1)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, Any]:
-    """Delete a pension entry."""
+    """Delete a 1099-R pension entry by ID."""
     try:
         deleted = await income_service.delete_retirement_1099r(db, retirement_id)
         if not deleted:
@@ -155,11 +211,19 @@ async def delete_pension_entry(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/1099r/import-csv")
-async def import_pension_csv_endpoint(
-    file: UploadFile, db: Annotated[AsyncSession, Depends(get_db)]
-) -> dict[str, Any]:
-    """Import pension entries from CSV file."""
+@router.post(
+    "/1099r/import-csv",
+    summary="Import 1099-R pensions from CSV",
+    response_description="Import result with success/error counts",
+    responses={400: {"description": "Invalid file or CSV format"}},
+)
+async def import_pension_csv_endpoint(file: UploadFile, db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    """
+    Import 1099-R pension entries from a CSV file.
+
+    Flexible column mapping is applied automatically. Currency symbols and multiple date formats
+    are handled. Rows with errors are skipped and reported in the response.
+    """
     try:
         content = await file.read()
         result = await csv_import.import_pension_csv(db, content.decode("utf-8"))
@@ -171,8 +235,7 @@ async def import_pension_csv_endpoint(
             message = "Import failed - all rows had errors"
         else:
             message = (
-                f"Import partially successful - "
-                f"{result['success_count']} succeeded, {result['error_count']} failed"
+                f"Import partially successful - {result['success_count']} succeeded, {result['error_count']} failed"
             )
 
         return {
@@ -193,11 +256,16 @@ async def import_pension_csv_endpoint(
 # ============================================================================
 
 
-@router.post("/non-taxable")
+@router.post(
+    "/non-taxable",
+    summary="Create non-taxable income entry",
+    response_description="Created non-taxable income entry",
+    responses={400: {"description": "Validation error"}},
+)
 async def create_va_entry(
     va: NonTaxableIncomeCreate, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> NonTaxableIncomeResponse:
-    """Create a new Non-taxable entry."""
+    """Create a new non-taxable income entry (non-taxable benefit, SSA disability, gifts, etc.)."""
     try:
         return await income_service.create_non_taxable_payment(db, va)  # ty: ignore[invalid-return-type]
     except ValidationError as e:
@@ -206,28 +274,46 @@ async def create_va_entry(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/non-taxable")
+@router.get(
+    "/non-taxable",
+    summary="List non-taxable income entries",
+    response_description="List of non-taxable income entries",
+)
 async def list_va_disability(
-    year: int | None = None, *, db: Annotated[AsyncSession, Depends(get_db)]
+    year: Annotated[
+        int | None,
+        Query(description="Filter by tax year (e.g. 2025, 2026)", examples=[2026]),
+    ] = None,
+    *,
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[NonTaxableIncomeResponse]:
-    """List all Non-taxable entries, optionally filtered by year."""
+    """List all non-taxable income entries (non-taxable benefit, SSA disability, gifts),
+    optionally filtered by tax year.
+    """
     try:
         return await income_service.get_non_taxable_payments(db, year)  # ty: ignore[invalid-return-type]
     except DatabaseError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/non-taxable/{non_taxable_id}")
+@router.delete(
+    "/non-taxable/{non_taxable_id}",
+    summary="Delete non-taxable income entry",
+    response_description="Deletion confirmation",
+    responses={
+        404: {"description": "Non-taxable entry not found"},
+        400: {"description": "Validation error"},
+    },
+)
 async def delete_va_entry(
-    non_taxable_id: int, db: Annotated[AsyncSession, Depends(get_db)]
+    non_taxable_id: Annotated[int, Path(description="Unique non-taxable income record ID", ge=1)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, Any]:
-    """Delete a Non-taxable entry."""
+    """Delete a non-taxable income entry by ID."""
     try:
         deleted = await income_service.delete_non_taxable_payment(db, non_taxable_id)
         if not deleted:
-            raise HTTPException(
-                status_code=404, detail=f"Non-taxable entry {non_taxable_id} not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Non-taxable entry {non_taxable_id} not found")
         return {"message": "Non-taxable entry deleted successfully"}
     except HTTPException:
         raise
@@ -237,11 +323,19 @@ async def delete_va_entry(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/non-taxable/import-csv")
-async def import_va_csv_endpoint(
-    file: UploadFile, db: Annotated[AsyncSession, Depends(get_db)]
-) -> dict[str, Any]:
-    """Import non-taxable income entries from CSV file."""
+@router.post(
+    "/non-taxable/import-csv",
+    summary="Import non-taxable income from CSV",
+    response_description="Import result with success/error counts",
+    responses={400: {"description": "Invalid file or CSV format"}},
+)
+async def import_va_csv_endpoint(file: UploadFile, db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    """
+    Import non-taxable income entries from a CSV file.
+
+    Flexible column mapping is applied automatically. Currency symbols and multiple date formats
+    are handled. Rows with errors are skipped and reported in the response.
+    """
     try:
         content = await file.read()
         result = await csv_import.import_va_csv(db, content.decode("utf-8"))
@@ -253,8 +347,7 @@ async def import_va_csv_endpoint(
             message = "Import failed - all rows had errors"
         else:
             message = (
-                f"Import partially successful - "
-                f"{result['success_count']} succeeded, {result['error_count']} failed"
+                f"Import partially successful - {result['success_count']} succeeded, {result['error_count']} failed"
             )
 
         return {

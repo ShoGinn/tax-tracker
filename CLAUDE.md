@@ -181,7 +181,7 @@ The plugin can be enabled for all contributors via `.claude/settings.json`:
 
 ## Conventions
 
-- Line length: 100 characters
+- Line length: 120 characters
 - Type hints on all functions (enforced by Ruff ANN rules)
 - Snake_case for all Python identifiers and JSON fields
 - Async-first for all DB operations

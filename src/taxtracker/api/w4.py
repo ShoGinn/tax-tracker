@@ -22,7 +22,12 @@ from taxtracker.services.w4_withholding import (
 router = APIRouter(prefix="/w4", tags=["W-4"])
 
 
-@router.post("/optimize")
+@router.post(
+    "/optimize",
+    summary="Optimize W-4 settings",
+    response_description="W-4 form recommendations (Steps 2, 3, 4a-c) with withholding breakdown",
+    responses={400: {"description": "Invalid input or calculation error"}},
+)
 async def optimize_w4_settings(request: W4OptimizeRequest) -> dict[str, Any]:
     """
     Optimize W-4 settings to achieve target refund amount.
@@ -96,7 +101,12 @@ async def optimize_w4_settings(request: W4OptimizeRequest) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"W-4 optimization failed: {e!s}") from e
 
 
-@router.post("/calculate-withholding")
+@router.post(
+    "/calculate-withholding",
+    summary="Calculate per-paycheck withholding",
+    response_description="Federal withholding per paycheck (IRS Publication 15-T percentage method)",
+    responses={400: {"description": "Invalid input or calculation error"}},
+)
 async def calculate_withholding(request: WithholdingCalcRequest) -> dict[str, Any]:
     """
     Calculate federal withholding per paycheck based on W-4 settings.
@@ -124,7 +134,12 @@ async def calculate_withholding(request: WithholdingCalcRequest) -> dict[str, An
         raise HTTPException(status_code=500, detail=f"Withholding calculation failed: {e!s}") from e
 
 
-@router.post("/estimate-annual-withholding")
+@router.post(
+    "/estimate-annual-withholding",
+    summary="Estimate annual withholding",
+    response_description="Estimated total federal withholding for the year",
+    responses={400: {"description": "Invalid input or calculation error"}},
+)
 async def estimate_withholding(request: AnnualWithholdingRequest) -> dict[str, Any]:
     """
     Estimate total annual withholding from W-4 settings.

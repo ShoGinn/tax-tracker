@@ -2,10 +2,10 @@
 
 import json
 from collections.abc import Callable  # noqa: TC003
-from pathlib import Path  # noqa: TC003
+from pathlib import Path as FilePath  # noqa: TC003
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from taxtracker.api.dependencies import get_db, get_tax_data
@@ -30,7 +30,12 @@ from taxtracker.services.tax_calculator import TaxCalculator
 router = APIRouter(prefix="/taxes", tags=["Taxes"])
 
 
-@router.post("/calculate")
+@router.post(
+    "/calculate",
+    summary="Calculate federal taxes",
+    response_description="Complete tax calculation breakdown",
+    responses={400: {"description": "Invalid input or unsupported tax year"}},
+)
 async def calculate_taxes(
     request: TaxCalculationRequest,
 ) -> TaxCalculationResponse:
@@ -62,13 +67,27 @@ async def calculate_taxes(
         raise HTTPException(status_code=500, detail=f"Tax calculation failed: {e!s}") from e
 
 
-@router.post("/calculate-from-db/{year}")
+@router.post(
+    "/calculate-from-db/{year}",
+    summary="Calculate taxes from database income",
+    response_description="Tax reconciliation with withholding comparison",
+    responses={400: {"description": "Invalid input or unsupported tax year"}},
+)
 async def calculate_from_database(
-    year: int,
-    filing_status: FilingStatus,
-    num_children: int = 0,
-    use_standard_deduction: bool = True,
-    itemized_deduction_amount: float = 0,
+    year: Annotated[int, Path(description="Tax year to calculate (e.g. 2025, 2026)", ge=2020, le=2030)],
+    filing_status: Annotated[FilingStatus, Query(description="IRS filing status")],
+    num_children: Annotated[int, Query(description="Number of qualifying children for child tax credit", ge=0)] = 0,
+    use_standard_deduction: Annotated[
+        bool,
+        Query(description="Use IRS standard deduction; set false to supply itemized amount"),
+    ] = True,
+    itemized_deduction_amount: Annotated[
+        float,
+        Query(
+            description="Total itemized deductions; only used when use_standard_deduction is false",
+            ge=0,
+        ),
+    ] = 0,
     *,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TaxReconciliationResponse:
@@ -105,14 +124,19 @@ async def calculate_from_database(
     except TaxCalculationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except DataLoadError as e:
-        raise HTTPException(
-            status_code=500, detail=f"Database tax calculation failed: {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Database tax calculation failed: {e!s}") from e
 
 
-@router.get("/fica/{year}")
+@router.get(
+    "/fica/{year}",
+    summary="Get FICA limits for a year",
+    response_description="FICA wage bases and rates",
+    responses={404: {"description": "Tax data not available for requested year"}},
+)
 async def get_fica_info(
-    year: int,  # noqa: ARG001 — path param consumed by get_tax_data dependency
+    year: Annotated[  # noqa: ARG001 — path param consumed by get_tax_data dependency
+        int, Path(description="Tax year (e.g. 2025, 2026)", ge=2020, le=2030)
+    ],
     tax_data: Annotated[tuple[TaxBrackets, FICALimits], Depends(get_tax_data)],
 ) -> FICALimits:
     """Get FICA limits and rates for a given year.
@@ -128,9 +152,16 @@ async def get_fica_info(
     return fica_limits
 
 
-@router.get("/brackets/{year}")
+@router.get(
+    "/brackets/{year}",
+    summary="Get tax brackets for a year",
+    response_description="Tax brackets and standard deduction amounts",
+    responses={404: {"description": "Tax data not available for requested year"}},
+)
 async def get_tax_brackets(
-    year: int,  # noqa: ARG001 — path param consumed by get_tax_data dependency
+    year: Annotated[  # noqa: ARG001 — path param consumed by get_tax_data dependency
+        int, Path(description="Tax year (e.g. 2025, 2026)", ge=2020, le=2030)
+    ],
     tax_data: Annotated[tuple[TaxBrackets, FICALimits], Depends(get_tax_data)],
 ) -> TaxBrackets:
     """Get tax brackets for a given year.
@@ -146,7 +177,11 @@ async def get_tax_brackets(
     return tax_brackets
 
 
-@router.get("/tax-data/available-years")
+@router.get(
+    "/tax-data/available-years",
+    summary="List available tax years",
+    response_description="Years with loaded tax bracket data",
+)
 async def list_available_years() -> dict[str, Any]:
     """Get list of years with available tax data."""
     years = get_available_years()
@@ -157,8 +192,25 @@ async def list_available_years() -> dict[str, Any]:
     }
 
 
-@router.post("/tax-data/upload/{year}")
-async def upload_tax_data(year: int, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
+@router.post(
+    "/tax-data/upload/{year}",
+    summary="Upload tax bracket data",
+    response_description="Upload confirmation with saved file path",
+    responses={400: {"description": "Invalid JSON or data validation failure"}},
+)
+async def upload_tax_data(
+    year: Annotated[
+        int,
+        Path(description="Tax year this data applies to (e.g. 2025, 2026)", ge=2020, le=2030),
+    ],
+    file: Annotated[UploadFile, File()],
+) -> dict[str, Any]:
+    """
+    Upload a tax brackets JSON file for a given year.
+
+    Replaces the stored bracket data used for all tax calculations for that year.
+    The JSON must conform to the internal `TaxBrackets` schema.
+    """
     return await _handle_json_upload(
         year,
         file,
@@ -167,8 +219,25 @@ async def upload_tax_data(year: int, file: Annotated[UploadFile, File()]) -> dic
     )
 
 
-@router.post("/fica-data/upload/{year}")
-async def upload_fica_data(year: int, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
+@router.post(
+    "/fica-data/upload/{year}",
+    summary="Upload FICA limits data",
+    response_description="Upload confirmation with saved file path",
+    responses={400: {"description": "Invalid JSON or data validation failure"}},
+)
+async def upload_fica_data(
+    year: Annotated[
+        int,
+        Path(description="Tax year this data applies to (e.g. 2025, 2026)", ge=2020, le=2030),
+    ],
+    file: Annotated[UploadFile, File()],
+) -> dict[str, Any]:
+    """
+    Upload a FICA limits JSON file for a given year.
+
+    Replaces the stored FICA wage base and rate data used for Social Security
+    and Medicare calculations. The JSON must conform to the internal `FICALimits` schema.
+    """
     return await _handle_json_upload(
         year,
         file,
@@ -181,7 +250,7 @@ async def _handle_json_upload(
     year: int,
     file: UploadFile,
     *,
-    validator: Callable[[int, dict[str, Any]], Path],
+    validator: Callable[[int, dict[str, Any]], FilePath],
     success_message: str,
 ) -> dict[str, Any]:
     if not file.filename or not file.filename.endswith(".json"):
