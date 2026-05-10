@@ -31,6 +31,9 @@ frontend-dev:
 frontend-build:
     cd frontend && pnpm build
 
+frontend-test:
+    cd frontend && pnpm test
+
 frontend-typecheck:
     cd frontend && pnpm typecheck
 
@@ -44,7 +47,7 @@ frontend-format:
     cd frontend && pnpm format:fix
 
 frontend-check:
-    cd frontend && pnpm lint && pnpm typecheck && pnpm build
+    cd frontend && pnpm lint && pnpm typecheck && pnpm test && pnpm build
 
 # Run API with explicit host/port overrides.
 run-host host="127.0.0.1" port="8000":

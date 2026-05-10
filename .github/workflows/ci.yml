@@ -23,7 +23,7 @@ jobs:
       - name: Install frontend dependencies
         run: cd frontend && pnpm install --frozen-lockfile
       - name: Frontend quality gate
-        run: cd frontend && pnpm lint && pnpm typecheck && pnpm build
+        run: cd frontend && pnpm lint && pnpm typecheck && pnpm test && pnpm build
 
   lint:
     runs-on: ubuntu-latest

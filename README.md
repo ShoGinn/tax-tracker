@@ -122,11 +122,12 @@ just typecheck
 just frontend-install
 just frontend-dev
 just frontend-build
+just frontend-test
 just frontend-typecheck
 just frontend-lint
 just frontend-lint-fix
 just frontend-format
-just frontend-check
+just frontend-check   # frontend lint + typecheck + test + build
 just security
 just psl-snapshot years="2025 2026"
 just psl-draft year=YYYY

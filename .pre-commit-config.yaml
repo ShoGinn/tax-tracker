@@ -15,10 +15,9 @@ repos:
 
   - repo: local
     hooks:
-      - id: local-biome-check
-        name: biome check
+      - id: biome-check
+        name: biome check (frontend)
         language: system
-        entry: npx biome check --write --files-ignore-unknown=true --no-errors-on-unmatched
-        types_or: [javascript, jsx, ts, tsx, json]
-        files: ^frontend/
+        entry: bash -c 'cd frontend && npx @biomejs/biome check --write --files-ignore-unknown=true --no-errors-on-unmatched .'
         pass_filenames: false
+        always_run: true
