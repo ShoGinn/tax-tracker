@@ -60,17 +60,11 @@ def _mount_frontend(app: FastAPI) -> None:
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str) -> FileResponse:
         """Catch-all: serve the SPA for all unmatched routes."""
-        api_like_prefixes = (
-            "income",
-            "taxes",
-            "w4",
-            "projections",
-            "health",
-            "docs",
-            "redoc",
-            "openapi.json",
-        )
-        if full_path.startswith(api_like_prefixes):
+        # Frontend has top-level routes like /w4 and /taxes, while API routes
+        # are nested under those prefixes (for example /w4/optimize).
+        api_like_nested_prefixes = ("income/", "taxes/", "w4/", "projections/")
+        reserved_root_paths = {"health", "docs", "redoc", "openapi.json"}
+        if full_path in reserved_root_paths or full_path.startswith(api_like_nested_prefixes):
             raise HTTPException(status_code=404, detail="Not Found")
 
         candidate = _FRONTEND_DIST / full_path

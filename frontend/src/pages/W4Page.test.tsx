@@ -11,6 +11,8 @@ vi.mock("../lib/api/client", () => ({
     optimizeMidyearW4: vi.fn(),
     calculateWithholding: vi.fn(),
     listEmployers: vi.fn(),
+    listPensions: vi.fn(),
+    listNonTaxableIncome: vi.fn(),
   },
 }));
 
@@ -110,6 +112,8 @@ describe("W4Page", () => {
         notes: null,
       },
     ]);
+    vi.mocked(apiClient.listPensions).mockResolvedValue([]);
+    vi.mocked(apiClient.listNonTaxableIncome).mockResolvedValue([]);
     vi.mocked(apiClient.optimizeMidyearW4).mockResolvedValue(midYearResponse);
   });
 
@@ -129,9 +133,9 @@ describe("W4Page", () => {
 
     const payload = vi.mocked(apiClient.optimizeMidyearW4).mock.calls[0]?.[0];
     expect(payload?.filing_status).toBe("single");
-    expect(payload?.remaining_pay_periods).toBe(10);
-    expect(payload?.remaining_pension_periods).toBe(10);
-    expect(payload?.remaining_non_taxable_periods).toBe(10);
+    expect(payload?.remaining_pay_periods).toBeGreaterThan(0);
+    expect(payload?.remaining_pension_periods).toBeGreaterThan(0);
+    expect(payload?.remaining_non_taxable_periods).toBeGreaterThan(0);
     expect(payload?.as_of_date).toBeUndefined();
   });
 
@@ -163,8 +167,56 @@ describe("W4Page", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Auto-suggest" }));
 
-    expect(screen.getByLabelText("Remaining W-2 pay periods")).toHaveValue(16);
-    expect(screen.getByLabelText("Remaining pension periods (monthly typical)")).toHaveValue(8);
-    expect(screen.getByLabelText("Remaining non-taxable periods (monthly typical)")).toHaveValue(8);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Remaining W-2 pay periods")).toHaveValue(16);
+      expect(screen.getByLabelText("Remaining pension periods (monthly typical)")).toHaveValue(8);
+      expect(screen.getByLabelText("Remaining non-taxable periods (monthly typical)")).toHaveValue(8);
+    });
+  });
+
+  it("reduces monthly suggestions when current month already has pension and non-taxable entries", async () => {
+    vi.mocked(apiClient.listPensions).mockResolvedValue([
+      {
+        id: 11,
+        pay_date: "2026-05-01T00:00:00Z",
+        gross_amount: "1000.00",
+        pretax_deductions: "0.00",
+        posttax_deductions: "0.00",
+        taxable_amount: "1000.00",
+        federal_withholding: "100.00",
+        net_amount: "900.00",
+        source_description: "Monthly Pension",
+        notes: null,
+        created_at: "2026-05-01T00:00:00",
+        updated_at: "2026-05-01T00:00:00",
+      },
+    ]);
+    vi.mocked(apiClient.listNonTaxableIncome).mockResolvedValue([
+      {
+        id: 21,
+        pay_date: "2026-05-03",
+        amount: "500.00",
+        source_type: "Non-taxable benefit",
+        notes: null,
+      },
+    ]);
+
+    renderWithQueryClient();
+
+    fireEvent.click(screen.getByRole("button", { name: "Mid-Year Optimizer" }));
+
+    fireEvent.change(screen.getByLabelText("As-of date (optional)"), {
+      target: { value: "2026-05-10" },
+    });
+    fireEvent.change(screen.getByLabelText("W-2 pay frequency"), {
+      target: { value: "semimonthly" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Auto-suggest" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Remaining W-2 pay periods")).toHaveValue(16);
+      expect(screen.getByLabelText("Remaining pension periods (monthly typical)")).toHaveValue(7);
+      expect(screen.getByLabelText("Remaining non-taxable periods (monthly typical)")).toHaveValue(7);
+    });
   });
 });

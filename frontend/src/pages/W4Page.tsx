@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
 import type {
@@ -37,7 +37,14 @@ const parseIsoDate = (value: string): Date | null => {
     return null;
   }
 
-  const parsed = new Date(`${value}T00:00:00`);
+  const normalized = value.trim();
+
+  if (normalized.length === 10 && !normalized.includes("T")) {
+    const dateOnly = new Date(`${normalized}T00:00:00`);
+    return Number.isNaN(dateOnly.getTime()) ? null : dateOnly;
+  }
+
+  const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
@@ -65,6 +72,26 @@ const suggestRemainingPeriods = (
     default:
       return 10;
   }
+};
+
+const hasRecordedEntryInAsOfMonth = <T extends { pay_date: string }>(entries: T[], asOfDate: Date): boolean => {
+  const asOfYear = asOfDate.getFullYear();
+  const asOfMonth = asOfDate.getMonth() + 1;
+  const asOfDay = asOfDate.getDate();
+
+  return entries.some((entry) => {
+    const datePart = entry.pay_date.trim().slice(0, 10);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+    if (!match) {
+      return false;
+    }
+
+    const entryYear = Number(match[1]);
+    const entryMonth = Number(match[2]);
+    const entryDay = Number(match[3]);
+
+    return entryYear === asOfYear && entryMonth === asOfMonth && entryDay <= asOfDay;
+  });
 };
 
 // ---------------------------------------------------------------------------
@@ -460,20 +487,29 @@ const MidYearTab = () => {
     expected_remaining_gross_per_paycheck: "",
   });
 
-  const [fields, setFields] = useState<MidYearDBW4OptimizeRequest>({
-    tax_year: currentYear,
-    filing_status: "single",
-    remaining_pay_periods: 10,
-    num_children: 0,
-    target_refund: "0",
-    use_standard_deduction: true,
-    itemized_deductions: "0",
-    employer_overrides: [],
+  const [fields, setFields] = useState<MidYearDBW4OptimizeRequest>(() => {
+    const today = new Date();
+    const defaultW2Remaining = suggestRemainingPeriods(today, "biweekly");
+    const defaultMonthlyRemaining = suggestRemainingPeriods(today, "monthly");
+
+    return {
+      tax_year: currentYear,
+      filing_status: "single",
+      remaining_pay_periods: defaultW2Remaining,
+      remaining_pension_periods: defaultMonthlyRemaining,
+      remaining_non_taxable_periods: defaultMonthlyRemaining,
+      num_children: 0,
+      target_refund: "0",
+      use_standard_deduction: true,
+      itemized_deductions: "0",
+      employer_overrides: [],
+    };
   });
   const [asOfDate, setAsOfDate] = useState("");
   const [expectedRemainingPensionTaxable, setExpectedRemainingPensionTaxable] = useState("");
   const [w2PayFrequency, setW2PayFrequency] = useState<"weekly" | "biweekly" | "semimonthly" | "monthly">("biweekly");
   const [employerOverrides, setEmployerOverrides] = useState<OverrideRow[]>([]);
+  const queryClient = useQueryClient();
 
   const employersQuery = useQuery({
     queryKey: ["midyear-employers"],
@@ -484,17 +520,77 @@ const MidYearTab = () => {
     mutationFn: (data: MidYearDBW4OptimizeRequest) => apiClient.optimizeMidyearW4(data),
   });
 
-  const set = <K extends keyof MidYearDBW4OptimizeRequest>(key: K, val: MidYearDBW4OptimizeRequest[K]) =>
+  const set = useCallback(<K extends keyof MidYearDBW4OptimizeRequest>(key: K, val: MidYearDBW4OptimizeRequest[K]) => {
     setFields((prev) => ({ ...prev, [key]: val }));
+  }, []);
 
-  const handleAutoSuggestPeriods = () => {
+  // On mount, refine initial monthly suggestions based on current-month records
+  useEffect(() => {
+    const refineInitialSuggestions = async () => {
+      try {
+        const [pensionEntries, nonTaxEntries] = await Promise.all([
+          queryClient.fetchQuery({
+            queryKey: ["midyear-pensions", fields.tax_year],
+            queryFn: () => apiClient.listPensions(fields.tax_year),
+          }),
+          queryClient.fetchQuery({
+            queryKey: ["midyear-nontaxable", fields.tax_year],
+            queryFn: () => apiClient.listNonTaxableIncome(fields.tax_year),
+          }),
+        ]);
+
+        const today = new Date();
+        const pensionHasCurrentMonth = hasRecordedEntryInAsOfMonth(pensionEntries, today);
+        const nonTaxHasCurrentMonth = hasRecordedEntryInAsOfMonth(nonTaxEntries, today);
+
+        if (pensionHasCurrentMonth || nonTaxHasCurrentMonth) {
+          const currentMonthlyBaseline = suggestRemainingPeriods(today, "monthly");
+          if (pensionHasCurrentMonth) {
+            set("remaining_pension_periods", Math.max(1, currentMonthlyBaseline - 1));
+          }
+          if (nonTaxHasCurrentMonth) {
+            set("remaining_non_taxable_periods", Math.max(1, currentMonthlyBaseline - 1));
+          }
+        }
+      } catch {
+        // If fetch fails, keep the defaults
+      }
+    };
+
+    refineInitialSuggestions();
+  }, [fields.tax_year, queryClient, set]);
+
+  const handleAutoSuggestPeriods = async () => {
     const effectiveDate = parseIsoDate(asOfDate) ?? new Date();
     const suggestedW2 = suggestRemainingPeriods(effectiveDate, w2PayFrequency);
     const suggestedMonthly = suggestRemainingPeriods(effectiveDate, "monthly");
-
+    // Always provide immediate cadence-based suggestions, then refine with record-aware monthly adjustments.
     set("remaining_pay_periods", suggestedW2);
     set("remaining_pension_periods", suggestedMonthly);
     set("remaining_non_taxable_periods", suggestedMonthly);
+
+    try {
+      const [pensionEntries, nonTaxEntries] = await Promise.all([
+        queryClient.fetchQuery({
+          queryKey: ["midyear-pensions", fields.tax_year],
+          queryFn: () => apiClient.listPensions(fields.tax_year),
+        }),
+        queryClient.fetchQuery({
+          queryKey: ["midyear-nontaxable", fields.tax_year],
+          queryFn: () => apiClient.listNonTaxableIncome(fields.tax_year),
+        }),
+      ]);
+
+      const pensionHasCurrentMonth = hasRecordedEntryInAsOfMonth(pensionEntries, effectiveDate);
+      const nonTaxHasCurrentMonth = hasRecordedEntryInAsOfMonth(nonTaxEntries, effectiveDate);
+      const suggestedPension = Math.max(1, suggestedMonthly - (pensionHasCurrentMonth ? 1 : 0));
+      const suggestedNonTaxable = Math.max(1, suggestedMonthly - (nonTaxHasCurrentMonth ? 1 : 0));
+
+      set("remaining_pension_periods", suggestedPension);
+      set("remaining_non_taxable_periods", suggestedNonTaxable);
+    } catch {
+      // Keep the cadence-only suggestions when entry fetch fails.
+    }
   };
 
   return (
@@ -531,6 +627,10 @@ const MidYearTab = () => {
         <p className="helper-text">
           Remaining periods are editable. Auto-suggest provides a starting point, especially when W-2 and pension
           cadences differ.
+        </p>
+        <p className="helper-text">
+          Monthly suggestions adjust down by one when a pension/non-taxable entry is already recorded in the as-of
+          month.
         </p>
 
         <div className="midyear-autosuggest card">
