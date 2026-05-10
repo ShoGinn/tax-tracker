@@ -526,3 +526,6 @@ class TestMidYearOptimizeFromDB:
         assert result["ytd_summary"]["remaining_non_taxable_periods"] == 4
         assert Decimal(result["projection_summary"]["projected_remaining_pension_taxable"]) == Decimal(5000)
         assert Decimal(result["projection_summary"]["projected_full_year_non_taxable_income"]) == Decimal(2500)
+        assert result["optimization"].current_total_withholding == Decimal(
+            result["projection_summary"]["projected_annual_total_withholding"]
+        )

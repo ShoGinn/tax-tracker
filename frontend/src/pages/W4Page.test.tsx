@@ -152,9 +152,10 @@ describe("W4Page", () => {
 
     await screen.findByRole("heading", { name: "Year-to-Date Summary" });
 
-    expect(screen.getByText("Employer Gross Equation")).toBeInTheDocument();
-    expect(screen.getByText("Pension Projection Equation")).toBeInTheDocument();
-    expect(screen.getByText("Non-taxable Projection Equation")).toBeInTheDocument();
+    expect(screen.getByText("W-2 Projection Summary")).toBeInTheDocument();
+    expect(screen.getByText("Pension Projection Summary")).toBeInTheDocument();
+    expect(screen.getByText("Non-taxable Projection Summary")).toBeInTheDocument();
+    expect(screen.getByText("Projected Tax Rollup")).toBeInTheDocument();
     expect(screen.getByText("Assumptions")).toBeInTheDocument();
     expect(screen.getByText("Used YTD average gross for remaining periods.")).toBeInTheDocument();
   });
