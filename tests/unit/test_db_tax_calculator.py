@@ -70,9 +70,7 @@ class TestTaxReconciliationResponse:
 class TestCalculateTaxesFromDatabase:
     """Integration tests for calculate_taxes_from_database."""
 
-    async def test_calculate_with_w2_only(
-        self, async_db_session: AsyncSession, test_calculator: TaxCalculator
-    ):
+    async def test_calculate_with_w2_only(self, async_db_session: AsyncSession, test_calculator: TaxCalculator):
         """Test calculation with only W-2 income."""
         # Set up employer and paycheck
         employer = Employer(name="Test Corp", ein="12-3456789", start_date=date(2030, 1, 1))
@@ -110,9 +108,7 @@ class TestCalculateTaxesFromDatabase:
         assert float(result.w2_pretax_deductions) == 500.0
         assert float(result.total_federal_withheld) == 600.0
 
-    async def test_cross_check_db_vs_manual(
-        self, async_db_session: AsyncSession, test_calculator: TaxCalculator
-    ):
+    async def test_cross_check_db_vs_manual(self, async_db_session: AsyncSession, test_calculator: TaxCalculator):
         """Cross-check DB aggregation vs direct calculator+FICA for parity."""
 
         employer = Employer(name="Parity Corp", ein="22-3334444", start_date=date(2024, 1, 1))
@@ -159,9 +155,7 @@ class TestCalculateTaxesFromDatabase:
         assert db_result.combined_liability == manual_combined
         assert db_result.refund_or_owed == manual_refund
 
-    async def test_calculate_with_pension(
-        self, async_db_session: AsyncSession, test_calculator: TaxCalculator
-    ):
+    async def test_calculate_with_pension(self, async_db_session: AsyncSession, test_calculator: TaxCalculator):
         """Test calculation with pension income."""
         pension = Retirement1099R(
             pay_date=date(2030, 1, 1),
@@ -194,9 +188,7 @@ class TestCalculateTaxesFromDatabase:
         async_db_session.add(employer)
         await async_db_session.commit()
 
-        paycheck = Paycheck(
-            employer_id=employer.id, pay_date=date(2030, 6, 15), gross_wages=Decimal(3000)
-        )
+        paycheck = Paycheck(employer_id=employer.id, pay_date=date(2030, 6, 15), gross_wages=Decimal(3000))
         async_db_session.add(paycheck)
 
         non_taxable_payment = NonTaxableIncome(
@@ -217,9 +209,7 @@ class TestCalculateTaxesFromDatabase:
         # Non-taxable income should be recorded but not taxable
         assert float(result.non_taxable_income) == 2000.0
 
-    async def test_calculate_with_children(
-        self, async_db_session: AsyncSession, test_calculator: TaxCalculator
-    ):
+    async def test_calculate_with_children(self, async_db_session: AsyncSession, test_calculator: TaxCalculator):
         """Test calculation with child tax credits."""
         employer = Employer(name="Family Test Corp", ein="98-7654321", start_date=date(2030, 1, 1))
         async_db_session.add(employer)
@@ -253,9 +243,7 @@ class TestCalculateTaxesFromDatabase:
         self, async_db_session: AsyncSession, test_calculator: TaxCalculator
     ):
         """Test calculation with itemized deductions."""
-        employer = Employer(
-            name="High Deduction Corp", ein="11-2233445", start_date=date(2030, 1, 1)
-        )
+        employer = Employer(name="High Deduction Corp", ein="11-2233445", start_date=date(2030, 1, 1))
         async_db_session.add(employer)
         await async_db_session.commit()
 
@@ -285,13 +273,9 @@ class TestCalculateTaxesFromDatabase:
         assert "Itemized" in result.deduction_type
         assert float(result.deduction_amount) == 25000.0
 
-    async def test_calculate_multiple_paychecks(
-        self, async_db_session: AsyncSession, test_calculator: TaxCalculator
-    ):
+    async def test_calculate_multiple_paychecks(self, async_db_session: AsyncSession, test_calculator: TaxCalculator):
         """Test calculation with multiple paychecks (YTD total)."""
-        employer = Employer(
-            name="Multi Paycheck Corp", ein="55-6677889", start_date=date(2030, 1, 1)
-        )
+        employer = Employer(name="Multi Paycheck Corp", ein="55-6677889", start_date=date(2030, 1, 1))
         async_db_session.add(employer)
         await async_db_session.commit()
 
@@ -323,9 +307,7 @@ class TestCalculateTaxesFromDatabase:
         assert float(result.w2_pretax_deductions) == 3000.0  # 6 x $500
         assert float(result.total_federal_withheld) == 3600.0  # 6 x $600
 
-    async def test_calculate_empty_database(
-        self, async_db_session: AsyncSession, test_calculator: TaxCalculator
-    ):
+    async def test_calculate_empty_database(self, async_db_session: AsyncSession, test_calculator: TaxCalculator):
         """Test calculation with no income records - returns zero tax."""
 
         result = await calculate_taxes_from_database(

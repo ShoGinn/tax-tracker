@@ -93,10 +93,7 @@ class TestOptimizeW4:
         )
 
         assert result_refund.target_total_withholding > result_zero.target_total_withholding
-        assert (
-            result_refund.target_total_withholding - result_zero.target_total_withholding
-            == Decimal(2000)
-        )
+        assert result_refund.target_total_withholding - result_zero.target_total_withholding == Decimal(2000)
 
     def test_with_children(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """Children should add Step 3 dependents amount."""
@@ -131,9 +128,7 @@ class TestOptimizeW4:
         assert rec.step4a_other_income == Decimal(25000)
         assert result.total_pension_income == Decimal(25000)
 
-    def test_multiple_jobs_distribution(
-        self, test_calculator: TaxCalculator, two_jobs: list
-    ) -> None:
+    def test_multiple_jobs_distribution(self, test_calculator: TaxCalculator, two_jobs: list) -> None:
         """Multiple jobs should distribute adjustments proportionally."""
         result = optimize_w4(
             tax_calculator=test_calculator,
@@ -200,9 +195,7 @@ class TestOptimizeW4:
         assert result.current_refund_or_owed < 0
         assert any("underpaying" in note.lower() for note in result.notes)
 
-    def test_perfect_withholding_notes(
-        self, test_calculator: TaxCalculator, single_job: list
-    ) -> None:
+    def test_perfect_withholding_notes(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """When withholding is close to perfect, note should say so."""
         # First calculate tax liability to know what perfect withholding is
         result_probe = optimize_w4(
@@ -230,9 +223,7 @@ class TestOptimizeW4:
 
         assert any("perfect" in note.lower() or "close" in note.lower() for note in result.notes)
 
-    def test_negative_adjustment_step4c(
-        self, test_calculator: TaxCalculator, single_job: list
-    ) -> None:
+    def test_negative_adjustment_step4c(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """When overpaying, Step 4c should be 0 (can't negative-withhold)."""
         result = optimize_w4(
             tax_calculator=test_calculator,
@@ -296,9 +287,7 @@ class TestW4OptimizationResultToDict:
         assert income["total_pension_income"] == 20000.0
         assert income["total_va_income"] == 3000.0
 
-    def test_to_dict_current_situation_status(
-        self, test_calculator: TaxCalculator, single_job: list
-    ) -> None:
+    def test_to_dict_current_situation_status(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """Current situation should show OVERPAYING/UNDERPAYING/PERFECT."""
         result = optimize_w4(
             tax_calculator=test_calculator,
@@ -314,9 +303,7 @@ class TestW4OptimizationResultToDict:
         d = result.to_dict()
         assert d["current_situation"]["status"] == "OVERPAYING"
 
-    def test_to_dict_recommendations_structure(
-        self, test_calculator: TaxCalculator, single_job: list
-    ) -> None:
+    def test_to_dict_recommendations_structure(self, test_calculator: TaxCalculator, single_job: list) -> None:
         """Each recommendation should have W-4 step structure."""
         result = optimize_w4(
             tax_calculator=test_calculator,

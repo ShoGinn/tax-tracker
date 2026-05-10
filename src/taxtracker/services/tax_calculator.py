@@ -126,9 +126,7 @@ class TaxCalculator:
         marginal_rate = active_bracket.rate
         return total_tax, marginal_rate, breakdown
 
-    def calculate_fica(
-        self, gross_wages: Decimal, filing_status: FilingStatus
-    ) -> dict[str, Decimal]:
+    def calculate_fica(self, gross_wages: Decimal, filing_status: FilingStatus) -> dict[str, Decimal]:
         """
         Calculate FICA taxes (Social Security and Medicare).
 
@@ -148,13 +146,9 @@ class TaxCalculator:
 
         # Additional Medicare (only on wages above threshold)
         threshold_key = filing_status.value
-        additional_medicare_threshold = self._fica_limits.additional_medicare.thresholds[
-            threshold_key
-        ]
+        additional_medicare_threshold = self._fica_limits.additional_medicare.thresholds[threshold_key]
         additional_medicare_taxable = max(Decimal(0), gross_wages - additional_medicare_threshold)
-        additional_medicare_tax = (
-            additional_medicare_taxable * self._fica_limits.additional_medicare.rate
-        )
+        additional_medicare_tax = additional_medicare_taxable * self._fica_limits.additional_medicare.rate
 
         total_fica = ss_tax + medicare_tax + additional_medicare_tax
 
@@ -200,9 +194,7 @@ class TaxCalculator:
             deduction_type = "Standard Deduction"
         else:
             if request.itemized_deduction_amount is None:
-                raise ValueError(
-                    "Must provide itemized_deduction_amount when not using standard deduction"
-                )
+                raise ValueError("Must provide itemized_deduction_amount when not using standard deduction")
             deduction = request.itemized_deduction_amount
             deduction_type = "Itemized Deduction"
 
@@ -222,9 +214,7 @@ class TaxCalculator:
 
         if child_credits > 0:
             # IRS phase-out: reduce by $50 per $1,000 (or fraction) of AGI over threshold
-            threshold = ctc.phase_out_threshold.get(
-                request.filing_status, ctc.phase_out_threshold[FilingStatus.SINGLE]
-            )
+            threshold = ctc.phase_out_threshold.get(request.filing_status, ctc.phase_out_threshold[FilingStatus.SINGLE])
             if agi > threshold:
                 excess = agi - threshold
                 # Ceiling division: round up to next $1,000
@@ -236,9 +226,7 @@ class TaxCalculator:
                 )
 
             if child_credits > 0:
-                notes.append(
-                    f"Child Tax Credit: ${child_credits:,.2f} for {request.num_children} children"
-                )
+                notes.append(f"Child Tax Credit: ${child_credits:,.2f} for {request.num_children} children")
 
         # Step 6: Calculate total tax liability (credits reduce tax)
         total_liability = max(Decimal(0), federal_tax - child_credits)
@@ -256,11 +244,7 @@ class TaxCalculator:
             )
 
         # Step 8: Calculate effective rate
-        effective_rate = (
-            (total_liability / request.gross_income) * 100
-            if request.gross_income > 0
-            else Decimal(0)
-        )
+        effective_rate = (total_liability / request.gross_income) * 100 if request.gross_income > 0 else Decimal(0)
 
         # Step 9: Total household income (including non-taxable VA)
         total_household = request.gross_income + request.non_taxable_income

@@ -99,9 +99,7 @@ class TestTaxBrackets2025:
         for i in range(7):
             if single[i].rate == Decimal("0.35"):
                 continue  # 35% bracket differs
-            assert mfs[i].threshold == single[i].threshold, (
-                f"MFS bracket {i} ({mfs[i].rate}) should match Single"
-            )
+            assert mfs[i].threshold == single[i].threshold, f"MFS bracket {i} ({mfs[i].rate}) should match Single"
 
     def test_mfs_35_threshold(self) -> None:
         # MFS 35% bracket is half of MFJ 35% ($751,600 / 2 = $375,800)
@@ -159,9 +157,7 @@ class TestTaxBrackets2025:
         assert self.data.child_tax_credit.refundable_portion == Decimal(1700)
 
     def test_ctc_phase_out_mfj(self) -> None:
-        assert self.data.child_tax_credit.phase_out_threshold["married_filing_jointly"] == Decimal(
-            400000
-        )
+        assert self.data.child_tax_credit.phase_out_threshold["married_filing_jointly"] == Decimal(400000)
 
     def test_ctc_phase_out_single(self) -> None:
         assert self.data.child_tax_credit.phase_out_threshold["single"] == Decimal(200000)
@@ -294,9 +290,7 @@ class TestFICALimits2025:
 
     def test_ss_max_tax_consistent(self) -> None:
         """max_employee_tax must equal wage_base_limit * employee_rate."""
-        computed = (
-            self.data.social_security.wage_base_limit * self.data.social_security.employee_rate
-        )
+        computed = self.data.social_security.wage_base_limit * self.data.social_security.employee_rate
         assert self.data.social_security.max_employee_tax == computed
 
     def test_medicare_employee_rate(self) -> None:
@@ -316,9 +310,7 @@ class TestFICALimits2025:
         assert self.data.additional_medicare.thresholds["married_filing_jointly"] == Decimal(250000)
 
     def test_additional_medicare_mfs_threshold(self) -> None:
-        assert self.data.additional_medicare.thresholds["married_filing_separately"] == Decimal(
-            125000
-        )
+        assert self.data.additional_medicare.thresholds["married_filing_separately"] == Decimal(125000)
 
 
 # ---------------------------------------------------------------------------
@@ -344,9 +336,7 @@ class TestFICALimits2026:
         assert self.data.social_security.max_employee_tax == expected
 
     def test_ss_max_tax_consistent(self) -> None:
-        computed = (
-            self.data.social_security.wage_base_limit * self.data.social_security.employee_rate
-        )
+        computed = self.data.social_security.wage_base_limit * self.data.social_security.employee_rate
         assert self.data.social_security.max_employee_tax == computed
 
     def test_medicare_rate_unchanged(self) -> None:

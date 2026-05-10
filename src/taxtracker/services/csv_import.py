@@ -102,9 +102,7 @@ async def import_paychecks_csv(
             elif "employer_name" in mapped_data and mapped_data["employer_name"].strip():
                 # Find or create employer by name
                 employer_name = mapped_data["employer_name"].strip()
-                result_query = await db.execute(
-                    select(Employer).filter(Employer.name == employer_name)
-                )
+                result_query = await db.execute(select(Employer).filter(Employer.name == employer_name))
                 employer = result_query.scalar_one_or_none()
                 if not employer:
                     # Create employer with start date from first paycheck
@@ -118,14 +116,10 @@ async def import_paychecks_csv(
                     )
                 employer_id = employer.id
             else:
-                raise ValueError(
-                    f"Must provide either employer_id or employer_name. Got: {mapped_data}"
-                )
+                raise ValueError(f"Must provide either employer_id or employer_name. Got: {mapped_data}")
 
             # Remove employer_name/id from data before passing to PaycheckCreate
-            paycheck_data = {
-                k: v for k, v in mapped_data.items() if k not in ("employer_name", "employer_id")
-            }
+            paycheck_data = {k: v for k, v in mapped_data.items() if k not in ("employer_name", "employer_id")}
             paycheck_data["employer_id"] = employer_id
 
             # Let Pydantic handle all type conversions (date, Decimal, etc.)

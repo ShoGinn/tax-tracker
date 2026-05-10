@@ -32,10 +32,7 @@ from typing import Any
 
 import click
 
-PSLMODELS_URL = (
-    "https://raw.githubusercontent.com/PSLmodels/Tax-Calculator"
-    "/master/taxcalc/policy_current_law.json"
-)
+PSLMODELS_URL = "https://raw.githubusercontent.com/PSLmodels/Tax-Calculator/master/taxcalc/policy_current_law.json"
 
 # Project paths (relative to this script's location)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -82,9 +79,7 @@ def fetch_pslmodels_data() -> dict[str, Any]:
     return data
 
 
-def _resolve_value_for_year(
-    entries: list[dict[str, Any]], year: int, mars: str | None = None
-) -> float | None:
+def _resolve_value_for_year(entries: list[dict[str, Any]], year: int, mars: str | None = None) -> float | None:
     """Resolve a PSLmodels parameter value for a specific year, handling forward-carry.
 
     PSLmodels uses year-forward-carry semantics: a value set in year Y applies to all
@@ -117,9 +112,7 @@ def _resolve_value_for_year(
     return best_value
 
 
-def extract_bracket_thresholds(
-    data: dict[str, Any], year: int
-) -> dict[str, list[dict[str, float | None]]]:
+def extract_bracket_thresholds(data: dict[str, Any], year: int) -> dict[str, list[dict[str, float | None]]]:
     """Extract tax bracket thresholds for all filing statuses.
 
     Returns:
@@ -336,10 +329,7 @@ def _print_brackets_checklist(year_data: dict[str, Any]) -> None:
         for b in brackets["married_filing_jointly"]:
             if b["threshold"] is not None:
                 pct = f"{b['rate'] * 100:.0f}%"
-                click.echo(
-                    f"  [ ] {pct} threshold: "
-                    f"{_format_currency(b['threshold'])} — check IRS Rev. Proc."
-                )
+                click.echo(f"  [ ] {pct} threshold: {_format_currency(b['threshold'])} — check IRS Rev. Proc.")
 
     click.echo("\n  Tax Rates:")
     for i, rate in enumerate(rates, 1):
@@ -498,8 +488,7 @@ def draft(year: int, dry_run: bool, force: bool) -> None:
         for path, label in [(brackets_path, "tax brackets"), (fica_path, "FICA limits")]:
             if path.exists() and not force:
                 raise click.ClickException(
-                    f"{label} file already exists: {path.relative_to(PROJECT_ROOT)}\n"
-                    "  Use --force to overwrite."
+                    f"{label} file already exists: {path.relative_to(PROJECT_ROOT)}\n  Use --force to overwrite."
                 )
 
         with brackets_path.open("w") as f:

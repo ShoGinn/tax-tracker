@@ -46,9 +46,7 @@ class TestEmployerService:
     async def test_get_employer(self, async_db_session: AsyncSession):
         """Test retrieving an employer by ID."""
         # Create employer first
-        employer_data = EmployerCreate(
-            name="Get Test", ein="11-1111111", start_date=date(2024, 1, 1)
-        )
+        employer_data = EmployerCreate(name="Get Test", ein="11-1111111", start_date=date(2024, 1, 1))
         created = await income_service.create_employer(async_db_session, employer_data)
 
         # Retrieve it
@@ -67,9 +65,7 @@ class TestEmployerService:
         """Test listing all employers."""
         # Create multiple employers
         for i in range(3):
-            employer_data = EmployerCreate(
-                name=f"Company {i}", ein=f"1{i}-1111111", start_date=date(2024, 1, i + 1)
-            )
+            employer_data = EmployerCreate(name=f"Company {i}", ein=f"1{i}-1111111", start_date=date(2024, 1, i + 1))
             await income_service.create_employer(async_db_session, employer_data)
 
         employers = await income_service.get_employers(async_db_session)
@@ -79,9 +75,7 @@ class TestEmployerService:
     async def test_update_employer(self, async_db_session: AsyncSession):
         """Test updating an employer."""
         # Create employer
-        employer_data = EmployerCreate(
-            name="Update Test", ein="22-2222222", start_date=date(2024, 1, 1)
-        )
+        employer_data = EmployerCreate(name="Update Test", ein="22-2222222", start_date=date(2024, 1, 1))
         created = await income_service.create_employer(async_db_session, employer_data)
 
         # Update it
@@ -96,9 +90,7 @@ class TestEmployerService:
     async def test_delete_employer(self, async_db_session: AsyncSession):
         """Test deleting an employer."""
         # Create employer
-        employer_data = EmployerCreate(
-            name="Delete Test", ein="33-3333333", start_date=date(2024, 1, 1)
-        )
+        employer_data = EmployerCreate(name="Delete Test", ein="33-3333333", start_date=date(2024, 1, 1))
         created = await income_service.create_employer(async_db_session, employer_data)
 
         # Delete it
@@ -365,9 +357,7 @@ class TestRetirement1099RService:
         )
 
         update_data = Retirement1099RUpdate(gross_amount=Decimal(5500), notes="Updated")
-        updated = await income_service.update_retirement_1099r(
-            async_db_session, created.id, update_data
-        )
+        updated = await income_service.update_retirement_1099r(async_db_session, created.id, update_data)
 
         assert updated is not None
         assert updated.gross_amount == Decimal(5500)
@@ -452,9 +442,7 @@ class TestNonTaxableIncomeService:
         )
 
         update_data = NonTaxableIncomeUpdate(amount=Decimal(3200), source_type="SSA Disability")
-        updated = await income_service.update_non_taxable_payment(
-            async_db_session, created.id, update_data
-        )
+        updated = await income_service.update_non_taxable_payment(async_db_session, created.id, update_data)
 
         assert updated is not None
         assert updated.amount == Decimal(3200)

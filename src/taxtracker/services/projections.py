@@ -119,10 +119,7 @@ def project_year(
         ProjectionError: If tax_calculator year doesn't match projection year
     """
     if tax_calculator.tax_year != year:
-        msg = (
-            f"Tax calculator year ({tax_calculator.tax_year}) "
-            f"does not match projection year ({year})"
-        )
+        msg = f"Tax calculator year ({tax_calculator.tax_year}) does not match projection year ({year})"
         raise ProjectionError(msg)
 
     # Calculate taxable amounts
@@ -138,9 +135,7 @@ def project_year(
         pension_gross_income=pension_taxable,
         num_children=num_children,
         use_standard_deduction=use_standard_deduction,
-        itemized_deduction_amount=Decimal(str(itemized_deductions))
-        if not use_standard_deduction
-        else None,
+        itemized_deduction_amount=Decimal(str(itemized_deductions)) if not use_standard_deduction else None,
     )
 
     tax_result = tax_calculator.calculate_taxes(tax_request)
@@ -202,17 +197,11 @@ def compare_years(projections: list[YearProjection]) -> dict[str, Any]:
 
         income_change = curr.total_taxable_income - prev.total_taxable_income
         income_change_pct = (
-            (income_change / prev.total_taxable_income * 100)
-            if prev.total_taxable_income > 0
-            else Decimal(0)
+            (income_change / prev.total_taxable_income * 100) if prev.total_taxable_income > 0 else Decimal(0)
         )
 
         tax_change = curr.total_tax_liability - prev.total_tax_liability
-        tax_change_pct = (
-            (tax_change / prev.total_tax_liability * 100)
-            if prev.total_tax_liability > 0
-            else Decimal(0)
-        )
+        tax_change_pct = (tax_change / prev.total_tax_liability * 100) if prev.total_tax_liability > 0 else Decimal(0)
 
         rate_change = curr.effective_rate - prev.effective_rate
 

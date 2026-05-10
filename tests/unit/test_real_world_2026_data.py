@@ -169,9 +169,7 @@ def test_high_earner_fica_cap(mock_tax_brackets_2026, mock_fica_limits_2026):
     """
     calc = TaxCalculator(2026, mock_tax_brackets_2026, mock_fica_limits_2026)
 
-    request = TaxCalculationRequest(
-        w2_gross_income=Decimal(250000), filing_status=FilingStatus.SINGLE, tax_year=2026
-    )
+    request = TaxCalculationRequest(w2_gross_income=Decimal(250000), filing_status=FilingStatus.SINGLE, tax_year=2026)
 
     response = calc.calculate_taxes(request)
 

@@ -16,9 +16,7 @@ PAY_PERIODS: dict[str, int] = {
 }
 
 
-def _calculate_progressive_tax(
-    taxable_income: Decimal, brackets: TaxBrackets, filing_status: FilingStatus
-) -> Decimal:
+def _calculate_progressive_tax(taxable_income: Decimal, brackets: TaxBrackets, filing_status: FilingStatus) -> Decimal:
     """Calculate progressive tax using TaxBracket models directly."""
     bracket_list = brackets.tax_brackets[filing_status]
     previous_threshold = Decimal(0)
@@ -29,10 +27,7 @@ def _calculate_progressive_tax(
         if remaining <= 0:
             break
 
-        if bracket.threshold is not None:
-            bracket_size = bracket.threshold - previous_threshold
-        else:
-            bracket_size = remaining
+        bracket_size = bracket.threshold - previous_threshold if bracket.threshold is not None else remaining
         taxable_in_bracket = min(remaining, bracket_size)
         total_tax += taxable_in_bracket * bracket.rate
         remaining -= taxable_in_bracket

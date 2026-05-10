@@ -45,9 +45,7 @@ async def get_employers(db: AsyncSession, skip: int = 0, limit: int = 100) -> li
     return list(result.scalars().all())
 
 
-async def update_employer(
-    db: AsyncSession, employer_id: int, employer_update: EmployerUpdate
-) -> Employer | None:
+async def update_employer(db: AsyncSession, employer_id: int, employer_update: EmployerUpdate) -> Employer | None:
     """Update an employer."""
     db_employer = await get_employer(db, employer_id)
     if not db_employer:
@@ -83,9 +81,7 @@ async def create_paycheck(db: AsyncSession, paycheck: PaycheckCreate) -> Paychec
 
     # Eagerly load employer relationship to avoid lazy loading issues in async
     result = await db.execute(
-        select(Paycheck)
-        .filter(Paycheck.id == db_paycheck.id)
-        .options(selectinload(Paycheck.employer))
+        select(Paycheck).filter(Paycheck.id == db_paycheck.id).options(selectinload(Paycheck.employer))
     )
     return result.scalar_one()
 
@@ -121,9 +117,7 @@ async def get_paychecks(
     return list(result.scalars().all())
 
 
-async def update_paycheck(
-    db: AsyncSession, paycheck_id: int, paycheck_update: PaycheckUpdate
-) -> Paycheck | None:
+async def update_paycheck(db: AsyncSession, paycheck_id: int, paycheck_update: PaycheckUpdate) -> Paycheck | None:
     """Update a paycheck."""
     db_paycheck = await get_paycheck(db, paycheck_id)
     if not db_paycheck:
@@ -138,9 +132,7 @@ async def update_paycheck(
 
     # Re-load with employer relationship after refresh
     result = await db.execute(
-        select(Paycheck)
-        .filter(Paycheck.id == db_paycheck.id)
-        .options(selectinload(Paycheck.employer))
+        select(Paycheck).filter(Paycheck.id == db_paycheck.id).options(selectinload(Paycheck.employer))
     )
     return result.scalar_one()
 
@@ -157,9 +149,7 @@ async def delete_paycheck(db: AsyncSession, paycheck_id: int) -> bool:
 
 
 # Pension Payment CRUD
-async def create_retirement_1099r(
-    db: AsyncSession, payment: Retirement1099RCreate
-) -> Retirement1099R:
+async def create_retirement_1099r(db: AsyncSession, payment: Retirement1099RCreate) -> Retirement1099R:
     """Create a new pension payment."""
     db_payment = Retirement1099R(**payment.model_dump())
     db.add(db_payment)
@@ -219,9 +209,7 @@ async def delete_retirement_1099r(db: AsyncSession, payment_id: int) -> bool:
 
 
 # Non-Taxable Payment CRUD
-async def create_non_taxable_payment(
-    db: AsyncSession, payment: NonTaxableIncomeCreate
-) -> NonTaxableIncome:
+async def create_non_taxable_payment(db: AsyncSession, payment: NonTaxableIncomeCreate) -> NonTaxableIncome:
     """Create a new Non-Taxable payment."""
     db_payment = NonTaxableIncome(**payment.model_dump())
     db.add(db_payment)

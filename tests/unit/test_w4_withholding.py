@@ -93,9 +93,7 @@ class TestWithholdingCalculation:
         )
 
         # Halving gross should reduce withholding
-        assert (
-            with_checkbox["withholding_per_paycheck"] < without_checkbox["withholding_per_paycheck"]
-        )
+        assert with_checkbox["withholding_per_paycheck"] < without_checkbox["withholding_per_paycheck"]
         # Verify breakdown shows adjusted gross
         assert with_checkbox["breakdown"]["adjusted_gross_per_paycheck"] == 2000.0
 
@@ -213,10 +211,7 @@ class TestWithholdingCalculation:
         )
 
         # Extra withholding should increase by exactly $200
-        assert (
-            abs(with_extra["withholding_per_paycheck"] - base["withholding_per_paycheck"] - 200.0)
-            < 0.01
-        )
+        assert abs(with_extra["withholding_per_paycheck"] - base["withholding_per_paycheck"] - 200.0) < 0.01
 
     def test_extra_deductions_reduce_withholding(self) -> None:
         """Extra deductions (Step 4b) reduce withholding."""
