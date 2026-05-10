@@ -103,9 +103,9 @@ test-psl:
     uv run pytest tests/unit/test_pslmodels_cross_check.py -v
 
 # CI-style local gates.
-check: format-check lint typecheck test-fast
+check: format-check lint typecheck test-fast frontend-check
 
-ci: lint typecheck test
+ci: lint typecheck test frontend-check
 
 # Remove common local caches and coverage outputs.
 clean:

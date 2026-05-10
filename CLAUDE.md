@@ -13,7 +13,7 @@ This project is actively developed and currently versioned as v1.0.0.
 
 ## Project Direction
 
-- **Frontend UI** planned (tech stack TBD)
+- **Frontend UI** — React 19 + TypeScript + Vite SPA in `frontend/`, served by FastAPI from `frontend/dist` when built
 - **Multi-user** with data segregation (auth approach TBD)
 - **New tax years** added annually — this is the primary ongoing expansion
 - **State taxes are out of scope** — federal only
@@ -63,6 +63,7 @@ This project is actively developed and currently versioned as v1.0.0.
 - uv for dependency management
 - just for task recipes and local CI-style workflows
 - Ruff for linting/formatting, ty for type checking
+- React 19 + TypeScript + Vite (SPA in `frontend/`), pnpm, Biome
 
 ## Commands
 
@@ -83,8 +84,16 @@ Preferred workflow uses just recipes:
 - `just psl-snapshot years="2025 2026"` — refresh PSLmodels cross-validation snapshot
 - `just psl-draft year=YYYY` — generate draft tax data files from PSLmodels
 - `just test-psl` — run PSLmodels cross-validation tests
-- `just check` — local fast quality gate (format-check, lint, typecheck, test-fast)
-- `just ci` — local full CI gate (lint, typecheck, full tests)
+- `just check` — local fast quality gate (format-check, lint, typecheck, test-fast, frontend-check)
+- `just ci` — local full CI gate (lint, typecheck, full tests, frontend-check)
+
+Frontend-specific recipes (run from repo root via just):
+
+- `just frontend-install` — install pnpm dependencies
+- `just frontend-dev` — start Vite dev server (proxies API to `http://127.0.0.1:8000`)
+- `just frontend-build` — production build to `frontend/dist`
+- `just frontend-check` — lint + typecheck + build (Biome + tsc + vite)
+- `just frontend-lint` / `just frontend-lint-fix` / `just frontend-format` — Biome wrappers
 
 Direct uv equivalents remain valid when needed:
 
