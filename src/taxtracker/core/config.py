@@ -10,6 +10,8 @@ from typing import Final
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from taxtracker import __version__
+
 
 def _default_data_dir() -> Path:
     """Compute default data directory path."""
@@ -33,7 +35,7 @@ class Settings(BaseSettings):
 
     # Application
     app_name: str = "Tax Tracker"
-    app_version: str = "1.0.0"
+    app_version: str = __version__
     debug: bool = False
 
     # Database (use aiosqlite for async SQLite support)

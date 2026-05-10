@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from taxtracker import __version__
 from taxtracker.api.income import router as income_router
 from taxtracker.api.projections import router as projections_router
 from taxtracker.api.taxes import router as taxes_router
@@ -53,7 +54,7 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
         description="Personal federal tax calculation and W-4 optimization system. "
         "Tracks W-2 paychecks, 1099-R pension income, and non-taxable income (VA disability, etc.) "
         "to calculate federal tax liability, reconcile withholding, and optimize W-4 settings.",
-        version="1.0.0",
+        version=__version__,
         lifespan=app_lifespan,
         openapi_tags=[
             {
@@ -95,7 +96,7 @@ def create_app(skip_db_init: bool = False) -> FastAPI:
         """Root endpoint."""
         return {
             "name": "Tax Tracker API",
-            "version": "1.0.0",
+            "version": __version__,
             "status": "active",
             "docs": "/docs",
         }

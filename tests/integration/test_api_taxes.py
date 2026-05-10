@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from taxtracker import __version__
 from taxtracker.core.config import settings
 
 if TYPE_CHECKING:
@@ -180,7 +181,7 @@ class TestTaxesAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == "Tax Tracker API"
-        assert data["version"] == "1.0.0"
+        assert data["version"] == __version__
 
     def test_health_endpoint(self, client: TestClient):
         """Test health check endpoint."""
