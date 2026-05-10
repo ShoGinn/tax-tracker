@@ -31,7 +31,7 @@ router = APIRouter(prefix="/taxes", tags=["Taxes"])
 
 # Reusable path parameter types for year-scoped endpoints
 _TaxYearPath = Annotated[int, Path(description="Tax year (e.g. 2025, 2026)", ge=2020, le=2030)]
-_UploadYearPath = Annotated[int, Path(description="Tax year this data applies to (e.g. 2025, 2026)", ge=2020, le=2030)]
+_UploadYearPath = Annotated[int, Path(description="Tax year this data applies to (e.g. 2025, 2026)", ge=2020)]
 
 
 @router.post(
