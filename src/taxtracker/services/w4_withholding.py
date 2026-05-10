@@ -1,5 +1,6 @@
 """W-4 Withholding Calculator - Simulates federal withholding based on W-4 settings."""
 
+import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -50,7 +51,7 @@ def calculate_withholding_per_paycheck(
     other_income_annual: Decimal,
     deductions_annual: Decimal,
     extra_withholding: Decimal,
-    year: int = 2024,
+    year: int | None = None,
 ) -> dict[str, Any]:
     """
     Calculate federal withholding per paycheck based on W-4 settings.
@@ -71,7 +72,8 @@ def calculate_withholding_per_paycheck(
     Returns:
         Dictionary with withholding amount and breakdown
     """
-    tax_brackets_model = load_tax_brackets_model(year)
+    tax_year = year if year is not None else datetime.date.today().year
+    tax_brackets_model = load_tax_brackets_model(tax_year)
 
     if pay_frequency not in PAY_PERIODS:
         raise ValueError(f"Invalid pay_frequency: {pay_frequency}")
@@ -141,7 +143,7 @@ def estimate_annual_withholding_from_w4(
     w4_step4a_other_income: Decimal,
     w4_step4b_deductions: Decimal,
     w4_step4c_extra: Decimal,
-    year: int = 2024,
+    year: int | None = None,
 ) -> Decimal:
     """
     Estimate annual federal withholding from W-4 settings.

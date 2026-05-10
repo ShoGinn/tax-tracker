@@ -1,5 +1,6 @@
 """Tax data models for validation and type safety."""
 
+import datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -8,6 +9,9 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+_CURRENT_YEAR = datetime.date.today().year
 
 
 class FilingStatus(StrEnum):
@@ -241,7 +245,7 @@ class TaxCalculationRequest(BaseModel):
     non_taxable_income: Decimal = Field(
         default=Decimal(0), ge=0, description="Non-taxable income (non-taxable benefit, SSA, gifts, etc.)"
     )
-    tax_year: int = Field(default=2025, ge=2024, le=2030, description="Tax year for calculation")
+    tax_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Tax year for calculation")
 
     @property
     def gross_income(self) -> Decimal:
