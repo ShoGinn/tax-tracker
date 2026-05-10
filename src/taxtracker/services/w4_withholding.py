@@ -72,7 +72,7 @@ def calculate_withholding_per_paycheck(
     Returns:
         Dictionary with withholding amount and breakdown
     """
-    tax_year = year if year is not None else datetime.date.today().year
+    tax_year = year if year is not None else datetime.datetime.now(datetime.UTC).year
     tax_brackets_model = load_tax_brackets_model(tax_year)
 
     if pay_frequency not in PAY_PERIODS:
