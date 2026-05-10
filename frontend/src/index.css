@@ -718,6 +718,45 @@ a {
   font-style: italic;
 }
 
+.midyear-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.8rem;
+}
+
+.midyear-employer-card {
+  margin-top: 0;
+  border-top: 0;
+  border: 1px solid rgba(20, 23, 31, 0.08);
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+
+.midyear-employer-title {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  color: var(--ink-900);
+}
+
+.midyear-override-section {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.midyear-override-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .midyear-override-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ============================================================
    Projections
    ============================================================ */

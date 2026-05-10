@@ -211,13 +211,68 @@ export interface W4OptimizeResponse {
   filing_status: string;
   total_w2_income: DecimalString;
   total_pension_income: DecimalString;
+  total_va_income: DecimalString;
+  total_taxable_income: DecimalString;
   estimated_tax_liability: DecimalString;
   target_refund: DecimalString;
   target_total_withholding: DecimalString;
   current_total_withholding: DecimalString;
+  current_refund_or_owed: DecimalString;
   adjustment_needed: DecimalString;
   w4_recommendations: W4Recommendation[];
   notes: string[];
+}
+
+export interface EmployerRemainingOverride {
+  employer_id: number;
+  expected_remaining_gross_per_paycheck: DecimalString;
+}
+
+export interface MidYearDBW4OptimizeRequest {
+  tax_year: number;
+  filing_status: FilingStatus;
+  as_of_date?: string;
+  remaining_pay_periods: number;
+  num_children?: number;
+  target_refund?: DecimalString;
+  use_standard_deduction?: boolean;
+  itemized_deductions?: DecimalString;
+  expected_remaining_pension_taxable?: DecimalString;
+  employer_overrides?: EmployerRemainingOverride[];
+}
+
+export interface MidYearEmployerSummary {
+  employer_id: number;
+  employer_name: string;
+  paychecks_recorded: number;
+  ytd_gross: DecimalString;
+  ytd_pretax_deductions: DecimalString;
+  ytd_federal_withholding: DecimalString;
+  projected_remaining_gross: DecimalString;
+  projected_annual_gross: DecimalString;
+}
+
+export interface MidYearYTDSummary {
+  tax_year: number;
+  as_of_date: string | null;
+  remaining_pay_periods: number;
+  employers: MidYearEmployerSummary[];
+  ytd_pension_taxable: DecimalString;
+  ytd_pension_federal_withholding: DecimalString;
+  ytd_non_taxable_income: DecimalString;
+  ytd_total_federal_withholding: DecimalString;
+}
+
+export interface MidYearProjectionSummary {
+  projected_remaining_pension_taxable: DecimalString;
+  projected_full_year_pension_taxable: DecimalString;
+  projected_full_year_non_taxable_income: DecimalString;
+}
+
+export interface MidYearW4OptimizeResponse extends W4OptimizeResponse {
+  ytd_summary: MidYearYTDSummary;
+  projection_summary: MidYearProjectionSummary;
+  assumptions: string[];
 }
 
 export interface WithholdingCalcRequest {
