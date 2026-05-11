@@ -243,6 +243,12 @@ export interface MidYearDBW4OptimizeRequest {
   employer_overrides?: EmployerRemainingOverride[];
 }
 
+export interface MidYearPeriodSuggestionRequest {
+  tax_year: number;
+  as_of_date?: string;
+  w2_pay_frequency: "weekly" | "biweekly" | "semimonthly" | "monthly";
+}
+
 export interface MidYearEmployerSummary {
   employer_id: number;
   employer_name: string;
@@ -277,6 +283,19 @@ export interface MidYearProjectionSummary {
   projected_annual_w2_withholding: DecimalString;
   projected_annual_pension_withholding: DecimalString;
   projected_annual_total_withholding: DecimalString;
+}
+
+export interface MidYearPeriodSuggestionResponse {
+  tax_year: number;
+  as_of_date: string;
+  w2_pay_frequency: "weekly" | "biweekly" | "semimonthly" | "monthly";
+  remaining_pay_periods: number;
+  remaining_pension_periods: number;
+  remaining_non_taxable_periods: number;
+  monthly_baseline_periods: number;
+  current_month_has_pension_entry: boolean;
+  current_month_has_non_taxable_entry: boolean;
+  notes: string[];
 }
 
 export interface MidYearW4OptimizeResponse extends W4OptimizeResponse {

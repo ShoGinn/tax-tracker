@@ -7,6 +7,8 @@ import type {
   EmployerResponse,
   FilingStatus,
   MidYearDBW4OptimizeRequest,
+  MidYearPeriodSuggestionRequest,
+  MidYearPeriodSuggestionResponse,
   MidYearW4OptimizeResponse,
   NonTaxableIncomeCreate,
   NonTaxableIncomeResponse,
@@ -154,6 +156,8 @@ export const apiClient = {
 
   // W-4
   optimizeW4: (data: W4OptimizeRequest) => post<W4OptimizeResponse>("/w4/optimize", data),
+  suggestMidyearPeriods: (data: MidYearPeriodSuggestionRequest) =>
+    post<MidYearPeriodSuggestionResponse>("/w4/suggest-periods", data),
   optimizeMidyearW4: (data: MidYearDBW4OptimizeRequest) =>
     post<MidYearW4OptimizeResponse>("/w4/optimize-midyear-from-db", data),
   calculateWithholding: (data: WithholdingCalcRequest) =>

@@ -315,6 +315,44 @@ class TestW4APIOptimize:
         assert data["ytd_summary"]["remaining_non_taxable_periods"] == 4
         assert Decimal(data["projection_summary"]["projected_remaining_pension_taxable"]) == Decimal(5000)
 
+    async def test_suggest_midyear_periods(self, client: TestClient, async_db_session):
+        """Backend period suggestions should match the frontend heuristic that was previously inline."""
+        async_db_session.add_all(
+            [
+                Retirement1099R(
+                    pay_date=date(2026, 5, 1),
+                    gross_amount=Decimal(1000),
+                    federal_withholding=Decimal(100),
+                ),
+                NonTaxableIncome(
+                    pay_date=date(2026, 5, 3),
+                    amount=Decimal(500),
+                    source_type="Non-taxable benefit",
+                ),
+            ]
+        )
+        await async_db_session.commit()
+
+        response = client.post(
+            "/w4/suggest-periods",
+            json={
+                "tax_year": 2026,
+                "as_of_date": "2026-05-10",
+                "w2_pay_frequency": "semimonthly",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tax_year"] == 2026
+        assert data["as_of_date"] == "2026-05-10"
+        assert data["remaining_pay_periods"] == 16
+        assert data["monthly_baseline_periods"] == 8
+        assert data["remaining_pension_periods"] == 7
+        assert data["remaining_non_taxable_periods"] == 7
+        assert data["current_month_has_pension_entry"] is True
+        assert data["current_month_has_non_taxable_entry"] is True
+
 
 @pytest.mark.integration
 class TestW4APIWithholding:

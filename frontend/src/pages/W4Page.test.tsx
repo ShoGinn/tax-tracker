@@ -9,12 +9,13 @@ vi.mock("../lib/api/client", () => ({
   apiClient: {
     optimizeW4: vi.fn(),
     optimizeMidyearW4: vi.fn(),
+    suggestMidyearPeriods: vi.fn(),
     calculateWithholding: vi.fn(),
     listEmployers: vi.fn(),
-    listPensions: vi.fn(),
-    listNonTaxableIncome: vi.fn(),
   },
 }));
+
+const currentYear = new Date().getFullYear();
 
 const renderWithQueryClient = () => {
   const queryClient = new QueryClient({
@@ -36,7 +37,7 @@ const renderWithQueryClient = () => {
 };
 
 const midYearResponse = {
-  year: 2026,
+  year: currentYear,
   filing_status: "single",
   total_w2_income: "40000.00",
   total_pension_income: "0.00",
@@ -68,8 +69,8 @@ const midYearResponse = {
   ],
   notes: [],
   ytd_summary: {
-    tax_year: 2026,
-    as_of_date: "2026-05-01",
+    tax_year: currentYear,
+    as_of_date: `${currentYear}-05-01`,
     remaining_pay_periods: 10,
     remaining_w2_pay_periods: 10,
     remaining_pension_periods: 5,
@@ -104,6 +105,19 @@ const midYearResponse = {
   assumptions: ["Used YTD average gross for remaining periods."],
 };
 
+const suggestionResponse = {
+  tax_year: currentYear,
+  as_of_date: `${currentYear}-05-10`,
+  w2_pay_frequency: "semimonthly" as const,
+  remaining_pay_periods: 16,
+  remaining_pension_periods: 7,
+  remaining_non_taxable_periods: 7,
+  monthly_baseline_periods: 8,
+  current_month_has_pension_entry: true,
+  current_month_has_non_taxable_entry: true,
+  notes: ["Backend suggestion response"],
+};
+
 describe("W4Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -117,8 +131,7 @@ describe("W4Page", () => {
         notes: null,
       },
     ]);
-    vi.mocked(apiClient.listPensions).mockResolvedValue([]);
-    vi.mocked(apiClient.listNonTaxableIncome).mockResolvedValue([]);
+    vi.mocked(apiClient.suggestMidyearPeriods).mockResolvedValue(suggestionResponse);
     vi.mocked(apiClient.optimizeMidyearW4).mockResolvedValue(midYearResponse);
   });
 
@@ -126,6 +139,10 @@ describe("W4Page", () => {
     renderWithQueryClient();
 
     fireEvent.click(screen.getByRole("button", { name: "Mid-Year Optimizer" }));
+
+    await waitFor(() => {
+      expect(apiClient.suggestMidyearPeriods).toHaveBeenCalled();
+    });
 
     const submitButton = screen.getByRole("button", {
       name: "Optimize Mid-Year W-4",
@@ -165,51 +182,9 @@ describe("W4Page", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Mid-Year Optimizer" }));
 
-    fireEvent.change(screen.getByLabelText("As-of date (optional)"), {
-      target: { value: "2026-05-10" },
-    });
-    fireEvent.change(screen.getByLabelText("W-2 pay frequency"), {
-      target: { value: "semimonthly" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Auto-suggest" }));
-
     await waitFor(() => {
-      expect(screen.getByLabelText("Remaining W-2 pay periods")).toHaveValue(16);
-      expect(screen.getByLabelText("Remaining pension periods (monthly typical)")).toHaveValue(8);
-      expect(screen.getByLabelText("Remaining non-taxable periods (monthly typical)")).toHaveValue(8);
+      expect(screen.getByRole("button", { name: "Auto-suggest" })).toBeEnabled();
     });
-  });
-
-  it("reduces monthly suggestions when current month already has pension and non-taxable entries", async () => {
-    vi.mocked(apiClient.listPensions).mockResolvedValue([
-      {
-        id: 11,
-        pay_date: "2026-05-01T00:00:00Z",
-        gross_amount: "1000.00",
-        pretax_deductions: "0.00",
-        posttax_deductions: "0.00",
-        taxable_amount: "1000.00",
-        federal_withholding: "100.00",
-        net_amount: "900.00",
-        source_description: "Monthly Pension",
-        notes: null,
-        created_at: "2026-05-01T00:00:00",
-        updated_at: "2026-05-01T00:00:00",
-      },
-    ]);
-    vi.mocked(apiClient.listNonTaxableIncome).mockResolvedValue([
-      {
-        id: 21,
-        pay_date: "2026-05-03",
-        amount: "500.00",
-        source_type: "Non-taxable benefit",
-        notes: null,
-      },
-    ]);
-
-    renderWithQueryClient();
-
-    fireEvent.click(screen.getByRole("button", { name: "Mid-Year Optimizer" }));
 
     fireEvent.change(screen.getByLabelText("As-of date (optional)"), {
       target: { value: "2026-05-10" },

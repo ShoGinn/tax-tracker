@@ -12,9 +12,12 @@ from taxtracker.core.exceptions import W4CalculationError
 from taxtracker.models.api_requests import (  # noqa: TC001
     AnnualWithholdingRequest,
     MidYearDBW4OptimizeRequest,
+    MidYearPeriodSuggestionRequest,
     W4OptimizeRequest,
     WithholdingCalcRequest,
 )
+from taxtracker.models.schemas import MidYearPeriodSuggestionResponse
+from taxtracker.services.midyear_periods import suggest_midyear_periods
 from taxtracker.services.tax_calculator import TaxCalculator
 from taxtracker.services.w4_calculator import W4OptimizationResult, optimize_midyear_from_db, optimize_w4
 from taxtracker.services.w4_withholding import (
@@ -156,6 +159,32 @@ async def optimize_midyear_w4_from_db(
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Mid-year W-4 optimization failed: {e!s}") from e
+
+
+@router.post(
+    "/suggest-periods",
+    summary="Suggest remaining periods for mid-year W-4 optimization",
+    response_description="Suggested remaining W-2, pension, and non-taxable periods for the selected as-of date",
+    response_model=MidYearPeriodSuggestionResponse,
+    responses={400: {"description": "Invalid input or calculation error"}},
+)
+async def suggest_periods(
+    request: MidYearPeriodSuggestionRequest,
+    *,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> MidYearPeriodSuggestionResponse:
+    """Suggest remaining periods for mid-year W-4 optimization using backend DB data."""
+    try:
+        return await suggest_midyear_periods(
+            db,
+            tax_year=request.tax_year,
+            as_of_date=request.as_of_date,
+            w2_pay_frequency=request.w2_pay_frequency,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Period suggestion failed: {e!s}") from e
 
 
 @router.post(
