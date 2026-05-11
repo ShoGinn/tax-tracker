@@ -320,3 +320,18 @@ class YTDSummary(BaseModel):
     paycheck_count: int
     retirement_1099r_count: int
     non_taxable_payment_count: int
+
+
+class MidYearPeriodSuggestionResponse(BaseModel):
+    """Remaining-period suggestions for mid-year W-4 optimization."""
+
+    tax_year: int
+    as_of_date: date
+    w2_pay_frequency: str
+    remaining_pay_periods: int
+    remaining_pension_periods: int
+    remaining_non_taxable_periods: int
+    monthly_baseline_periods: int
+    current_month_has_pension_entry: bool
+    current_month_has_non_taxable_entry: bool
+    notes: list[str]

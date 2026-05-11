@@ -55,7 +55,7 @@ The codebase is under active development and prioritizes correctness, maintainab
 ### W-4 Optimization And Projections
 
 - W-4 recommendation generation (steps 2, 3, 4a-4c)
-- Mid-year W-4 optimization from database YTD data with editable remaining-period projections per income cadence (W-2, pension, non-taxable)
+- Mid-year W-4 optimization from database YTD data with backend-backed remaining-period suggestions per income cadence (W-2, pension, non-taxable)
 - Per-paycheck withholding estimator (IRS Publication 15-T method)
 - Annual projections and year-over-year comparison
 
@@ -162,6 +162,7 @@ The service includes endpoints for:
 - Tax calculations from direct payload input
 - Database-backed reconciliation of withholding versus liability
 - W-4 optimization and withholding estimates
+- Backend-backed mid-year remaining-period suggestions via `POST /w4/suggest-periods`
 - Mid-year W-4 optimization from DB-backed YTD actuals via `POST /w4/optimize-midyear-from-db` with optional `as_of_date` cutoff and split remaining periods (`remaining_pay_periods`, optional `remaining_pension_periods`, optional `remaining_non_taxable_periods`)
 - Tax projections based on expected or historical income patterns
 

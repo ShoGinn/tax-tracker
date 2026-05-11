@@ -179,7 +179,8 @@ When working with tax data, always cite the specific IRS source document and cro
 
 ## Critical Rules
 
-- **Always run quality checks after code changes.** Prefer `just check` for fast validation and `just ci` for full validation.
+- **Always run quality checks after code changes.** At minimum run `just check` before finishing any change.
+- **For frontend changes, also run `just frontend-check`.** If the change touches tax math, W-4 logic, projections, or other high-risk calculations, prefer `just ci` before handing it off.
 - **Every logic component must have comprehensive tests.** This is tax/finance software — calculations must be verified against IRS data.
 - **Frontend changes require frontend tests when behavior changes.** Add/adjust Vitest + React Testing Library tests and run `just frontend-check`.
 - **Tests must verify correct behavior, not be adjusted to match incorrect code.** Do not create trivial tests or modify IRS-validated assertions to make failing tests pass. Fix the implementation. If unsure, ask for guidance.

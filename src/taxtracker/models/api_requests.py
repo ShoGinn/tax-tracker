@@ -2,6 +2,7 @@
 
 import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -92,6 +93,17 @@ class MidYearDBW4OptimizeRequest(BaseModel):
     employer_overrides: list[EmployerRemainingOverride] = Field(
         default_factory=list,
         description="Optional per-employer remaining gross overrides",
+    )
+
+
+class MidYearPeriodSuggestionRequest(BaseModel):
+    """Request for mid-year remaining-period suggestions."""
+
+    tax_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Tax year to inspect")
+    as_of_date: datetime.date | None = Field(default=None, description=_D.as_of_date)
+    w2_pay_frequency: Literal["weekly", "biweekly", "semimonthly", "monthly"] = Field(
+        default="biweekly",
+        description=_D.pay_frequency,
     )
 
 
