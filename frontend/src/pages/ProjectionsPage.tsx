@@ -1,18 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
 import type { CompareYearsRequest, FilingStatus, ProjectYearRequest, ProjectYearResponse } from "../lib/api/types";
+import { FILING_STATUSES } from "../lib/constants";
+import { useAppConfig } from "../lib/hooks";
 import { formatCurrency, parseDecimalString } from "../lib/money";
 
 const currentYear = new Date().getFullYear();
-
-const FILING_STATUSES: { value: FilingStatus; label: string }[] = [
-  { value: "single", label: "Single" },
-  { value: "married_filing_jointly", label: "Married Filing Jointly" },
-  { value: "married_filing_separately", label: "Married Filing Separately" },
-  { value: "head_of_household", label: "Head of Household" },
-];
 
 const YEARS = Array.from({ length: 4 }, (_, i) => currentYear - i + 1);
 
@@ -54,11 +49,11 @@ const ProjectionCard = ({ result, label }: { result: ProjectYearResponse; label?
       </div>
       <div className="result-row">
         <span>Effective rate</span>
-        <span>{(parseDecimalString(result.effective_rate) * 100).toFixed(2)}%</span>
+        <span>{parseDecimalString(result.effective_rate).toFixed(2)}%</span>
       </div>
       <div className="result-row">
         <span>Marginal rate</span>
-        <span>{(parseDecimalString(result.marginal_rate) * 100).toFixed(0)}%</span>
+        <span>{parseDecimalString(result.marginal_rate).toFixed(0)}%</span>
       </div>
     </div>
   </div>
@@ -69,9 +64,12 @@ const ProjectionCard = ({ result, label }: { result: ProjectYearResponse; label?
 // ---------------------------------------------------------------------------
 
 const ProjectYearTab = () => {
+  const { config, isLoading: configLoading } = useAppConfig();
+  const didInitialSync = useRef(false);
+
   const [fields, setFields] = useState<ProjectYearRequest>({
     projection_year: currentYear + 1,
-    filing_status: "single",
+    filing_status: config.filing_status,
     num_children: 0,
     w2_gross: "",
     w2_pretax_deductions: "0",
@@ -81,6 +79,14 @@ const ProjectYearTab = () => {
     use_standard_deduction: true,
     itemized_deduction_amount: "0",
   });
+
+  // Sync filing status from DB config once it loads (no-op if already cached at mount)
+  useEffect(() => {
+    if (!configLoading && !didInitialSync.current) {
+      didInitialSync.current = true;
+      setFields((prev) => ({ ...prev, filing_status: config.filing_status }));
+    }
+  }, [configLoading, config.filing_status]);
 
   const mutation = useMutation({
     mutationFn: (data: ProjectYearRequest) => apiClient.projectYear(data),
@@ -260,16 +266,27 @@ const ProjectYearTab = () => {
 // ---------------------------------------------------------------------------
 
 const CompareYearsTab = () => {
+  const { config, isLoading: configLoading } = useAppConfig();
+  const didInitialSync = useRef(false);
+
   const [fields, setFields] = useState<CompareYearsRequest>({
     base_year: currentYear,
     comparison_year: currentYear + 1,
-    filing_status: "single",
+    filing_status: config.filing_status,
     num_children: 0,
     base_w2_gross: "",
     comparison_w2_gross: "",
     base_pension: "0",
     comparison_pension: "0",
   });
+
+  // Sync filing status from DB config once it loads (no-op if already cached at mount)
+  useEffect(() => {
+    if (!configLoading && !didInitialSync.current) {
+      didInitialSync.current = true;
+      setFields((prev) => ({ ...prev, filing_status: config.filing_status }));
+    }
+  }, [configLoading, config.filing_status]);
 
   const mutation = useMutation({
     mutationFn: (data: CompareYearsRequest) => apiClient.compareYears(data),
@@ -442,16 +459,14 @@ const CompareYearsTab = () => {
                 <div className="result-row">
                   <span>Effective rate</span>
                   <span>
-                    {(cmp.effective_rate_change.from * 100).toFixed(2)}% →{" "}
-                    {(cmp.effective_rate_change.to * 100).toFixed(2)}%
+                    {cmp.effective_rate_change.from.toFixed(2)}% → {cmp.effective_rate_change.to.toFixed(2)}%
                   </span>
                 </div>
                 {cmp.marginal_bracket_change.moved_bracket && (
                   <div className="result-row result-highlight">
                     <span>Moved to new tax bracket</span>
                     <span>
-                      {(cmp.marginal_bracket_change.from * 100).toFixed(0)}% →{" "}
-                      {(cmp.marginal_bracket_change.to * 100).toFixed(0)}%
+                      {cmp.marginal_bracket_change.from.toFixed(0)}% → {cmp.marginal_bracket_change.to.toFixed(0)}%
                     </span>
                   </div>
                 )}

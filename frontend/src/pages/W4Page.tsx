@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
 import type {
@@ -12,16 +12,11 @@ import type {
   W4OptimizeResponse,
   WithholdingCalcRequest,
 } from "../lib/api/types";
+import { FILING_STATUSES } from "../lib/constants";
+import { useAppConfig } from "../lib/hooks";
 import { formatCurrency, parseDecimalString } from "../lib/money";
 
 const currentYear = new Date().getFullYear();
-
-const FILING_STATUSES: { value: FilingStatus; label: string }[] = [
-  { value: "single", label: "Single" },
-  { value: "married_filing_jointly", label: "Married Filing Jointly" },
-  { value: "married_filing_separately", label: "Married Filing Separately" },
-  { value: "head_of_household", label: "Head of Household" },
-];
 
 const PAY_FREQUENCIES = [
   { value: "weekly", label: "Weekly (52×/yr)" },
@@ -153,16 +148,31 @@ const W4ResultCard = ({ result }: { result: W4OptimizeResponse }) => (
 // ---------------------------------------------------------------------------
 
 const OptimizerTab = () => {
+  const { config, isLoading: configLoading } = useAppConfig();
+  const didInitialSync = useRef(false);
+
   const [fields, setFields] = useState<W4OptimizeRequest>({
     total_annual_w2_income: "",
     paychecks_per_year: 26,
-    filing_status: "single",
-    num_children: 0,
+    filing_status: config.filing_status,
+    num_children: config.num_children,
     other_annual_income: "0",
     itemized_deductions: "0",
     target_refund: "0",
     year: currentYear,
   });
+
+  // Sync profile fields from DB config once it loads (no-op if already cached at mount)
+  useEffect(() => {
+    if (!configLoading && !didInitialSync.current) {
+      didInitialSync.current = true;
+      setFields((prev) => ({
+        ...prev,
+        filing_status: config.filing_status,
+        num_children: config.num_children,
+      }));
+    }
+  }, [configLoading, config.filing_status, config.num_children]);
 
   const [payFreq, setPayFreq] = useState("biweekly");
 
@@ -562,20 +572,35 @@ const MidYearTab = () => {
     expected_remaining_gross_per_paycheck: "",
   });
 
+  const { config, isLoading: configLoading } = useAppConfig();
+  const didInitialSync = useRef(false);
+
   const [fields, setFields] = useState<MidYearDBW4OptimizeRequest>(() => {
     return {
       tax_year: currentYear,
-      filing_status: "single",
+      filing_status: config.filing_status,
       remaining_pay_periods: 1,
       remaining_pension_periods: 1,
       remaining_non_taxable_periods: 1,
-      num_children: 0,
+      num_children: config.num_children,
       target_refund: "0",
       use_standard_deduction: true,
       itemized_deductions: "0",
       employer_overrides: [],
     };
   });
+
+  // Sync profile fields from DB config once it loads (no-op if already cached at mount)
+  useEffect(() => {
+    if (!configLoading && !didInitialSync.current) {
+      didInitialSync.current = true;
+      setFields((prev) => ({
+        ...prev,
+        filing_status: config.filing_status,
+        num_children: config.num_children,
+      }));
+    }
+  }, [configLoading, config.filing_status, config.num_children]);
   const [asOfDate, setAsOfDate] = useState("");
   const [expectedRemainingPensionTaxable, setExpectedRemainingPensionTaxable] = useState("");
   const [w2PayFrequency, setW2PayFrequency] = useState<"weekly" | "biweekly" | "semimonthly" | "monthly">("biweekly");
@@ -923,10 +948,13 @@ const MidYearTab = () => {
 // ---------------------------------------------------------------------------
 
 const WithholdingTab = () => {
+  const { config, isLoading: configLoading } = useAppConfig();
+  const didInitialSync = useRef(false);
+
   const [fields, setFields] = useState<WithholdingCalcRequest>({
     gross_pay_per_paycheck: "",
     pay_frequency: "biweekly",
-    filing_status: "single",
+    filing_status: config.filing_status,
     multiple_jobs_checkbox: false,
     dependents_amount: "0",
     other_income_annual: "0",
@@ -934,6 +962,14 @@ const WithholdingTab = () => {
     extra_withholding: "0",
     year: currentYear,
   });
+
+  // Sync filing status from DB config once it loads (no-op if already cached at mount)
+  useEffect(() => {
+    if (!configLoading && !didInitialSync.current) {
+      didInitialSync.current = true;
+      setFields((prev) => ({ ...prev, filing_status: config.filing_status }));
+    }
+  }, [configLoading, config.filing_status]);
 
   const mutation = useMutation({
     mutationFn: (data: WithholdingCalcRequest) => apiClient.calculateWithholding(data),

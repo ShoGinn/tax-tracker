@@ -217,6 +217,28 @@ class Retirement1099R(Base):
         return f"<Retirement1099R(date={self.pay_date}, gross=${self.gross_amount}, taxable=${self.taxable_amount})>"
 
 
+class AppConfig(Base):
+    """Singleton application configuration for tax settings used across the whole app.
+
+    Always uses id=1. Stores filing status, dependent info, and deduction
+    preferences shared across dashboard projections, W-4, taxes pages.
+    """
+
+    __tablename__ = "app_config"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    filing_status: Mapped[str] = mapped_column(String(50), default="married_filing_jointly")
+    num_children: Mapped[int] = mapped_column(default=0)
+    use_standard_deduction: Mapped[bool] = mapped_column(default=True)
+    itemized_deduction_amount: Mapped[Decimal] = mapped_column(default=Decimal(0))
+    age_65_plus: Mapped[bool] = mapped_column(default=False)
+
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self) -> str:
+        return f"<AppConfig(filing={self.filing_status}, children={self.num_children})>"
+
+
 class NonTaxableIncome(Base):
     """Non-taxable income (non-taxable benefit, SSA disability, child support, gifts).
 

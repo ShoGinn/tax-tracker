@@ -388,3 +388,23 @@ export interface CompareYearsResponse {
     total_tax_change: number;
   };
 }
+
+// ---------------------------------------------------------------------------
+// App config
+// ---------------------------------------------------------------------------
+
+export interface AppConfigResponse {
+  filing_status: FilingStatus;
+  num_children: number;
+  use_standard_deduction: boolean;
+  itemized_deduction_amount: DecimalString;
+  age_65_plus: boolean;
+}
+
+export interface AppConfigUpdate {
+  filing_status?: FilingStatus;
+  num_children?: number;
+  use_standard_deduction?: boolean;
+  itemized_deduction_amount?: string;
+  age_65_plus?: boolean;
+}

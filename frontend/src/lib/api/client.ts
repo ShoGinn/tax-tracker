@@ -1,4 +1,6 @@
 import type {
+  AppConfigResponse,
+  AppConfigUpdate,
   AvailableYearsResponse,
   CompareYearsRequest,
   CompareYearsResponse,
@@ -113,6 +115,32 @@ const del = async <T>(path: string): Promise<T> => {
   return (await response.json()) as T;
 };
 
+const put = async <T>(path: string, body: unknown): Promise<T> => {
+  const origin = typeof window === "undefined" ? "http://127.0.0.1:8000" : window.location.origin;
+  const url = new URL(path, API_BASE_URL || origin);
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let detail = `Request failed with status ${response.status}`;
+    try {
+      const payload = (await response.json()) as { detail?: string };
+      if (payload.detail) {
+        detail = payload.detail;
+      }
+    } catch {
+      // Keep generic detail if response is not JSON.
+    }
+    throw new Error(detail);
+  }
+
+  return (await response.json()) as T;
+};
+
 export const apiClient = {
   // Tax data
   getAvailableYears: () => request<AvailableYearsResponse>("/taxes/tax-data/available-years"),
@@ -166,4 +194,8 @@ export const apiClient = {
   // Projections
   projectYear: (data: ProjectYearRequest) => post<ProjectYearResponse>("/projections/project-year", data),
   compareYears: (data: CompareYearsRequest) => post<CompareYearsResponse>("/projections/compare-years", data),
+
+  // App config
+  getConfig: () => request<AppConfigResponse>("/config"),
+  updateConfig: (data: AppConfigUpdate) => put<AppConfigResponse>("/config", data),
 };

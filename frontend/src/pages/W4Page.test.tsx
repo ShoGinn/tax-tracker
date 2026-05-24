@@ -12,6 +12,7 @@ vi.mock("../lib/api/client", () => ({
     suggestMidyearPeriods: vi.fn(),
     calculateWithholding: vi.fn(),
     listEmployers: vi.fn(),
+    getConfig: vi.fn(),
   },
 }));
 
@@ -121,6 +122,13 @@ const suggestionResponse = {
 describe("W4Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(apiClient.getConfig).mockResolvedValue({
+      filing_status: "married_filing_jointly",
+      num_children: 0,
+      use_standard_deduction: true,
+      itemized_deduction_amount: "0.00",
+      age_65_plus: false,
+    });
     vi.mocked(apiClient.listEmployers).mockResolvedValue([
       {
         id: 1,
@@ -154,7 +162,7 @@ describe("W4Page", () => {
     });
 
     const payload = vi.mocked(apiClient.optimizeMidyearW4).mock.calls[0]?.[0];
-    expect(payload?.filing_status).toBe("single");
+    expect(payload?.filing_status).toBe("married_filing_jointly");
     expect(payload?.remaining_pay_periods).toBeGreaterThan(0);
     expect(payload?.remaining_pension_periods).toBeGreaterThan(0);
     expect(payload?.remaining_non_taxable_periods).toBeGreaterThan(0);
