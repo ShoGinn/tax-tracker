@@ -7,6 +7,7 @@ const navigation = [
   { to: "/w4", label: "W-4" },
   { to: "/projections", label: "Projections" },
   { to: "/imports", label: "CSV Import" },
+  { to: "/settings", label: "Settings" },
   { to: "/auth", label: "Auth" },
 ];
 

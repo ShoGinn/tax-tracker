@@ -7,6 +7,8 @@ from typing import Annotated
 from dateutil import parser
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
+from taxtracker.models.tax_data import FilingStatus  # noqa: TC001
+
 
 def _validate_flexible_date(value: date | str | int | datetime) -> date:
     """Validate and parse date from various formats.
@@ -335,3 +337,26 @@ class MidYearPeriodSuggestionResponse(BaseModel):
     current_month_has_pension_entry: bool
     current_month_has_non_taxable_entry: bool
     notes: list[str]
+
+
+# App config schemas
+class AppConfigUpdate(BaseModel):
+    """Schema for updating the application-wide tax configuration."""
+
+    filing_status: FilingStatus | None = Field(default=None, description="Filing status for tax projection")
+    num_children: int | None = Field(default=None, ge=0, description="Number of qualifying children for CTC")
+    use_standard_deduction: bool | None = Field(default=None)
+    itemized_deduction_amount: CleanDecimal | None = Field(default=None, ge=0)
+    age_65_plus: bool | None = Field(default=None, description="Whether taxpayer is 65+ for extra standard deduction")
+
+
+class AppConfigResponse(BaseModel):
+    """Schema for application-wide tax configuration response."""
+
+    filing_status: FilingStatus
+    num_children: int
+    use_standard_deduction: bool
+    itemized_deduction_amount: Decimal
+    age_65_plus: bool
+
+    model_config = ConfigDict(from_attributes=True)

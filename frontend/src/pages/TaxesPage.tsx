@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
 import type {
@@ -8,16 +8,11 @@ import type {
   TaxCalculationResponse,
   TaxReconciliationResponse,
 } from "../lib/api/types";
+import { FILING_STATUSES } from "../lib/constants";
+import { useAppConfig } from "../lib/hooks";
 import { formatCurrency, parseDecimalString } from "../lib/money";
 
 const currentYear = new Date().getFullYear();
-
-const FILING_STATUSES: { value: FilingStatus; label: string }[] = [
-  { value: "single", label: "Single" },
-  { value: "married_filing_jointly", label: "Married Filing Jointly" },
-  { value: "married_filing_separately", label: "Married Filing Separately" },
-  { value: "head_of_household", label: "Head of Household" },
-];
 
 // ---------------------------------------------------------------------------
 // Shared result display
@@ -159,18 +154,35 @@ const ReconciliationCard = ({ result }: { result: TaxReconciliationResponse }) =
 // ---------------------------------------------------------------------------
 
 const DirectCalcTab = () => {
+  const { config, isLoading: configLoading } = useAppConfig();
+  const didInitialSync = useRef(false);
+
   const [fields, setFields] = useState<TaxCalculationRequest>({
     w2_gross_income: "",
     pension_gross_income: "0",
-    filing_status: "single",
-    age_65_plus: false,
-    num_children: 0,
-    use_standard_deduction: true,
+    filing_status: config.filing_status,
+    age_65_plus: config.age_65_plus,
+    num_children: config.num_children,
+    use_standard_deduction: config.use_standard_deduction,
     itemized_deduction_amount: null,
     retirement_pretax_deductions: "0",
     non_taxable_income: "0",
     tax_year: currentYear,
   });
+
+  // Sync profile fields from DB config once it loads (no-op if already cached at mount)
+  useEffect(() => {
+    if (!configLoading && !didInitialSync.current) {
+      didInitialSync.current = true;
+      setFields((prev) => ({
+        ...prev,
+        filing_status: config.filing_status,
+        age_65_plus: config.age_65_plus,
+        num_children: config.num_children,
+        use_standard_deduction: config.use_standard_deduction,
+      }));
+    }
+  }, [configLoading, config.filing_status, config.age_65_plus, config.num_children, config.use_standard_deduction]);
 
   const mutation = useMutation({
     mutationFn: (data: TaxCalculationRequest) => apiClient.calculateTaxes(data),

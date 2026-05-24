@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from taxtracker import __version__
+from taxtracker.api.config import router as config_router
 from taxtracker.api.income import router as income_router
 from taxtracker.api.projections import router as projections_router
 from taxtracker.api.taxes import router as taxes_router
@@ -62,8 +63,8 @@ def _mount_frontend(app: FastAPI) -> None:
         """Catch-all: serve the SPA for all unmatched routes."""
         # Frontend has top-level routes like /w4 and /taxes, while API routes
         # are nested under those prefixes (for example /w4/optimize).
-        api_like_nested_prefixes = ("income/", "taxes/", "w4/", "projections/")
-        reserved_root_paths = {"health", "docs", "redoc", "openapi.json"}
+        api_like_nested_prefixes = ("income/", "taxes/", "w4/", "projections/", "config/")
+        reserved_root_paths = {"health", "docs", "redoc", "openapi.json", "config"}
         if full_path in reserved_root_paths or full_path.startswith(api_like_nested_prefixes):
             raise HTTPException(status_code=404, detail="Not Found")
 
@@ -137,6 +138,7 @@ def create_app(skip_db_init: bool = False, *, serve_frontend: bool = True) -> Fa
         return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     # Include routers (no /api prefix!)
+    app.include_router(config_router)
     app.include_router(taxes_router)
     app.include_router(w4_router)
     app.include_router(income_router)
