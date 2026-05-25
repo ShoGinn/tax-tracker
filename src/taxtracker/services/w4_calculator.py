@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from taxtracker.core.config import settings
-from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
+from taxtracker.models.tax_data import FilingStatus, TaxBrackets, TaxCalculationRequest
 from taxtracker.services.income_service import get_non_taxable_payments, get_paychecks, get_retirement_1099rs
 
 if TYPE_CHECKING:
@@ -142,34 +142,139 @@ class W4OptimizationResult:
         }
 
 
+def _invert_tax_brackets(target_tax: Decimal, brackets: list[Any]) -> Decimal:
+    """Find the taxable income that produces exactly target_tax using bracket data.
+
+    Uses the precomputed cumulative_tax on each TaxBracket for an efficient lookup.
+    Returns 0 if target_tax <= 0.
+    """
+    if target_tax <= 0:
+        return Decimal(0)
+
+    prev_threshold = Decimal(0)
+    for bracket in brackets:
+        bracket_start_tax = bracket.cumulative_tax
+        # Upper bound of this bracket's tax contribution
+        if bracket.threshold is not None:
+            bracket_end_tax = bracket.cumulative_tax + (bracket.threshold - prev_threshold) * bracket.rate
+        else:
+            bracket_end_tax = Decimal("Infinity")
+
+        if target_tax <= bracket_end_tax:
+            # target_tax falls in this bracket
+            excess_tax = target_tax - bracket_start_tax
+            return prev_threshold + excess_tax / bracket.rate
+
+        if bracket.threshold is not None:
+            prev_threshold = bracket.threshold
+
+    # target_tax exceeds all defined brackets — return top threshold as floor
+    return prev_threshold
+
+
+def _compute_irs_formula_ppc(
+    gross_per_paycheck: Decimal,
+    periods: int,
+    step3_amount: Decimal,
+    step4a_amount: Decimal,
+    step4b_amount: Decimal,
+    std_ded: Decimal,
+    brackets: list[Any],
+) -> Decimal:
+    """Simulate the IRS Publication 15-T percentage method for one paycheck.
+
+    Returns the per-paycheck withholding amount produced by the IRS formula
+    given the provided W-4 step values.
+    """
+    annual_wages_adj = gross_per_paycheck * periods + step4a_amount
+    annual_taxable = max(Decimal(0), annual_wages_adj - std_ded - step4b_amount)
+
+    # Progressive tax using precomputed cumulative_tax
+    annual_tax = Decimal(0)
+    prev_threshold = Decimal(0)
+    for bracket in brackets:
+        if annual_taxable <= prev_threshold:
+            break
+        top = bracket.threshold if bracket.threshold is not None else annual_taxable
+        taxable_in_bracket = min(annual_taxable, top) - prev_threshold
+        if taxable_in_bracket <= 0:
+            break
+        annual_tax += taxable_in_bracket * bracket.rate
+        if bracket.threshold is not None:
+            prev_threshold = bracket.threshold
+
+    return max(Decimal(0), annual_tax - step3_amount) / periods
+
+
 def _compute_step4b_for_reduction(
-    job_adjustment: Decimal,
+    target_ppc: Decimal,
     job: dict[str, Any],
+    filing_status: FilingStatus,
+    step3_amount: Decimal,
+    step4a_amount: Decimal,
+    tax_brackets: TaxBrackets,
     marginal_rate: Decimal,
-    remaining_pay_periods: int | None,
 ) -> tuple[Decimal, str, str]:
-    """Compute Step 4b, Step 4c, and their explanations when withholding needs to decrease.
+    """Compute Step 4b and explanations when withholding needs to decrease.
+
+    Uses the IRS Publication 15-T formula directly: simulates the IRS annualization
+    method to find how much additional deduction (Step 4b) is needed to bring the
+    formula's per-paycheck withholding down to target_ppc.
+
+    Args:
+        target_ppc: Desired per-paycheck withholding from the IRS formula.
+        job: Job dict with annual_gross and paychecks_per_year.
+        filing_status: For standard deduction lookup.
+        step3_amount: Dependent credit entered on this W-4 (Step 3).
+        step4a_amount: Other income entered on this W-4 (Step 4a).
+        tax_brackets: Full TaxBrackets model for this tax year.
+        marginal_rate: Used only in the human-readable explanation.
 
     Returns:
         (step4b_deductions, step4b_explanation, step4c_explanation)
     """
-    divisor = remaining_pay_periods if remaining_pay_periods is not None else job["paychecks_per_year"]
-    annual_job_gap = abs(job_adjustment) * Decimal(divisor)
-    full_year_periods = Decimal(job["paychecks_per_year"])
-    remaining_periods_dec = Decimal(remaining_pay_periods) if remaining_pay_periods is not None else full_year_periods
-    if marginal_rate > 0:
-        # Scale step4b so that applying it to only the remaining periods achieves the full annual gap:
-        # step4b * marginal_rate * remaining / full_year ~= annual_gap
-        step4b_deductions = (annual_job_gap * full_year_periods / remaining_periods_dec) / marginal_rate
-    else:
+    periods = job["paychecks_per_year"]
+    gross_per_paycheck = Decimal(str(job["annual_gross"])) / Decimal(periods)
+    std_ded = tax_brackets.standard_deductions.amounts[filing_status]
+    brackets = tax_brackets.brackets_for_status(filing_status)
+
+    # IRS formula baseline: what the formula produces with step4b=0
+    baseline_ppc = _compute_irs_formula_ppc(
+        gross_per_paycheck, periods, step3_amount, step4a_amount, Decimal(0), std_ded, brackets
+    )
+
+    if target_ppc >= baseline_ppc:
+        # No reduction needed via step4b (IRS formula already at or below target)
         step4b_deductions = Decimal(0)
+        step4b_explanation = "No additional deductions needed (standard deduction is sufficient)"
+        step4c_explanation = "No adjustment needed"
+        return step4b_deductions, step4b_explanation, step4c_explanation
+
+    # Amount per paycheck the IRS formula must reduce from its baseline
+    reduction_per_ppc = baseline_ppc - target_ppc
+
+    # Invert the IRS formula: find the step4b that produces target_ppc
+    # IRS formula: (brackets(annual_wages_adj - std_ded - step4b) - step3) / periods = target_ppc
+    # → target annual tax (before credits) = target_ppc * periods + step3
+    # → find taxable income T such that brackets(T) = target_annual_tax_before_credits
+    # → step4b = (annual_wages_adj - std_ded) - T
+    target_annual_tax_before_credits = target_ppc * Decimal(periods) + step3_amount
+    if target_annual_tax_before_credits < 0:
+        target_annual_tax_before_credits = Decimal(0)
+
+    annual_wages_adj = gross_per_paycheck * Decimal(periods) + step4a_amount
+    baseline_taxable = max(Decimal(0), annual_wages_adj - std_ded)
+
+    target_taxable = _invert_tax_brackets(target_annual_tax_before_credits, brackets)
+    step4b_deductions = max(Decimal(0), baseline_taxable - target_taxable)
+
     step4b_explanation = (
-        f"Enter ${step4b_deductions:,.0f} to reduce withholding by ~${abs(job_adjustment):,.2f}/paycheck "
+        f"Enter ${step4b_deductions:,.0f} to reduce withholding by ~${reduction_per_ppc:,.2f}/paycheck "
         f"(estimated at {float(marginal_rate):.0%} marginal rate)"
     )
     step4c_explanation = (
         f"Step 4c must be $0 or positive; use Step 4b (above) to reduce withholding instead. "
-        f"Target reduction: ${abs(job_adjustment):,.2f}/paycheck."
+        f"Target reduction: ${reduction_per_ppc:,.2f}/paycheck."
     )
     return step4b_deductions, step4b_explanation, step4c_explanation
 
@@ -319,8 +424,19 @@ def optimize_w4(
             )
         elif job_adjustment < 0:
             # Need to withhold LESS. Step 4c can't be negative; Step 4b is the IRS lever.
+            # Compute the true target per-paycheck for the IRS formula to produce.
+            # current_ppc_job = projected annual withholding for this job / paychecks_per_year
+            job_portion = Decimal(str(job["annual_gross"])) / total_w2_gross
+            current_ppc_job = current_federal_withholding * job_portion / Decimal(paychecks_per_year)
+            target_ppc = current_ppc_job + job_adjustment  # job_adjustment < 0 → reduction
             step4b_deductions, step4b_explanation, step4c_explanation = _compute_step4b_for_reduction(
-                job_adjustment, job, marginal_rate, remaining_pay_periods
+                target_ppc=target_ppc,
+                job=job,
+                filing_status=filing_status,
+                step3_amount=step3_amount,
+                step4a_amount=step4a_other_income,
+                tax_brackets=tax_calculator.tax_brackets,
+                marginal_rate=marginal_rate,
             )
             step4c_extra_withholding = Decimal(0)
         else:

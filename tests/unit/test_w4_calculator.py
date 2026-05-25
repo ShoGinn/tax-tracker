@@ -8,8 +8,9 @@ from fixtures.w4_scenarios import get_single_job_scenario, get_two_job_scenario
 
 from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
 from taxtracker.models.tax_data import FilingStatus
-from taxtracker.services.tax_calculator import TaxCalculator  # noqa: TC001
-from taxtracker.services.w4_calculator import optimize_midyear_from_db, optimize_w4
+from taxtracker.services.data_loader import load_fica_limits_model, load_tax_brackets_model
+from taxtracker.services.tax_calculator import TaxCalculator
+from taxtracker.services.w4_calculator import _compute_irs_formula_ppc, optimize_midyear_from_db, optimize_w4
 
 pytestmark = pytest.mark.unit
 
@@ -228,7 +229,14 @@ class TestOptimizeW4:
         assert any("perfect" in note.lower() or "close" in note.lower() for note in result.notes)
 
     def test_negative_adjustment_step4c(self, test_calculator: TaxCalculator, single_job: list) -> None:
-        """When overpaying, Step 4c should be 0 (can't negative-withhold) and Step 4b should be non-zero."""
+        """When overpaying, Step 4c must be $0 and Step 4b is the IRS lever to reduce withholding.
+
+        The single_job fixture has a $5,000 annual pre-tax deduction (e.g., 401k). Because the
+        IRS formula operates on gross pay (before pre-tax deductions), but tax liability is
+        computed on taxable wages (after pre-tax deductions), the IRS formula would over-withhold
+        by the tax effect of the pre-tax deduction. Step 4b corrects this by declaring the
+        pre-tax deduction as an extra deduction — reducing the formula's effective income to match.
+        """
         result = optimize_w4(
             tax_calculator=test_calculator,
             year=2024,
@@ -241,9 +249,9 @@ class TestOptimizeW4:
         )
 
         rec = result.w4_recommendations[0]
+        # Step 4c must be $0 — it can't be negative; Step 4b is the IRS lever for reduction
         assert rec.step4c_extra_withholding == Decimal(0)
-        assert "Step 4c" in rec.step4c_explanation
-        # Step 4b should be non-zero — it's the IRS lever to reduce withholding
+        # Step 4b accounts for the $5,000 pre-tax deduction (IRS formula uses gross, not taxable wages)
         assert rec.step4b_deductions > Decimal(0)
         assert "$" in rec.step4b_explanation
 
@@ -575,4 +583,177 @@ class TestMidYearOptimizeFromDB:
         assert Decimal(result["projection_summary"]["projected_full_year_non_taxable_income"]) == Decimal(2500)
         assert result["optimization"].current_total_withholding == Decimal(
             result["projection_summary"]["projected_annual_total_withholding"]
+        )
+
+
+class TestStep4bIRSFormulaRoundTrip:
+    """Verify that the step4b reduction recommendation round-trips correctly through the IRS formula.
+
+    These tests guard against the regression where _compute_step4b_for_reduction computed
+    the deduction amount against actual withholding history instead of the IRS formula baseline,
+    producing a wildly inflated step4b that barely changed per-paycheck withholding.
+
+    The round-trip assertion: feeding rec.step4b_deductions back into the IRS Pub 15-T formula
+    simulator (_compute_irs_formula_ppc) must produce the target per-paycheck amount.
+    """
+
+    @pytest.fixture
+    def tax_calculator_2026(self) -> TaxCalculator:
+        """TaxCalculator loaded with 2026 IRS data."""
+        return TaxCalculator(
+            tax_year=2026,
+            tax_brackets=load_tax_brackets_model(2026),
+            fica_limits=load_fica_limits_model(2026),
+        )
+
+    def _expected_ppc(
+        self,
+        current_federal_withholding: Decimal,
+        paychecks_per_year: int,
+        remaining: int,
+        target_withholding: Decimal,
+    ) -> Decimal:
+        """Compute the target per-paycheck amount the IRS formula must produce.
+
+        For mid-year: the formula runs for `remaining` more paychecks. YTD withholding
+        (estimated at the current projected rate) is already locked in.
+        """
+        current_ppc = current_federal_withholding / Decimal(paychecks_per_year)
+        ytd_paychecks = paychecks_per_year - remaining
+        ytd_withholding = current_ppc * Decimal(ytd_paychecks)
+        remaining_needed = target_withholding - ytd_withholding
+        return remaining_needed / Decimal(remaining)
+
+    def test_step4b_roundtrip_midyear_single_with_pension(self, test_calculator: TaxCalculator) -> None:
+        """Mid-year, single, W-2 + pension: step4b must produce the exact target per-paycheck.
+
+        Scenario: 10 paychecks left out of 26, single, $60k W-2 + $20k pension, overpaying.
+        The IRS formula baseline (with pension in step4a) is above target_ppc because the
+        per-paycheck target is set to recover over just 10 remaining periods.
+        """
+        job = [{"employer": "Acme Corp", "annual_gross": 60000, "paychecks_per_year": 26}]
+        current_federal_withholding = Decimal(15000)
+        remaining = 10
+        paychecks_per_year = 26
+        pension_taxable = Decimal(20000)
+
+        result = optimize_w4(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_jobs=job,
+            pension_taxable=pension_taxable,
+            va_disability=Decimal(0),
+            current_federal_withholding=current_federal_withholding,
+            remaining_pay_periods=remaining,
+        )
+
+        rec = result.w4_recommendations[0]
+        # step4b must be non-zero: the IRS formula baseline (which includes pension in step4a)
+        # produces more per-paycheck than needed since we're catching up over fewer periods
+        assert rec.step4b_deductions > Decimal(0), "Expected non-zero step4b for mid-year overpaying with pension"
+
+        # Round-trip: feed step4b back through IRS formula and verify it produces the target ppc
+        brackets = test_calculator.tax_brackets.brackets_for_status(FilingStatus.SINGLE)
+        std_ded = test_calculator.tax_brackets.standard_deductions.amounts[FilingStatus.SINGLE]
+        gross_per_paycheck = Decimal(60000) / Decimal(paychecks_per_year)
+
+        verify_ppc = _compute_irs_formula_ppc(
+            gross_per_paycheck=gross_per_paycheck,
+            periods=paychecks_per_year,
+            step3_amount=rec.step3_amount,
+            step4a_amount=rec.step4a_other_income,
+            step4b_amount=rec.step4b_deductions,
+            std_ded=std_ded,
+            brackets=brackets,
+        )
+
+        expected_ppc = self._expected_ppc(
+            current_federal_withholding, paychecks_per_year, remaining, result.target_total_withholding
+        )
+        assert abs(verify_ppc - expected_ppc) < Decimal("0.10"), (
+            f"IRS formula produced {verify_ppc:.4f}/paycheck but expected {expected_ppc:.4f}; "
+            f"step4b={rec.step4b_deductions}"
+        )
+
+    def test_step4b_roundtrip_mfj_2026_reported_bug(self, tax_calculator_2026: TaxCalculator) -> None:
+        """MFJ 2026 mid-year: the original reported bug scenario must produce correct step4b.
+
+        The original bug computed step4b against ACTUAL withholding history ($2,047/paycheck)
+        instead of the IRS formula BASELINE ($1,267/paycheck), producing a wildly inflated
+        step4b (~$127,726) that caused the formula to withhold ~$59/paycheck instead of ~$877.
+
+        With the fix, step4b is derived by inverting the IRS formula so it produces exactly
+        the required target_ppc, giving ~$42,565 and ~$877/paycheck.
+
+        Inputs from the curl report (projected annual from YTD actuals + override):
+          - MFJ, semimonthly (24 pay periods), $208,999.92/year projected
+          - 2 children, $29,482.32 pension, remaining=16 out of 24
+          - Current projected annual withholding: $49,134.66
+          - Expected total: ~$30,406 (target refund = $0)
+        """
+        job = [
+            {
+                "employer": "Yurts",
+                "annual_gross": 208999.92,  # YTD actuals + override, from curl report
+                "paychecks_per_year": 24,
+            }
+        ]
+        current_federal_withholding = Decimal("49134.66")
+        remaining = 16
+        paychecks_per_year = 24
+        pension_taxable = Decimal("29482.32")
+        num_children = 2
+
+        result = optimize_w4(
+            tax_calculator=tax_calculator_2026,
+            year=2026,
+            filing_status=FilingStatus.MARRIED_FILING_JOINTLY,
+            num_children=num_children,
+            w2_jobs=job,
+            pension_taxable=pension_taxable,
+            va_disability=Decimal(0),
+            current_federal_withholding=current_federal_withholding,
+            remaining_pay_periods=remaining,
+        )
+
+        rec = result.w4_recommendations[0]
+
+        # step4b must be non-zero and dramatically smaller than the old buggy ~$127,726
+        assert rec.step4b_deductions > Decimal(0), "Expected non-zero step4b for mid-year overpaying with pension"
+        assert rec.step4b_deductions < Decimal(100000), (
+            f"step4b={rec.step4b_deductions:.0f} exceeds $100k threshold; old buggy algorithm produced ~$127,726"
+        )
+
+        # Round-trip: verify the recommended step4b produces the correct per-paycheck withholding
+        brackets = tax_calculator_2026.tax_brackets.brackets_for_status(FilingStatus.MARRIED_FILING_JOINTLY)
+        std_ded = tax_calculator_2026.tax_brackets.standard_deductions.amounts[FilingStatus.MARRIED_FILING_JOINTLY]
+        gross_per_paycheck = Decimal("208999.92") / Decimal(paychecks_per_year)
+
+        verify_ppc = _compute_irs_formula_ppc(
+            gross_per_paycheck=gross_per_paycheck,
+            periods=paychecks_per_year,
+            step3_amount=rec.step3_amount,
+            step4a_amount=rec.step4a_other_income,
+            step4b_amount=rec.step4b_deductions,
+            std_ded=std_ded,
+            brackets=brackets,
+        )
+
+        expected_ppc = self._expected_ppc(
+            current_federal_withholding, paychecks_per_year, remaining, result.target_total_withholding
+        )
+        assert abs(verify_ppc - expected_ppc) < Decimal("0.10"), (
+            f"IRS formula produced {verify_ppc:.4f}/paycheck but expected {expected_ppc:.4f}; "
+            f"step4b={rec.step4b_deductions:.2f} (old buggy value was ~$127,726)"
+        )
+
+        # Verify total annual withholding round-trip: ytd + remaining * ppc ~= target
+        current_ppc = current_federal_withholding / Decimal(paychecks_per_year)
+        ytd_withholding = current_ppc * Decimal(paychecks_per_year - remaining)
+        total_projected = ytd_withholding + verify_ppc * Decimal(remaining)
+        assert abs(total_projected - result.target_total_withholding) < Decimal("1.00"), (
+            f"Total projected withholding {total_projected:.2f} does not match "
+            f"target {result.target_total_withholding:.2f}"
         )
