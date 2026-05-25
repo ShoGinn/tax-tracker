@@ -228,7 +228,7 @@ class TestOptimizeW4:
         assert any("perfect" in note.lower() or "close" in note.lower() for note in result.notes)
 
     def test_negative_adjustment_step4c(self, test_calculator: TaxCalculator, single_job: list) -> None:
-        """When overpaying, Step 4c should be 0 (can't negative-withhold)."""
+        """When overpaying, Step 4c should be 0 (can't negative-withhold) and Step 4b should be non-zero."""
         result = optimize_w4(
             tax_calculator=test_calculator,
             year=2024,
@@ -242,7 +242,71 @@ class TestOptimizeW4:
 
         rec = result.w4_recommendations[0]
         assert rec.step4c_extra_withholding == Decimal(0)
-        assert "reduce" in rec.step4c_explanation.lower()
+        assert "Step 4c" in rec.step4c_explanation
+        # Step 4b should be non-zero — it's the IRS lever to reduce withholding
+        assert rec.step4b_deductions > Decimal(0)
+        assert "$" in rec.step4b_explanation
+
+    def test_remaining_pay_periods_divides_correctly(self, test_calculator: TaxCalculator) -> None:
+        """remaining_pay_periods should override paychecks_per_year for per-paycheck adjustment."""
+        job = [{"employer": "Mid Co", "annual_gross": 100000, "paychecks_per_year": 20}]
+        # Overpaying — needs reduction
+        result_remaining = optimize_w4(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_jobs=job,
+            pension_taxable=Decimal(0),
+            va_disability=Decimal(0),
+            current_federal_withholding=Decimal(50000),
+            remaining_pay_periods=10,
+        )
+        result_full = optimize_w4(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_jobs=job,
+            pension_taxable=Decimal(0),
+            va_disability=Decimal(0),
+            current_federal_withholding=Decimal(50000),
+        )
+
+        # With remaining=10 out of 20, per-paycheck adjustment should be double the full-year version
+        adj_remaining = abs(result_remaining.adjustment_per_paycheck["Mid Co"])
+        adj_full = abs(result_full.adjustment_per_paycheck["Mid Co"])
+        assert abs(adj_remaining - adj_full * 2) < Decimal("0.01")
+
+    def test_remaining_pay_periods_step4b_scaled(self, test_calculator: TaxCalculator) -> None:
+        """Step 4b for reduction should be scaled up when W-4 applies only to remaining periods."""
+        job = [{"employer": "Mid Co", "annual_gross": 100000, "paychecks_per_year": 20}]
+        result_remaining = optimize_w4(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_jobs=job,
+            pension_taxable=Decimal(0),
+            va_disability=Decimal(0),
+            current_federal_withholding=Decimal(50000),
+            remaining_pay_periods=10,
+        )
+        result_full = optimize_w4(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_jobs=job,
+            pension_taxable=Decimal(0),
+            va_disability=Decimal(0),
+            current_federal_withholding=Decimal(50000),
+        )
+
+        rec_remaining = result_remaining.w4_recommendations[0]
+        rec_full = result_full.w4_recommendations[0]
+        # Mid-year Step 4b should be larger than full-year (scaled up because fewer paychecks apply)
+        assert rec_remaining.step4b_deductions > rec_full.step4b_deductions
 
 
 class TestW4OptimizationResultToDict:
