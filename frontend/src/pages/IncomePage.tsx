@@ -138,9 +138,16 @@ const PaychecksTab = ({ year }: { year: number }) => {
     },
   });
 
-  const totalGross = paychecks.reduce((s, p) => s + parseDecimalString(p.gross_wages), 0);
+  const totalGross = paychecks.reduce((s, p) => s + parseDecimalString(p.gross_wages) + parseDecimalString(p.bonus), 0);
+  const totalBonus = paychecks.reduce((s, p) => s + parseDecimalString(p.bonus), 0);
+  const totalTaxable = paychecks.reduce((s, p) => s + parseDecimalString(p.taxable_wages), 0);
   const totalWithholding = paychecks.reduce((s, p) => s + parseDecimalString(p.federal_withholding), 0);
+  const totalFica = paychecks.reduce(
+    (s, p) => s + parseDecimalString(p.social_security) + parseDecimalString(p.medicare),
+    0,
+  );
   const totalNet = paychecks.reduce((s, p) => s + parseDecimalString(p.net_pay), 0);
+  const hasBonus = totalBonus > 0;
 
   return (
     <div className="tab-panel">
@@ -187,8 +194,9 @@ const PaychecksTab = ({ year }: { year: number }) => {
                 <tr>
                   <th>Date</th>
                   <th>Employer</th>
-                  <th className="num">Gross</th>
-                  <th className="num">Pre-tax deductions</th>
+                  <th className="num">Gross wages</th>
+                  {hasBonus && <th className="num">Bonus</th>}
+                  <th className="num">Taxable wages</th>
                   <th className="num">Fed. withheld</th>
                   <th className="num">FICA</th>
                   <th className="num">Net pay</th>
@@ -196,22 +204,28 @@ const PaychecksTab = ({ year }: { year: number }) => {
                 </tr>
               </thead>
               <tbody>
-                {paychecks.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.pay_date}</td>
-                    <td>{p.employer.name}</td>
-                    <td className="num">{formatCurrency(parseDecimalString(p.gross_wages))}</td>
-                    <td className="num">{formatCurrency(parseDecimalString(p.total_pretax_deductions))}</td>
-                    <td className="num">{formatCurrency(parseDecimalString(p.federal_withholding))}</td>
-                    <td className="num">
-                      {formatCurrency(parseDecimalString(p.social_security) + parseDecimalString(p.medicare))}
-                    </td>
-                    <td className="num">{formatCurrency(parseDecimalString(p.net_pay))}</td>
-                    <td>
-                      <DeleteButton onConfirm={() => deleteMutation.mutate(p.id)} />
-                    </td>
-                  </tr>
-                ))}
+                {paychecks.map((p) => {
+                  const fica = parseDecimalString(p.social_security) + parseDecimalString(p.medicare);
+                  return (
+                    <tr key={p.id}>
+                      <td>{p.pay_date}</td>
+                      <td>{p.employer.name}</td>
+                      <td className="num">{formatCurrency(parseDecimalString(p.gross_wages))}</td>
+                      {hasBonus && (
+                        <td className="num">
+                          {parseDecimalString(p.bonus) > 0 ? formatCurrency(parseDecimalString(p.bonus)) : "—"}
+                        </td>
+                      )}
+                      <td className="num">{formatCurrency(parseDecimalString(p.taxable_wages))}</td>
+                      <td className="num">{formatCurrency(parseDecimalString(p.federal_withholding))}</td>
+                      <td className="num">{formatCurrency(fica)}</td>
+                      <td className="num">{formatCurrency(parseDecimalString(p.net_pay))}</td>
+                      <td>
+                        <DeleteButton onConfirm={() => deleteMutation.mutate(p.id)} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr className="totals-row">
@@ -221,11 +235,20 @@ const PaychecksTab = ({ year }: { year: number }) => {
                   <td className="num">
                     <strong>{formatCurrency(totalGross)}</strong>
                   </td>
-                  <td />
+                  {hasBonus && (
+                    <td className="num">
+                      <strong>{formatCurrency(totalBonus)}</strong>
+                    </td>
+                  )}
+                  <td className="num">
+                    <strong>{formatCurrency(totalTaxable)}</strong>
+                  </td>
                   <td className="num">
                     <strong>{formatCurrency(totalWithholding)}</strong>
                   </td>
-                  <td />
+                  <td className="num">
+                    <strong>{formatCurrency(totalFica)}</strong>
+                  </td>
                   <td className="num">
                     <strong>{formatCurrency(totalNet)}</strong>
                   </td>

@@ -844,7 +844,7 @@ a {
   transition:
     border-color 0.15s,
     background 0.15s;
-  margin-bottom: 1rem;
+  width: 100%;
 }
 
 .csv-drop-zone:hover,
@@ -859,10 +859,31 @@ a {
   font-size: 0.95rem;
 }
 
+.csv-selected-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(20, 23, 31, 0.15);
+  border-radius: 8px;
+  background: rgba(20, 23, 31, 0.02);
+}
+
+.csv-selected-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .csv-file-name {
   color: var(--teal-500);
   font-weight: 600;
   font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .csv-result {
@@ -891,4 +912,136 @@ a {
   padding: 0;
   font-size: 0.83rem;
   color: var(--red-600, #c0392b);
+}
+
+/* ============================================================
+   Settings page
+   ============================================================ */
+
+.settings-layout {
+  max-width: 560px;
+}
+
+.settings-card {
+  background: #fff;
+  border: 1px solid rgba(20, 23, 31, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.settings-card-header {
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid rgba(20, 23, 31, 0.08);
+}
+
+.settings-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.settings-card-description {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-700);
+}
+
+.settings-fields {
+  padding: 0.5rem 0;
+}
+
+.settings-field {
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid rgba(20, 23, 31, 0.06);
+}
+
+.settings-field:last-child {
+  border-bottom: none;
+}
+
+.settings-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--ink-900, #14171f);
+}
+
+.settings-hint {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  color: var(--ink-700);
+}
+
+.settings-select,
+.settings-input {
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(20, 23, 31, 0.2);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.9rem;
+  background: #fff;
+  color: var(--ink-900, #14171f);
+}
+
+.settings-select:focus,
+.settings-input:focus {
+  outline: none;
+  border-color: var(--teal-500);
+  box-shadow: 0 0 0 2px rgba(40, 167, 169, 0.15);
+}
+
+.settings-input--short {
+  width: 120px;
+}
+
+.settings-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.settings-subfield {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(20, 23, 31, 0.1);
+}
+
+.settings-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+
+.settings-checkbox input[type="checkbox"] {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--teal-500);
+}
+
+.settings-checkbox-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(20, 23, 31, 0.08);
+  background: rgba(20, 23, 31, 0.02);
 }
