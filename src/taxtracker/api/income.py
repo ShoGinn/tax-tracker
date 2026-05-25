@@ -169,8 +169,8 @@ async def import_paychecks_csv_endpoint(
 
         return {
             "message": message,
-            "success_count": result["success_count"],
-            "error_count": result["error_count"],
+            "imported": result["success_count"],
+            "skipped": result["error_count"],
             "total_rows": result["total_rows"],
             "errors": result["errors"],
         }
@@ -276,8 +276,8 @@ async def import_pension_csv_endpoint(file: UploadFile, db: Annotated[AsyncSessi
 
         return {
             "message": message,
-            "success_count": result["success_count"],
-            "error_count": result["error_count"],
+            "imported": result["success_count"],
+            "skipped": result["error_count"],
             "total_rows": result["total_rows"],
             "errors": result.get("errors", []),
         }
@@ -385,8 +385,8 @@ async def import_va_csv_endpoint(file: UploadFile, db: Annotated[AsyncSession, D
 
         return {
             "message": message,
-            "success_count": result["success_count"],
-            "error_count": result["error_count"],
+            "imported": result["success_count"],
+            "skipped": result["error_count"],
             "total_rows": result["total_rows"],
             "errors": result.get("errors", []),
         }

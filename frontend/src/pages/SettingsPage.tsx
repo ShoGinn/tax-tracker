@@ -45,96 +45,132 @@ export const SettingsPage = () => {
     );
 
   return (
-    <section className="settings-page">
-      <h2>App Settings</h2>
-      <p className="settings-description">
-        These settings are used across the whole app — the Dashboard predictions, Projections, and W-4 optimization all
-        read from here.
-      </p>
+    <div className="page">
+      <div className="page-header">
+        <h1 className="page-title">Settings</h1>
+      </div>
 
-      <article className="metric-card config-card">
-        <p className="metric-label">Tax Profile</p>
-        <div className="config-form">
-          <label className="config-field" htmlFor="filing-status">
-            <span>Filing Status</span>
-            <select
-              id="filing-status"
-              value={current.filing_status ?? "married_filing_jointly"}
-              onChange={(e) => setDraft((d) => ({ ...current, ...d, filing_status: e.target.value as FilingStatus }))}
-            >
-              {FILING_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
+      <div className="settings-layout">
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <h2 className="settings-card-title">Tax Profile</h2>
+            <p className="settings-card-description">Used across the Dashboard, Projections, and W-4 optimization.</p>
+          </div>
 
-          <label className="config-field" htmlFor="num-children">
-            <span>Qualifying Children</span>
-            <input
-              id="num-children"
-              type="number"
-              min={0}
-              value={current.num_children ?? 0}
-              onChange={(e) =>
-                setDraft((d) => ({ ...current, ...d, num_children: Math.max(0, Number(e.target.value)) }))
-              }
-            />
-          </label>
+          <div className="settings-fields">
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="filing-status">
+                Filing Status
+              </label>
+              <select
+                id="filing-status"
+                className="settings-select"
+                value={current.filing_status ?? "married_filing_jointly"}
+                onChange={(e) => setDraft((d) => ({ ...current, ...d, filing_status: e.target.value as FilingStatus }))}
+              >
+                {FILING_STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <label className="config-field config-checkbox" htmlFor="age-65-plus">
-            <input
-              id="age-65-plus"
-              type="checkbox"
-              checked={current.age_65_plus ?? false}
-              onChange={(e) => setDraft((d) => ({ ...current, ...d, age_65_plus: e.target.checked }))}
-            />
-            <span>Age 65+ (additional standard deduction)</span>
-          </label>
-
-          <label className="config-field config-checkbox" htmlFor="use-standard-deduction">
-            <input
-              id="use-standard-deduction"
-              type="checkbox"
-              checked={current.use_standard_deduction ?? true}
-              onChange={(e) => setDraft((d) => ({ ...current, ...d, use_standard_deduction: e.target.checked }))}
-            />
-            <span>Use standard deduction</span>
-          </label>
-
-          {!(current.use_standard_deduction ?? true) && (
-            <label className="config-field" htmlFor="itemized-deduction">
-              <span>Itemized Deduction Amount</span>
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="num-children">
+                Qualifying Children
+              </label>
+              <p className="settings-hint">Children eligible for the Child Tax Credit</p>
               <input
-                id="itemized-deduction"
+                id="num-children"
                 type="number"
+                className="settings-input settings-input--short"
                 min={0}
-                step={100}
-                value={current.itemized_deduction_amount ?? 0}
+                value={current.num_children ?? 0}
                 onChange={(e) =>
-                  setDraft((d) => ({ ...current, ...d, itemized_deduction_amount: String(e.target.value) }))
+                  setDraft((d) => ({ ...current, ...d, num_children: Math.max(0, Number(e.target.value)) }))
                 }
               />
-            </label>
-          )}
+            </div>
 
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => mutation.mutate(current)}
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending ? "Saving…" : saved ? "Saved ✓" : "Save Settings"}
-          </button>
+            <div className="settings-field">
+              <p className="settings-label">Deduction Type</p>
+              <div className="settings-radio-group">
+                <label className="settings-radio" htmlFor="use-standard-deduction">
+                  <input
+                    id="use-standard-deduction"
+                    type="radio"
+                    name="deduction-type"
+                    checked={current.use_standard_deduction ?? true}
+                    onChange={() => setDraft((d) => ({ ...current, ...d, use_standard_deduction: true }))}
+                  />
+                  <span>Standard deduction</span>
+                </label>
+                <label className="settings-radio" htmlFor="use-itemized-deduction">
+                  <input
+                    id="use-itemized-deduction"
+                    type="radio"
+                    name="deduction-type"
+                    checked={!(current.use_standard_deduction ?? true)}
+                    onChange={() => setDraft((d) => ({ ...current, ...d, use_standard_deduction: false }))}
+                  />
+                  <span>Itemized deduction</span>
+                </label>
+              </div>
 
-          {mutation.isError && (
-            <p className="status-message error">
-              {mutation.error instanceof Error ? mutation.error.message : "Save failed"}
-            </p>
-          )}
+              {!(current.use_standard_deduction ?? true) && (
+                <div className="settings-subfield">
+                  <label className="settings-label" htmlFor="itemized-deduction">
+                    Itemized Deduction Amount
+                  </label>
+                  <input
+                    id="itemized-deduction"
+                    type="number"
+                    className="settings-input settings-input--short"
+                    min={0}
+                    step={100}
+                    value={current.itemized_deduction_amount ?? 0}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...current, ...d, itemized_deduction_amount: String(e.target.value) }))
+                    }
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="settings-field">
+              <label className="settings-checkbox" htmlFor="age-65-plus">
+                <input
+                  id="age-65-plus"
+                  type="checkbox"
+                  checked={current.age_65_plus ?? false}
+                  onChange={(e) => setDraft((d) => ({ ...current, ...d, age_65_plus: e.target.checked }))}
+                />
+                <div>
+                  <span className="settings-checkbox-label">Age 65 or older</span>
+                  <p className="settings-hint">Adds the additional standard deduction amount for seniors</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div className="settings-footer">
+            {mutation.isError && (
+              <p className="status-message error">
+                {mutation.error instanceof Error ? mutation.error.message : "Save failed"}
+              </p>
+            )}
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => mutation.mutate(current)}
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? "Saving…" : saved ? "Saved ✓" : "Save Settings"}
+            </button>
+          </div>
         </div>
-      </article>
-    </section>
+      </div>
+    </div>
   );
 };

@@ -3,10 +3,16 @@ import { useRef, useState } from "react";
 
 const BASE_URL = "";
 
+interface CsvImportError {
+  row: number;
+  error: string;
+  data: Record<string, unknown>;
+}
+
 interface CsvImportResult {
   imported: number;
   skipped: number;
-  errors: string[];
+  errors: CsvImportError[];
   [key: string]: unknown;
 }
 
@@ -80,6 +86,13 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
     if (dropped) handleFile(dropped);
   };
 
+  const clearFile = () => {
+    setFile(null);
+    setFileName(null);
+    mutation.reset();
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
   return (
     <div className="card income-form mb-4">
       <p className="helper-text">
@@ -87,42 +100,48 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
         symbols and multiple date formats. See <code>{config.example}</code> in the examples folder for a sample.
       </p>
 
-      {/* Drop zone */}
-      <button
-        type="button"
-        className="csv-drop-zone"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        aria-label="Drop CSV file or click to browse"
-      >
-        {fileName ? (
-          <span className="csv-file-name">{fileName}</span>
-        ) : (
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".csv,text/csv"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+        }}
+      />
+
+      {file ? (
+        <div className="csv-selected-file">
+          <span className="csv-file-name">📄 {fileName}</span>
+          <div className="csv-selected-actions">
+            <button type="button" className="btn-ghost-sm" onClick={clearFile}>
+              Change
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? "Importing…" : "Import"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="csv-drop-zone"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          aria-label="Drop CSV file or click to browse"
+        >
           <span className="csv-drop-hint">Drop CSV here or click to browse</span>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".csv,text/csv"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) handleFile(f);
-          }}
-        />
-      </button>
+        </button>
+      )}
 
-      {mutation.isError && <p className="form-error">{mutation.error.message}</p>}
-
-      <button
-        type="button"
-        className="btn-primary mt-2"
-        disabled={!file || mutation.isPending}
-        onClick={() => mutation.mutate()}
-      >
-        {mutation.isPending ? "Importing…" : `Import ${config.label}`}
-      </button>
+      {mutation.isError && <p className="form-error mt-2">{mutation.error.message}</p>}
 
       {mutation.data && (
         <div className={`csv-result ${mutation.data.errors.length > 0 ? "csv-result--warn" : "csv-result--ok"}`}>
@@ -135,7 +154,9 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
               <p className="form-error">Errors:</p>
               <ul className="csv-error-list">
                 {mutation.data.errors.map((e) => (
-                  <li key={e}>{e}</li>
+                  <li key={`${e.row}-${e.error}`}>
+                    Row {e.row}: {e.error}
+                  </li>
                 ))}
               </ul>
             </>
@@ -174,9 +195,6 @@ export const CsvImportPage = () => {
       </div>
 
       <div className="tab-panel">
-        <div className="panel-header">
-          <h2 className="panel-title">Import {config.label}</h2>
-        </div>
         <ImportPanel key={type} config={config} />
       </div>
     </div>

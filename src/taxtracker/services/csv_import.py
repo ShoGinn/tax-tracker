@@ -5,6 +5,7 @@ from io import StringIO
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from taxtracker.models.database import Employer
 from taxtracker.models.schemas import (
@@ -17,6 +18,16 @@ from taxtracker.services import income_service
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+
+def _friendly_error(e: Exception) -> str:
+    """Convert technical exceptions to user-friendly messages."""
+    if isinstance(e, IntegrityError):
+        orig = str(getattr(e, "orig", ""))
+        if "UNIQUE constraint failed" in orig:
+            return "Duplicate entry — this record already exists and was skipped"
+        return "Database error — record could not be saved"
+    return str(e)
 
 
 class CSVImportResult:
@@ -128,7 +139,8 @@ async def import_paychecks_csv(
             result.add_success()
 
         except Exception as e:
-            result.add_error(row_num, str(e), row)
+            await db.rollback()
+            result.add_error(row_num, _friendly_error(e), row)
 
     return result.to_dict()
 
@@ -182,7 +194,8 @@ async def import_pension_csv(
             result.add_success()
 
         except Exception as e:
-            result.add_error(row_num, str(e), row)
+            await db.rollback()
+            result.add_error(row_num, _friendly_error(e), row)
 
     return result.to_dict()
 
@@ -232,6 +245,7 @@ async def import_va_csv(
             result.add_success()
 
         except Exception as e:
-            result.add_error(row_num, str(e), row)
+            await db.rollback()
+            result.add_error(row_num, _friendly_error(e), row)
 
     return result.to_dict()

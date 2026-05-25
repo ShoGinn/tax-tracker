@@ -47,7 +47,10 @@ export const DashboardPage = () => {
         apiClient.listNonTaxableIncome(selectedYear),
       ]);
 
-      const w2Gross = paychecks.reduce((total, p) => total + parseDecimalString(p.gross_wages), 0);
+      const w2Gross = paychecks.reduce(
+        (total, p) => total + parseDecimalString(p.gross_wages) + parseDecimalString(p.bonus),
+        0,
+      );
       const w2PretaxDeductions = paychecks.reduce(
         (total, p) => total + parseDecimalString(p.total_pretax_deductions),
         0,
