@@ -142,6 +142,38 @@ class W4OptimizationResult:
         }
 
 
+def _compute_step4b_for_reduction(
+    job_adjustment: Decimal,
+    job: dict[str, Any],
+    marginal_rate: Decimal,
+    remaining_pay_periods: int | None,
+) -> tuple[Decimal, str, str]:
+    """Compute Step 4b, Step 4c, and their explanations when withholding needs to decrease.
+
+    Returns:
+        (step4b_deductions, step4b_explanation, step4c_explanation)
+    """
+    divisor = remaining_pay_periods if remaining_pay_periods is not None else job["paychecks_per_year"]
+    annual_job_gap = abs(job_adjustment) * Decimal(divisor)
+    full_year_periods = Decimal(job["paychecks_per_year"])
+    remaining_periods_dec = Decimal(remaining_pay_periods) if remaining_pay_periods is not None else full_year_periods
+    if marginal_rate > 0:
+        # Scale step4b so that applying it to only the remaining periods achieves the full annual gap:
+        # step4b * marginal_rate * remaining / full_year ~= annual_gap
+        step4b_deductions = (annual_job_gap * full_year_periods / remaining_periods_dec) / marginal_rate
+    else:
+        step4b_deductions = Decimal(0)
+    step4b_explanation = (
+        f"Enter ${step4b_deductions:,.0f} to reduce withholding by ~${abs(job_adjustment):,.2f}/paycheck "
+        f"(estimated at {float(marginal_rate):.0%} marginal rate)"
+    )
+    step4c_explanation = (
+        f"Step 4c must be $0 or positive; use Step 4b (above) to reduce withholding instead. "
+        f"Target reduction: ${abs(job_adjustment):,.2f}/paycheck."
+    )
+    return step4b_deductions, step4b_explanation, step4c_explanation
+
+
 def optimize_w4(
     tax_calculator: TaxCalculator,
     year: int,
@@ -158,6 +190,8 @@ def optimize_w4(
     # Optional
     use_standard_deduction: bool = True,
     itemized_deductions: float = 0.0,
+    # Mid-year: when set, adjustments are spread over remaining paychecks only (not total projected)
+    remaining_pay_periods: int | None = None,
 ) -> W4OptimizationResult:
     """
     Optimize W-4 settings to hit target refund amount.
@@ -174,6 +208,9 @@ def optimize_w4(
         target_refund: Desired refund amount (default: $0)
         use_standard_deduction: Use standard or itemized
         itemized_deductions: Itemized deduction amount
+        remaining_pay_periods: For mid-year use — number of paychecks remaining. When provided,
+            per-paycheck adjustments are divided by this count rather than the full projected
+            paychecks_per_year, since YTD paychecks are already locked in.
 
     Returns:
         W4OptimizationResult with recommendations
@@ -200,6 +237,7 @@ def optimize_w4(
 
     tax_result = tax_calculator.calculate_taxes(tax_request)
     tax_liability = Decimal(str(tax_result.total_tax_liability))
+    marginal_rate = Decimal(str(tax_result.marginal_tax_rate))
 
     # Target withholding
     target_withholding = tax_liability + target_refund
@@ -210,14 +248,15 @@ def optimize_w4(
     # Adjustment needed
     adjustment_needed = target_withholding - current_federal_withholding
 
-    # Calculate per-paycheck adjustments for each job
+    # Calculate per-paycheck adjustments for each job.
+    # For mid-year, divide by remaining_pay_periods (YTD paychecks are locked in).
+    # For full-year, divide by paychecks_per_year (all paychecks are in the future).
     adjustment_per_paycheck = {}
     for job in w2_jobs:
-        paychecks = job["paychecks_per_year"]
-        # Distribute adjustment proportionally by income
+        divisor = remaining_pay_periods if remaining_pay_periods is not None else job["paychecks_per_year"]
         job_portion = Decimal(str(job["annual_gross"])) / total_w2_gross
         job_adjustment = adjustment_needed * job_portion
-        adjustment_per_paycheck[job["employer"]] = job_adjustment / paychecks
+        adjustment_per_paycheck[job["employer"]] = job_adjustment / Decimal(divisor)
 
     # Generate W-4 recommendations
     w4_recommendations = []
@@ -279,11 +318,11 @@ def optimize_w4(
                 f"Withhold extra ${job_adjustment:,.2f} per paycheck to reach target ${target_refund:,.0f} refund"
             )
         elif job_adjustment < 0:
-            # Need to withhold LESS (can't do with extra withholding)
-            step4c_extra_withholding = Decimal(0)
-            step4c_explanation = (
-                f"Reduce withholding by ${abs(job_adjustment):,.2f} per paycheck (adjust Steps 3-4b above)"
+            # Need to withhold LESS. Step 4c can't be negative; Step 4b is the IRS lever.
+            step4b_deductions, step4b_explanation, step4c_explanation = _compute_step4b_for_reduction(
+                job_adjustment, job, marginal_rate, remaining_pay_periods
             )
+            step4c_extra_withholding = Decimal(0)
         else:
             step4c_extra_withholding = Decimal(0)
             step4c_explanation = "No adjustment needed"
@@ -600,6 +639,7 @@ async def optimize_midyear_from_db(
         target_refund=target_refund,
         use_standard_deduction=use_standard_deduction,
         itemized_deductions=itemized_deductions,
+        remaining_pay_periods=remaining_pay_periods,
     )
 
     return {
