@@ -237,7 +237,7 @@ def optimize_w4(
 
     tax_result = tax_calculator.calculate_taxes(tax_request)
     tax_liability = Decimal(str(tax_result.total_tax_liability))
-    marginal_rate = Decimal(str(tax_result.marginal_tax_rate))
+    marginal_rate = Decimal(str(tax_result.marginal_tax_rate)) / Decimal(100)
 
     # Target withholding
     target_withholding = tax_liability + target_refund
