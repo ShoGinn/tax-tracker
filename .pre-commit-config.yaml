@@ -1,23 +1,69 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
-  - repo: local
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.37.2
+    hooks:
+      - id: check-github-workflows
+      - id: check-dependabot
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.2
+    hooks:
+      - id: codespell
+        args:
+          - --check-filenames
+          - --ignore-words-list=te,HSA
+          - --skip=*.lock,**/pnpm-lock.yaml,uv.lock,*.csv,tests/data/*.json,tests/data/*.txt,htmlcov/*
+
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.4.16
     hooks:
       - id: biome-check
-        name: biome check (frontend)
+        stages: [pre-commit]
+        files: ^frontend/
+
+  - repo: local
+    hooks:
+      - id: ty-check
+        name: ty check (backend)
         language: system
-        entry: bash -c 'cd frontend && npx @biomejs/biome check --write --files-ignore-unknown=true --no-errors-on-unmatched .'
+        entry: uv run ty check
         pass_filenames: false
         always_run: true
+        stages: [pre-commit]
+      - id: backend-tests-fast
+        name: backend tests fast
+        language: system
+        entry: just test-fast
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: frontend-typecheck
+        name: frontend typecheck
+        language: system
+        entry: just frontend-typecheck
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: frontend-test
+        name: frontend test
+        language: system
+        entry: just frontend-test
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.10
+    rev: v0.15.15
     hooks:
       - id: ruff
         args: [--fix]
+        stages: [pre-commit]
       - id: ruff-format
+        stages: [pre-commit]

@@ -7,11 +7,11 @@ default:
 # Install project and dev dependencies, then install pre-commit hooks.
 install:
     uv sync --dev
-    uv run pre-commit install
+    uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 
 # Install pre-commit hooks only (run after cloning if hooks are missing).
 hooks:
-    uv run pre-commit install
+    uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 
 # Upgrade lockfile to latest compatible versions.
 update-lock:
