@@ -110,6 +110,21 @@ class TestPaycheckCSVImport:
         assert result["error_count"] == 1
         assert result["total_rows"] == 2
 
+    @pytest.mark.anyio
+    async def test_duplicate_detection(self, async_db_session) -> None:
+        """Duplicate paycheck rows should be skipped with a friendly error."""
+        csv_content = (
+            "employer_name,pay_date,gross_wages,federal_withholding,"
+            "social_security,medicare,net_pay\n"
+            "Dup Corp,2024-06-01,5000.00,750.00,310.00,72.50,3867.50\n"
+            "Dup Corp,2024-06-01,5000.00,750.00,310.00,72.50,3867.50\n"
+        )
+        result = await import_paychecks_csv(async_db_session, csv_content)
+
+        assert result["success_count"] == 1
+        assert result["error_count"] == 1
+        assert "Duplicate" in result["errors"][0]["error"]
+
 
 class TestPensionCSVImport:
     """Tests for import_pension_csv."""
@@ -138,6 +153,20 @@ class TestPensionCSVImport:
         result = await import_pension_csv(async_db_session, csv_content)
 
         assert result["error_count"] == 1
+
+    @pytest.mark.anyio
+    async def test_duplicate_detection(self, async_db_session) -> None:
+        """Duplicate pension rows should be skipped with a friendly error."""
+        csv_content = (
+            "pay_date,gross_amount,net_amount,federal_withholding\n"
+            "2024-03-01,3000.00,2700.00,300.00\n"
+            "2024-03-01,3000.00,2700.00,300.00\n"
+        )
+        result = await import_pension_csv(async_db_session, csv_content)
+
+        assert result["success_count"] == 1
+        assert result["error_count"] == 1
+        assert "Duplicate" in result["errors"][0]["error"]
 
 
 class TestVACSVImport:
@@ -168,6 +197,18 @@ class TestVACSVImport:
 
         assert result["error_count"] == 1
         assert len(result["errors"]) == 1
+
+    @pytest.mark.anyio
+    async def test_duplicate_detection(self, async_db_session) -> None:
+        """Duplicate VA rows should be skipped with a friendly error."""
+        csv_content = (
+            "pay_date,amount,source_type\n2024-04-01,2000.00,va_disability\n2024-04-01,2000.00,va_disability\n"
+        )
+        result = await import_va_csv(async_db_session, csv_content)
+
+        assert result["success_count"] == 1
+        assert result["error_count"] == 1
+        assert "Duplicate" in result["errors"][0]["error"]
 
     @pytest.mark.anyio
     async def test_multiple_rows(self, async_db_session) -> None:

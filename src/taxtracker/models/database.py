@@ -165,7 +165,10 @@ class Retirement1099R(Base):
     """
 
     __tablename__ = "retirement_1099r"
-    __table_args__ = ({"comment": "1099-R retirement income records"},)
+    __table_args__ = (
+        UniqueConstraint("pay_date", "gross_amount", name="uq_retirement_identity"),
+        {"comment": "1099-R retirement income records"},
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     pay_date: Mapped[date] = mapped_column(index=True)
@@ -250,7 +253,10 @@ class NonTaxableIncome(Base):
     """
 
     __tablename__ = "non_taxable_income"
-    __table_args__ = ({"comment": "Non-taxable income records (VA, SSA, etc.)"},)
+    __table_args__ = (
+        UniqueConstraint("pay_date", "amount", "source_type", name="uq_non_taxable_identity"),
+        {"comment": "Non-taxable income records (VA, SSA, etc.)"},
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     pay_date: Mapped[date] = mapped_column(index=True)
