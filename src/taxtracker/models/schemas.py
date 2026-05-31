@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
 from dateutil import parser
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
@@ -334,6 +334,7 @@ class MidYearPeriodSuggestionResponse(BaseModel):
     remaining_pension_periods: int
     remaining_non_taxable_periods: int
     monthly_baseline_periods: int
+    current_period_has_w2_entry: bool
     current_month_has_pension_entry: bool
     current_month_has_non_taxable_entry: bool
     notes: list[str]
@@ -348,6 +349,9 @@ class AppConfigUpdate(BaseModel):
     use_standard_deduction: bool | None = Field(default=None)
     itemized_deduction_amount: CleanDecimal | None = Field(default=None, ge=0)
     age_65_plus: bool | None = Field(default=None, description="Whether taxpayer is 65+ for extra standard deduction")
+    w2_pay_frequency: Literal["weekly", "biweekly", "semimonthly", "monthly"] | None = Field(
+        default=None, description="W-2 paycheck frequency: weekly, biweekly, semimonthly, or monthly"
+    )
 
 
 class AppConfigResponse(BaseModel):
@@ -358,5 +362,6 @@ class AppConfigResponse(BaseModel):
     use_standard_deduction: bool
     itemized_deduction_amount: Decimal
     age_65_plus: bool
+    w2_pay_frequency: Literal["weekly", "biweekly", "semimonthly", "monthly"]
 
     model_config = ConfigDict(from_attributes=True)

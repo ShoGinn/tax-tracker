@@ -22,6 +22,7 @@ class TestConfigAPI:
         assert data["use_standard_deduction"] is True
         assert float(data["itemized_deduction_amount"]) == 0.0
         assert data["age_65_plus"] is False
+        assert data["w2_pay_frequency"] == "monthly"
 
     def test_put_config_updates_filing_status(self, client: TestClient) -> None:
         """PUT /config updates filing status and GET returns the new value."""
@@ -61,6 +62,18 @@ class TestConfigAPI:
         response = client.put("/config", json={"age_65_plus": True})
         assert response.status_code == 200
         assert response.json()["age_65_plus"] is True
+
+    def test_put_config_w2_pay_frequency(self, client: TestClient) -> None:
+        """PUT /config updates w2_pay_frequency and GET returns the new value."""
+        for freq in ("weekly", "biweekly", "semimonthly", "monthly"):
+            resp = client.put("/config", json={"w2_pay_frequency": freq})
+            assert resp.status_code == 200
+            assert resp.json()["w2_pay_frequency"] == freq
+
+    def test_put_config_invalid_w2_pay_frequency(self, client: TestClient) -> None:
+        """PUT /config rejects unknown pay frequency values."""
+        response = client.put("/config", json={"w2_pay_frequency": "quarterly"})
+        assert response.status_code == 422
 
     def test_put_config_is_idempotent(self, client: TestClient) -> None:
         """Calling PUT /config twice with same data returns same result."""

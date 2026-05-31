@@ -232,6 +232,7 @@ class AppConfig(Base):
     use_standard_deduction: Mapped[bool] = mapped_column(default=True)
     itemized_deduction_amount: Mapped[Decimal] = mapped_column(default=Decimal(0))
     age_65_plus: Mapped[bool] = mapped_column(default=False)
+    w2_pay_frequency: Mapped[str] = mapped_column(String(20), default="monthly")
 
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 

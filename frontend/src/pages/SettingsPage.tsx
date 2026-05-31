@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { apiClient } from "../lib/api/client";
-import type { AppConfigUpdate, FilingStatus } from "../lib/api/types";
+import type { AppConfigUpdate, FilingStatus, W2PayFrequency } from "../lib/api/types";
 import { FILING_STATUSES } from "../lib/constants";
 
 export const SettingsPage = () => {
@@ -23,6 +23,7 @@ export const SettingsPage = () => {
     use_standard_deduction: config?.use_standard_deduction ?? true,
     itemized_deduction_amount: config?.itemized_deduction_amount,
     age_65_plus: config?.age_65_plus ?? false,
+    w2_pay_frequency: config?.w2_pay_frequency ?? "monthly",
   };
 
   const mutation = useMutation({
@@ -30,6 +31,7 @@ export const SettingsPage = () => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["app-config"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard-prediction"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-projection"] });
       setDraft(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -151,6 +153,28 @@ export const SettingsPage = () => {
                   <p className="settings-hint">Adds the additional standard deduction amount for seniors</p>
                 </div>
               </label>
+            </div>
+
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="w2-pay-frequency">
+                W-2 Pay Frequency
+              </label>
+              <p className="settings-hint">
+                How often you receive W-2 paychecks — used to calculate remaining pay periods
+              </p>
+              <select
+                id="w2-pay-frequency"
+                className="settings-select"
+                value={current.w2_pay_frequency ?? "monthly"}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...current, ...d, w2_pay_frequency: e.target.value as W2PayFrequency }))
+                }
+              >
+                <option value="weekly">Weekly (52/year)</option>
+                <option value="biweekly">Biweekly (26/year)</option>
+                <option value="semimonthly">Semimonthly (24/year)</option>
+                <option value="monthly">Monthly (12/year)</option>
+              </select>
             </div>
           </div>
 

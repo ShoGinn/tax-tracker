@@ -8,6 +8,8 @@ from taxtracker.core.exceptions import ProjectionError
 from taxtracker.models.tax_data import FilingStatus, TaxCalculationRequest
 
 if TYPE_CHECKING:
+    from datetime import date
+
     from taxtracker.services.tax_calculator import TaxCalculator
 
 
@@ -241,5 +243,127 @@ def compare_years(projections: list[YearProjection]) -> dict[str, Any]:
             "tax_trend": "increasing"
             if projections[-1].total_tax_liability > projections[0].total_tax_liability
             else "decreasing",
+        },
+    }
+
+
+def project_from_ytd(
+    tax_calculator: TaxCalculator,
+    *,
+    year: int,
+    filing_status: FilingStatus,
+    num_children: int,
+    use_standard_deduction: bool,
+    itemized_deduction_amount: Decimal,
+    # YTD actuals
+    ytd_w2_gross: Decimal,
+    ytd_w2_pretax: Decimal,
+    ytd_pension_gross: Decimal,
+    ytd_pension_pretax: Decimal,
+    ytd_va_income: Decimal,
+    ytd_w2_federal_withheld: Decimal,
+    ytd_pension_federal_withheld: Decimal,
+    paycheck_count: int,
+    pension_count: int,
+    non_taxable_count: int,
+    # Remaining periods (0 = past/complete year)
+    remaining_pay_periods: int,
+    remaining_pension_periods: int,
+    remaining_non_taxable_periods: int,
+    is_current_year: bool,
+    as_of_date: date,
+) -> dict[str, Any]:
+    """Project full-year income and tax liability from YTD actuals plus remaining periods.
+
+    For past/non-current years (is_current_year=False), remaining periods are 0 and the
+    projection equals the YTD actuals exactly.
+
+    For the current year, remaining periods drive the extrapolation:
+    - W-2: avg gross per paycheck * remaining_pay_periods
+    - Pension: avg per pension * remaining_pension_periods
+    - VA/non-taxable: avg per period * remaining_non_taxable_periods
+    """
+    if is_current_year and paycheck_count > 0:
+        avg_w2_gross = ytd_w2_gross / Decimal(paycheck_count)
+        avg_w2_pretax = ytd_w2_pretax / Decimal(paycheck_count)
+        proj_remaining_w2_gross = avg_w2_gross * Decimal(remaining_pay_periods)
+        proj_remaining_w2_pretax = avg_w2_pretax * Decimal(remaining_pay_periods)
+    else:
+        proj_remaining_w2_gross = Decimal(0)
+        proj_remaining_w2_pretax = Decimal(0)
+
+    if is_current_year and pension_count > 0:
+        avg_pension_gross = ytd_pension_gross / Decimal(pension_count)
+        avg_pension_pretax = ytd_pension_pretax / Decimal(pension_count)
+        proj_remaining_pension_gross = avg_pension_gross * Decimal(remaining_pension_periods)
+        proj_remaining_pension_pretax = avg_pension_pretax * Decimal(remaining_pension_periods)
+    else:
+        proj_remaining_pension_gross = Decimal(0)
+        proj_remaining_pension_pretax = Decimal(0)
+
+    if is_current_year and non_taxable_count > 0:
+        avg_va = ytd_va_income / Decimal(non_taxable_count)
+        proj_remaining_va = avg_va * Decimal(remaining_non_taxable_periods)
+    else:
+        proj_remaining_va = Decimal(0)
+
+    proj_w2_gross = ytd_w2_gross + proj_remaining_w2_gross
+    proj_w2_pretax = ytd_w2_pretax + proj_remaining_w2_pretax
+    proj_pension_gross = ytd_pension_gross + proj_remaining_pension_gross
+    proj_pension_pretax = ytd_pension_pretax + proj_remaining_pension_pretax
+    proj_va = ytd_va_income + proj_remaining_va
+
+    projection = project_year(
+        tax_calculator=tax_calculator,
+        year=year,
+        filing_status=filing_status,
+        num_children=num_children,
+        w2_gross=proj_w2_gross,
+        w2_pretax_deductions=proj_w2_pretax,
+        pension_gross=proj_pension_gross,
+        pension_pretax_deductions=proj_pension_pretax,
+        va_disability=proj_va,
+        estimated_federal_withholding=ytd_w2_federal_withheld + ytd_pension_federal_withheld,
+        use_standard_deduction=use_standard_deduction,
+        itemized_deductions=float(itemized_deduction_amount),
+    )
+
+    return {
+        "year": year,
+        "as_of_date": as_of_date.isoformat(),
+        "is_current_year": is_current_year,
+        "ytd": {
+            "w2_gross": str(ytd_w2_gross),
+            "w2_pretax_deductions": str(ytd_w2_pretax),
+            "pension_gross": str(ytd_pension_gross),
+            "pension_pretax_deductions": str(ytd_pension_pretax),
+            "va_income": str(ytd_va_income),
+            "federal_withheld": str(ytd_w2_federal_withheld + ytd_pension_federal_withheld),
+            "paycheck_count": paycheck_count,
+            "pension_count": pension_count,
+            "non_taxable_count": non_taxable_count,
+        },
+        "remaining_periods": {
+            "w2": remaining_pay_periods if is_current_year else 0,
+            "pension": remaining_pension_periods if is_current_year else 0,
+            "non_taxable": remaining_non_taxable_periods if is_current_year else 0,
+        },
+        "projected": {
+            "w2_gross": str(proj_w2_gross),
+            "w2_taxable": str(projection.w2_taxable),
+            "pension_gross": str(proj_pension_gross),
+            "pension_taxable": str(projection.pension_taxable),
+            "va_income": str(proj_va),
+            "total_taxable_income": str(projection.total_taxable_income),
+            "taxable_income": str(projection.taxable_income),
+            "federal_tax_liability": str(projection.federal_tax_liability),
+            "fica_liability": str(projection.fica_liability),
+            "total_tax_liability": str(projection.total_tax_liability),
+            "estimated_withholding": str(projection.estimated_withholding),
+            "estimated_refund_or_owed": str(projection.estimated_refund_or_owed),
+            "effective_rate": str(projection.effective_rate),
+            "marginal_rate": str(projection.marginal_rate),
+            "deduction_type": projection.deduction_type,
+            "deduction_amount": str(projection.deduction_amount),
         },
     }
