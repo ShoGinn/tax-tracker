@@ -8,11 +8,10 @@ import { DashboardPage } from "./DashboardPage";
 vi.mock("../lib/api/client", () => ({
   apiClient: {
     getAvailableYears: vi.fn(),
-    getConfig: vi.fn(),
     listPaychecks: vi.fn(),
     listPensions: vi.fn(),
     listNonTaxableIncome: vi.fn(),
-    projectYear: vi.fn(),
+    getDashboardProjection: vi.fn(),
   },
 }));
 
@@ -29,30 +28,37 @@ const renderWithQueryClient = () => {
   );
 };
 
-const defaultConfig = {
-  filing_status: "single" as const,
-  num_children: 0,
-  use_standard_deduction: true,
-  itemized_deduction_amount: "0.00",
-  age_65_plus: false,
-};
-
-const defaultProjection = {
+const defaultDashboardProjection = {
   year: currentYear,
-  filing_status: "single" as const,
-  w2_gross: "80000.00",
-  w2_taxable: "75000.00",
-  pension_taxable: "0.00",
-  total_taxable_income: "61650.00",
-  taxable_income: "61650.00",
-  federal_tax_liability: "9000.00",
-  fica_liability: "6120.00",
-  total_tax_liability: "15120.00",
-  estimated_withholding: "0.00",
-  estimated_refund_or_owed: "0.00",
-  // Backend returns rates already as percentages: "18.9" means 18.9%
-  effective_rate: "18.9",
-  marginal_rate: "22",
+  is_current_year: true,
+  as_of_date: "2025-05-31",
+  ytd: {
+    w2_gross: "40000.00",
+    w2_pretax: "5000.00",
+    w2_federal_withheld: "4800.00",
+    pension_gross: "0.00",
+    pension_pretax: "0.00",
+    pension_federal_withheld: "0.00",
+    va_income: "0.00",
+    paycheck_count: 4,
+    pension_count: 0,
+    non_taxable_count: 0,
+  },
+  projected: {
+    w2_gross: "80000.00",
+    w2_pretax: "10000.00",
+    pension_gross: "0.00",
+    pension_pretax: "0.00",
+    va_income: "0.00",
+    total_tax_liability: "15120.00",
+    federal_income_tax: "9000.00",
+    fica_total: "6120.00",
+    effective_rate: "18.9",
+    marginal_rate: "22",
+    total_withheld: "9600.00",
+    refund_or_owed: "-5520.00",
+  },
+  remaining_periods: { w2: 8, pension: 7, non_taxable: 7 },
 };
 
 describe("DashboardPage", () => {
@@ -63,24 +69,22 @@ describe("DashboardPage", () => {
       latest_year: currentYear,
       data_directory: "/data",
     });
-    vi.mocked(apiClient.getConfig).mockResolvedValue(defaultConfig);
     vi.mocked(apiClient.listPaychecks).mockResolvedValue([]);
     vi.mocked(apiClient.listPensions).mockResolvedValue([]);
     vi.mocked(apiClient.listNonTaxableIncome).mockResolvedValue([]);
-    vi.mocked(apiClient.projectYear).mockResolvedValue(defaultProjection);
+    vi.mocked(apiClient.getDashboardProjection).mockResolvedValue(defaultDashboardProjection);
   });
 
   it("renders YTD cashflow section", async () => {
     renderWithQueryClient();
-    await screen.findByText(/Household Cashflow/);
-    expect(screen.getByText(/Household Cashflow/)).toBeInTheDocument();
+    const cashflowCards = await screen.findAllByText(/Household Cashflow/);
+    expect(cashflowCards.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Federal Withholding")).toBeInTheDocument();
     expect(screen.getByText("W-2 Gross")).toBeInTheDocument();
   });
 
   it("displays effective rate as a plain percentage (not multiplied by 100 again)", async () => {
     renderWithQueryClient();
-    // Wait for prediction to load
     await screen.findByText(/Projected Total Tax Liability/);
 
     // The backend returns effective_rate = "18.9" meaning 18.9%
@@ -108,9 +112,15 @@ describe("DashboardPage", () => {
     expect(screen.getByText(/Projected Total Tax Liability/)).toBeInTheDocument();
   });
 
+  it("shows projected note with as_of_date for current year", async () => {
+    renderWithQueryClient();
+    await screen.findByText(/Projected Household Cashflow/);
+    expect(screen.getByText(/Projected from YTD \+ remaining pay periods/)).toBeInTheDocument();
+  });
+
   it("does not render ConfigEditor on the dashboard", async () => {
     renderWithQueryClient();
-    await screen.findByText(/Household Cashflow/);
+    await screen.findAllByText(/Household Cashflow/);
     expect(screen.queryByText("Tax Settings")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Filing Status")).not.toBeInTheDocument();
   });

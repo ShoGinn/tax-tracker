@@ -389,6 +389,8 @@ export interface CompareYearsResponse {
   };
 }
 
+export type W2PayFrequency = "weekly" | "biweekly" | "semimonthly" | "monthly";
+
 // ---------------------------------------------------------------------------
 // App config
 // ---------------------------------------------------------------------------
@@ -399,6 +401,7 @@ export interface AppConfigResponse {
   use_standard_deduction: boolean;
   itemized_deduction_amount: DecimalString;
   age_65_plus: boolean;
+  w2_pay_frequency: W2PayFrequency;
 }
 
 export interface AppConfigUpdate {
@@ -407,4 +410,52 @@ export interface AppConfigUpdate {
   use_standard_deduction?: boolean;
   itemized_deduction_amount?: string;
   age_65_plus?: boolean;
+  w2_pay_frequency?: W2PayFrequency;
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard projection
+// ---------------------------------------------------------------------------
+
+export interface DashboardProjectionYtd {
+  w2_gross: DecimalString;
+  w2_pretax: DecimalString;
+  w2_federal_withheld: DecimalString;
+  pension_gross: DecimalString;
+  pension_pretax: DecimalString;
+  pension_federal_withheld: DecimalString;
+  va_income: DecimalString;
+  paycheck_count: number;
+  pension_count: number;
+  non_taxable_count: number;
+}
+
+export interface DashboardProjectionFull {
+  w2_gross: DecimalString;
+  w2_pretax: DecimalString;
+  pension_gross: DecimalString;
+  pension_pretax: DecimalString;
+  va_income: DecimalString;
+  total_tax_liability: DecimalString;
+  federal_income_tax: DecimalString;
+  fica_total: DecimalString;
+  effective_rate: DecimalString;
+  marginal_rate: DecimalString;
+  total_withheld: DecimalString;
+  refund_or_owed: DecimalString;
+}
+
+export interface DashboardRemainingPeriods {
+  w2: number;
+  pension: number;
+  non_taxable: number;
+}
+
+export interface DashboardProjectionResponse {
+  year: number;
+  is_current_year: boolean;
+  as_of_date: string;
+  ytd: DashboardProjectionYtd;
+  projected: DashboardProjectionFull;
+  remaining_periods: DashboardRemainingPeriods;
 }

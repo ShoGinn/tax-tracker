@@ -1,5 +1,6 @@
 """Tax projection API endpoints."""
 
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated, Any
 
@@ -7,14 +8,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from taxtracker.api.dependencies import get_db
-from taxtracker.core.exceptions import ProjectionError
+from taxtracker.core.exceptions import DataLoadError, ProjectionError
 from taxtracker.models.api_requests import (  # noqa: TC001
     CompareYearsRequest,
     ProjectFromDBRequest,
     ProjectYearRequest,
 )
-from taxtracker.services.income_service import get_non_taxable_payments, get_retirement_1099rs
-from taxtracker.services.projections import compare_years, project_year
+from taxtracker.models.tax_data import FilingStatus
+from taxtracker.services.config_service import get_config
+from taxtracker.services.income_service import get_non_taxable_payments, get_paychecks, get_retirement_1099rs
+from taxtracker.services.midyear_periods import suggest_midyear_periods
+from taxtracker.services.projections import compare_years, project_from_ytd, project_year
 from taxtracker.services.tax_calculator import TaxCalculator
 
 router = APIRouter(prefix="/projections", tags=["Projections"])
@@ -190,3 +194,90 @@ async def project_from_database(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database projection failed: {e!s}") from e
+
+
+@router.get(
+    "/dashboard/{year}",
+    summary="Project full-year taxes using YTD database records",
+    response_description=(
+        "YTD actuals plus remaining-period projection with tax liability. "
+        "For past years, remaining periods are 0 and projected equals actual."
+    ),
+    responses={400: {"description": "Invalid input or unsupported tax year"}},
+)
+async def dashboard_projection(
+    year: int,
+    *,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    """Project full-year income and tax from YTD database records.
+
+    Uses the stored app config (filing status, pay frequency, deduction preference) to
+    drive remaining-period calculations. For the current calendar year the endpoint
+    fetches remaining periods via the mid-year period suggestion logic, accounting for
+    whether the current pay period already has an entry in the database.  For past years
+    it returns YTD actuals with no extrapolation.
+    """
+    try:
+        config = await get_config(db)
+        current_year = datetime.now(UTC).year
+        is_current_year = year == current_year
+
+        paychecks = await get_paychecks(db, year=year, limit=None)
+        retirement_1099rs = await get_retirement_1099rs(db, year=year, limit=None)
+        non_taxable_payments = await get_non_taxable_payments(db, year=year, limit=None)
+
+        ytd_w2_gross = sum((p.gross_wages + p.bonus for p in paychecks), Decimal(0))
+        ytd_w2_pretax = sum((p.total_pretax_deductions for p in paychecks), Decimal(0))
+        ytd_w2_federal = sum((p.federal_withholding for p in paychecks), Decimal(0))
+        ytd_pension_gross = sum((p.gross_amount for p in retirement_1099rs), Decimal(0))
+        ytd_pension_pretax = sum((p.pretax_deductions for p in retirement_1099rs), Decimal(0))
+        ytd_pension_federal = sum((p.federal_withholding for p in retirement_1099rs), Decimal(0))
+        ytd_va = sum((p.amount for p in non_taxable_payments), Decimal(0))
+
+        if is_current_year:
+            periods = await suggest_midyear_periods(
+                db,
+                tax_year=year,
+                as_of_date=None,
+                w2_pay_frequency=config.w2_pay_frequency,
+            )
+            remaining_pay_periods = periods.remaining_pay_periods
+            remaining_pension_periods = periods.remaining_pension_periods
+            remaining_non_taxable_periods = periods.remaining_non_taxable_periods
+        else:
+            remaining_pay_periods = 0
+            remaining_pension_periods = 0
+            remaining_non_taxable_periods = 0
+
+        filing_status = FilingStatus(config.filing_status)
+        itemized_amount = config.itemized_deduction_amount if not config.use_standard_deduction else Decimal(0)
+
+        return project_from_ytd(
+            tax_calculator=TaxCalculator(tax_year=year),
+            year=year,
+            filing_status=filing_status,
+            num_children=config.num_children,
+            use_standard_deduction=config.use_standard_deduction,
+            itemized_deduction_amount=itemized_amount,
+            ytd_w2_gross=ytd_w2_gross,
+            ytd_w2_pretax=ytd_w2_pretax,
+            ytd_pension_gross=ytd_pension_gross,
+            ytd_pension_pretax=ytd_pension_pretax,
+            ytd_va_income=ytd_va,
+            ytd_w2_federal_withheld=ytd_w2_federal,
+            ytd_pension_federal_withheld=ytd_pension_federal,
+            paycheck_count=len(paychecks),
+            pension_count=len(retirement_1099rs),
+            non_taxable_count=len(non_taxable_payments),
+            remaining_pay_periods=remaining_pay_periods,
+            remaining_pension_periods=remaining_pension_periods,
+            remaining_non_taxable_periods=remaining_non_taxable_periods,
+            is_current_year=is_current_year,
+            as_of_date=datetime.now(UTC).date(),
+        )
+
+    except (ProjectionError, DataLoadError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Dashboard projection failed: {e!s}") from e

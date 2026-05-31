@@ -128,6 +128,7 @@ describe("W4Page", () => {
       use_standard_deduction: true,
       itemized_deduction_amount: "0.00",
       age_65_plus: false,
+      w2_pay_frequency: "monthly",
     });
     vi.mocked(apiClient.listEmployers).mockResolvedValue([
       {

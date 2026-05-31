@@ -54,6 +54,7 @@ describe("ProjectionsPage – rate display", () => {
       use_standard_deduction: true,
       itemized_deduction_amount: "0.00",
       age_65_plus: false,
+      w2_pay_frequency: "monthly",
     });
     vi.mocked(apiClient.projectYear).mockResolvedValue(projectionResponse);
   });

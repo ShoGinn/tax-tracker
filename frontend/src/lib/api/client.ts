@@ -4,6 +4,7 @@ import type {
   AvailableYearsResponse,
   CompareYearsRequest,
   CompareYearsResponse,
+  DashboardProjectionResponse,
   DeleteResponse,
   EmployerCreate,
   EmployerResponse,
@@ -194,6 +195,7 @@ export const apiClient = {
   // Projections
   projectYear: (data: ProjectYearRequest) => post<ProjectYearResponse>("/projections/project-year", data),
   compareYears: (data: CompareYearsRequest) => post<CompareYearsResponse>("/projections/compare-years", data),
+  getDashboardProjection: (year: number) => request<DashboardProjectionResponse>(`/projections/dashboard/${year}`),
 
   // App config
   getConfig: () => request<AppConfigResponse>("/config"),

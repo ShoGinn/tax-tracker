@@ -90,9 +90,19 @@ def create_app(skip_db_init: bool = False, *, serve_frontend: bool = True) -> Fa
 
         if not skip_db_init:
             # Initialize database tables asynchronously
-
             async with async_engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+
+            # Apply lightweight schema migrations for columns added after initial release.
+            # create_all does not alter existing tables, so new columns must be added explicitly.
+            async with async_engine.begin() as conn:
+                result = await conn.execute(text("PRAGMA table_info(app_config)"))
+                columns = {row[1] for row in result.fetchall()}
+                if "w2_pay_frequency" not in columns:
+                    await conn.execute(
+                        text("ALTER TABLE app_config ADD COLUMN w2_pay_frequency VARCHAR(20) DEFAULT 'monthly'")
+                    )
+                    logger.info("Schema migration: added w2_pay_frequency column to app_config")
         else:
             pass
 

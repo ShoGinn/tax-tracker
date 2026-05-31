@@ -23,6 +23,7 @@ _DEFAULTS = {
     "use_standard_deduction": True,
     "itemized_deduction_amount": Decimal(0),
     "age_65_plus": False,
+    "w2_pay_frequency": "monthly",
 }
 
 
