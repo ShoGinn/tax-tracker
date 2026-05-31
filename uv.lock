@@ -608,7 +608,7 @@ wheels = [
 
 [[package]]
 name = "taxtracker"
-version = "1.5.3"
+version = "1.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
