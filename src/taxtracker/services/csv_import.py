@@ -1,6 +1,7 @@
 """CSV import service for bulk loading income data."""
 
 import csv
+from collections.abc import Awaitable, Callable
 from io import StringIO
 from typing import TYPE_CHECKING, Any
 
@@ -67,6 +68,46 @@ def _prepare_row_for_schema(row: dict[str, Any], column_mapping: dict[str, str])
     return mapped_data
 
 
+def _setup_reader(
+    csv_content: str, column_mapping: dict[str, str] | None
+) -> tuple[csv.DictReader[str], dict[str, str]] | None:
+    """Set up a CSV reader with a column mapping.
+
+    If column_mapping is None/empty, builds an identity mapping from the CSV headers.
+    Returns None when the CSV contains no data rows (empty or header-only).
+    """
+    reader: csv.DictReader[str] = csv.DictReader(StringIO(csv_content))
+    if not column_mapping:
+        first_row = next(reader, None)
+        if first_row is None:
+            return None
+        column_mapping = {col: col for col in first_row}
+        reader = csv.DictReader(StringIO(csv_content))
+    return reader, column_mapping
+
+
+_RowHandler = Callable[[dict[str, Any]], Awaitable[None]]
+
+
+async def _process_rows(
+    db: AsyncSession,
+    reader: csv.DictReader[str],
+    column_mapping: dict[str, str],
+    result: CSVImportResult,
+    handler: _RowHandler,
+) -> None:
+    """Iterate CSV rows, invoke handler for each, and accumulate success/error counts."""
+    for row_num, row in enumerate(reader, start=2):
+        raw_row = dict(row)
+        try:
+            mapped_data = _prepare_row_for_schema(raw_row, column_mapping)
+            await handler(mapped_data)
+            result.add_success()
+        except Exception as e:
+            await db.rollback()
+            result.add_error(row_num, _friendly_error(e), raw_row)
+
+
 async def import_paychecks_csv(
     db: AsyncSession, csv_content: str, column_mapping: dict[str, str] | None = None
 ) -> dict[str, Any]:
@@ -87,61 +128,36 @@ async def import_paychecks_csv(
         CSVImportResult with success/error counts
     """
     result = CSVImportResult()
-    reader = csv.DictReader(StringIO(csv_content))
+    setup = _setup_reader(csv_content, column_mapping)
+    if setup is None:
+        return result.to_dict()
+    reader, mapping = setup
 
-    # If no mapping provided, use identity mapping (CSV columns = our field names)
-    if not column_mapping:
-        # Use the CSV's actual column names as-is
-        first_row_peek = next(reader, None)
-        if first_row_peek is None:
-            return result.to_dict()  # Empty CSV
+    async def handler(mapped_data: dict[str, Any]) -> None:
+        if "employer_id" in mapped_data and mapped_data["employer_id"].strip():
+            employer_id = int(mapped_data["employer_id"])
+        elif "employer_name" in mapped_data and mapped_data["employer_name"].strip():
+            employer_name = mapped_data["employer_name"].strip()
+            result_query = await db.execute(select(Employer).filter(Employer.name == employer_name))
+            employer = result_query.scalar_one_or_none()
+            if not employer:
+                employer = await income_service.create_employer(
+                    db,
+                    EmployerCreate(
+                        name=employer_name,
+                        ein=None,
+                        start_date=mapped_data["pay_date"],
+                    ),
+                )
+            employer_id = employer.id
+        else:
+            raise ValueError(f"Must provide either employer_id or employer_name. Got: {mapped_data}")
 
-        # Create identity mapping for all columns in the CSV
-        column_mapping = {col: col for col in first_row_peek}
+        paycheck_data = {k: v for k, v in mapped_data.items() if k not in ("employer_name", "employer_id")}
+        paycheck_data["employer_id"] = employer_id
+        await income_service.create_paycheck(db, PaycheckCreate(**paycheck_data))
 
-        # Reset reader to start from beginning
-        reader = csv.DictReader(StringIO(csv_content))
-
-    for row_num, row in enumerate(reader, start=2):  # Start at 2 (1 is header)
-        try:
-            # Prepare cleaned data for Pydantic
-            mapped_data = _prepare_row_for_schema(row, column_mapping)
-
-            # Handle employer (by ID or name)
-            if "employer_id" in mapped_data and mapped_data["employer_id"].strip():
-                employer_id = int(mapped_data["employer_id"])
-            elif "employer_name" in mapped_data and mapped_data["employer_name"].strip():
-                # Find or create employer by name
-                employer_name = mapped_data["employer_name"].strip()
-                result_query = await db.execute(select(Employer).filter(Employer.name == employer_name))
-                employer = result_query.scalar_one_or_none()
-                if not employer:
-                    # Create employer with start date from first paycheck
-                    employer = await income_service.create_employer(
-                        db,
-                        EmployerCreate(
-                            name=employer_name,
-                            ein=None,
-                            start_date=mapped_data["pay_date"],
-                        ),
-                    )
-                employer_id = employer.id
-            else:
-                raise ValueError(f"Must provide either employer_id or employer_name. Got: {mapped_data}")
-
-            # Remove employer_name/id from data before passing to PaycheckCreate
-            paycheck_data = {k: v for k, v in mapped_data.items() if k not in ("employer_name", "employer_id")}
-            paycheck_data["employer_id"] = employer_id
-
-            # Let Pydantic handle all type conversions (date, Decimal, etc.)
-            paycheck = PaycheckCreate(**paycheck_data)
-            await income_service.create_paycheck(db, paycheck)
-            result.add_success()
-
-        except Exception as e:
-            await db.rollback()
-            result.add_error(row_num, _friendly_error(e), row)
-
+    await _process_rows(db, reader, mapping, result, handler)
     return result.to_dict()
 
 
@@ -174,29 +190,15 @@ async def import_pension_csv(
         CSVImportResult with success/error counts
     """
     result = CSVImportResult()
-    reader = csv.DictReader(StringIO(csv_content))
+    setup = _setup_reader(csv_content, column_mapping)
+    if setup is None:
+        return result.to_dict()
+    reader, mapping = setup
 
-    # If no mapping provided, use identity mapping
-    if not column_mapping:
-        first_row_peek = next(reader, None)
-        if first_row_peek is None:
-            return result.to_dict()
-        column_mapping = {col: col for col in first_row_peek}
-        reader = csv.DictReader(StringIO(csv_content))
+    async def handler(mapped_data: dict[str, Any]) -> None:
+        await income_service.create_retirement_1099r(db, Retirement1099RCreate(**mapped_data))
 
-    for row_num, row in enumerate(reader, start=2):
-        try:
-            mapped_data = _prepare_row_for_schema(row, column_mapping)
-
-            # Let Pydantic handle all type conversions
-            payment = Retirement1099RCreate(**mapped_data)
-            await income_service.create_retirement_1099r(db, payment)
-            result.add_success()
-
-        except Exception as e:
-            await db.rollback()
-            result.add_error(row_num, _friendly_error(e), row)
-
+    await _process_rows(db, reader, mapping, result, handler)
     return result.to_dict()
 
 
@@ -220,32 +222,19 @@ async def import_va_csv(
         CSVImportResult with success/error counts
     """
     result = CSVImportResult()
-    reader = csv.DictReader(StringIO(csv_content))
+    setup = _setup_reader(csv_content, column_mapping)
+    if setup is None:
+        return result.to_dict()
+    reader, mapping = setup
 
-    # If no mapping provided, use identity mapping
-    if not column_mapping:
-        first_row_peek = next(reader, None)
-        if first_row_peek is None:
-            return result.to_dict()
-        column_mapping = {col: col for col in first_row_peek}
-        reader = csv.DictReader(StringIO(csv_content))
+    async def handler(mapped_data: dict[str, Any]) -> None:
+        payment = NonTaxableIncomeCreate(
+            pay_date=mapped_data.get("pay_date", ""),
+            amount=mapped_data.get("amount", "0"),
+            source_type=mapped_data.get("source_type"),
+            notes=mapped_data.get("notes"),
+        )
+        await income_service.create_non_taxable_payment(db, payment)
 
-    for row_num, row in enumerate(reader, start=2):
-        try:
-            mapped_data = _prepare_row_for_schema(row, column_mapping)
-
-            payment = NonTaxableIncomeCreate(
-                pay_date=mapped_data.get("pay_date", ""),
-                amount=mapped_data.get("amount", "0"),
-                source_type=mapped_data.get("source_type"),
-                notes=mapped_data.get("notes"),
-            )
-
-            await income_service.create_non_taxable_payment(db, payment)
-            result.add_success()
-
-        except Exception as e:
-            await db.rollback()
-            result.add_error(row_num, _friendly_error(e), row)
-
+    await _process_rows(db, reader, mapping, result, handler)
     return result.to_dict()
