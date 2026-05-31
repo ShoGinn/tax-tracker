@@ -8,6 +8,7 @@ import type {
   MidYearDBW4OptimizeRequest,
   MidYearPeriodSuggestionRequest,
   MidYearW4OptimizeResponse,
+  W2PayFrequency,
   W4OptimizeRequest,
   W4OptimizeResponse,
   WithholdingCalcRequest,
@@ -162,19 +163,21 @@ const OptimizerTab = () => {
     year: currentYear,
   });
 
+  const [payFreq, setPayFreq] = useState<W2PayFrequency>(() => config.w2_pay_frequency);
+
   // Sync profile fields from DB config once it loads (no-op if already cached at mount)
   useEffect(() => {
     if (!configLoading && !didInitialSync.current) {
       didInitialSync.current = true;
+      setPayFreq(config.w2_pay_frequency);
       setFields((prev) => ({
         ...prev,
         filing_status: config.filing_status,
         num_children: config.num_children,
+        paychecks_per_year: frequencyToCount(config.w2_pay_frequency),
       }));
     }
-  }, [configLoading, config.filing_status, config.num_children]);
-
-  const [payFreq, setPayFreq] = useState("biweekly");
+  }, [configLoading, config.filing_status, config.num_children, config.w2_pay_frequency]);
 
   const mutation = useMutation({
     mutationFn: (data: W4OptimizeRequest) => apiClient.optimizeW4(data),
@@ -243,7 +246,7 @@ const OptimizerTab = () => {
               className="form-input"
               value={payFreq}
               onChange={(e) => {
-                setPayFreq(e.target.value);
+                setPayFreq(e.target.value as W2PayFrequency);
                 set("paychecks_per_year", frequencyToCount(e.target.value));
               }}
             >
@@ -590,20 +593,22 @@ const MidYearTab = () => {
     };
   });
 
+  const [asOfDate, setAsOfDate] = useState("");
+  const [expectedRemainingPensionTaxable, setExpectedRemainingPensionTaxable] = useState("");
+  const [w2PayFrequency, setW2PayFrequency] = useState<W2PayFrequency>(() => config.w2_pay_frequency);
+
   // Sync profile fields from DB config once it loads (no-op if already cached at mount)
   useEffect(() => {
     if (!configLoading && !didInitialSync.current) {
       didInitialSync.current = true;
+      setW2PayFrequency(config.w2_pay_frequency);
       setFields((prev) => ({
         ...prev,
         filing_status: config.filing_status,
         num_children: config.num_children,
       }));
     }
-  }, [configLoading, config.filing_status, config.num_children]);
-  const [asOfDate, setAsOfDate] = useState("");
-  const [expectedRemainingPensionTaxable, setExpectedRemainingPensionTaxable] = useState("");
-  const [w2PayFrequency, setW2PayFrequency] = useState<"weekly" | "biweekly" | "semimonthly" | "monthly">("biweekly");
+  }, [configLoading, config.filing_status, config.num_children, config.w2_pay_frequency]);
   const [employerOverrides, setEmployerOverrides] = useState<OverrideRow[]>([]);
 
   const employersQuery = useQuery({
@@ -691,7 +696,7 @@ const MidYearTab = () => {
               <select
                 className="form-input"
                 value={w2PayFrequency}
-                onChange={(e) => setW2PayFrequency(e.target.value as "weekly" | "biweekly" | "semimonthly" | "monthly")}
+                onChange={(e) => setW2PayFrequency(e.target.value as W2PayFrequency)}
               >
                 {PAY_FREQUENCIES.map((f) => (
                   <option key={f.value} value={f.value}>
