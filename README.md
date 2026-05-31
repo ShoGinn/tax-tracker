@@ -154,6 +154,14 @@ This repository includes an automated monitor workflow at [`.github/workflows/ps
 
 The existing CI PSL check still runs on push and pull request, but now distinguishes tax-value drift from date-only metadata updates.
 
+### Automated Pre-commit Hook Updates
+
+This repository includes an automated hook update workflow at [`.github/workflows/pre-commit-autoupdate.yml`](.github/workflows/pre-commit-autoupdate.yml):
+
+- Runs weekly and also supports manual execution via `workflow_dispatch`
+- Runs `pre-commit autoupdate` to refresh remote hook revisions
+- Opens or updates a pull request automatically when `.pre-commit-config.yaml` changes
+
 ## API Capabilities
 
 The service includes endpoints for:
