@@ -206,7 +206,9 @@ describe("W4Page", () => {
     await waitFor(() => {
       expect(screen.getByLabelText("Remaining W-2 pay periods")).toHaveValue(16);
       expect(screen.getByLabelText("Remaining pension periods (monthly typical)")).toHaveValue(7);
-      expect(screen.getByLabelText("Remaining non-taxable periods (monthly typical)")).toHaveValue(7);
+      expect(screen.getByLabelText("Remaining non-taxable periods (monthly typical)")).toHaveValue(
+        7,
+      );
     });
   });
 });

@@ -33,12 +33,22 @@ export const DashboardPage = () => {
       const federalWithholding =
         paychecks.reduce((total, p) => total + parseDecimalString(p.federal_withholding), 0) +
         pensions.reduce((total, p) => total + parseDecimalString(p.federal_withholding), 0);
-      const pensionGross = pensions.reduce((total, p) => total + parseDecimalString(p.gross_amount), 0);
-      const nonTaxableGross = nonTaxableIncome.reduce((total, e) => total + parseDecimalString(e.amount), 0);
+      const pensionGross = pensions.reduce(
+        (total, p) => total + parseDecimalString(p.gross_amount),
+        0,
+      );
+      const nonTaxableGross = nonTaxableIncome.reduce(
+        (total, e) => total + parseDecimalString(e.amount),
+        0,
+      );
 
       return {
         year: selectedYear,
-        counts: { paychecks: paychecks.length, pensions: pensions.length, nonTaxable: nonTaxableIncome.length },
+        counts: {
+          paychecks: paychecks.length,
+          pensions: pensions.length,
+          nonTaxable: nonTaxableIncome.length,
+        },
         totals: {
           w2Gross,
           pensionGross,
@@ -62,7 +72,9 @@ export const DashboardPage = () => {
   if (summaryQuery.isError) {
     return (
       <p className="status-message error">
-        {summaryQuery.error instanceof Error ? summaryQuery.error.message : "Unable to load dashboard"}
+        {summaryQuery.error instanceof Error
+          ? summaryQuery.error.message
+          : "Unable to load dashboard"}
       </p>
     );
   }
@@ -107,8 +119,8 @@ export const DashboardPage = () => {
       <article className="metric-card compact">
         <p className="metric-label">Records Loaded</p>
         <p className="metric-caption">
-          {summary.counts.paychecks} paychecks • {summary.counts.pensions} pensions • {summary.counts.nonTaxable}{" "}
-          non-taxable entries
+          {summary.counts.paychecks} paychecks • {summary.counts.pensions} pensions •{" "}
+          {summary.counts.nonTaxable} non-taxable entries
         </p>
       </article>
 
@@ -123,7 +135,9 @@ export const DashboardPage = () => {
         <article className="metric-card">
           <p className="metric-caption error">
             Projection unavailable:{" "}
-            {projectionQuery.error instanceof Error ? projectionQuery.error.message : "Unknown error"}
+            {projectionQuery.error instanceof Error
+              ? projectionQuery.error.message
+              : "Unknown error"}
           </p>
         </article>
       )}
@@ -144,27 +158,37 @@ export const DashboardPage = () => {
 
           <article className="metric-card">
             <p className="metric-label">Projected Federal Withholding</p>
-            <p className="metric-value">{formatCurrency(parseDecimalString(proj.projected.total_withheld))}</p>
+            <p className="metric-value">
+              {formatCurrency(parseDecimalString(proj.projected.total_withheld))}
+            </p>
           </article>
 
           <article className="metric-card">
             <p className="metric-label">Projected W-2 Gross</p>
-            <p className="metric-value">{formatCurrency(parseDecimalString(proj.projected.w2_gross))}</p>
+            <p className="metric-value">
+              {formatCurrency(parseDecimalString(proj.projected.w2_gross))}
+            </p>
           </article>
 
           <article className="metric-card">
             <p className="metric-label">Projected 1099-R Gross</p>
-            <p className="metric-value">{formatCurrency(parseDecimalString(proj.projected.pension_gross))}</p>
+            <p className="metric-value">
+              {formatCurrency(parseDecimalString(proj.projected.pension_gross))}
+            </p>
           </article>
 
           <article className="metric-card">
             <p className="metric-label">Projected Non-taxable Income</p>
-            <p className="metric-value">{formatCurrency(parseDecimalString(proj.projected.va_income))}</p>
+            <p className="metric-value">
+              {formatCurrency(parseDecimalString(proj.projected.va_income))}
+            </p>
           </article>
 
           <article className="metric-card">
             <p className="metric-label">Projected Total Tax Liability</p>
-            <p className="metric-value">{formatCurrency(parseDecimalString(proj.projected.total_tax_liability))}</p>
+            <p className="metric-value">
+              {formatCurrency(parseDecimalString(proj.projected.total_tax_liability))}
+            </p>
             <p className="metric-caption">
               {parseDecimalString(proj.projected.effective_rate).toFixed(1)}% effective •{" "}
               {parseDecimalString(proj.projected.marginal_rate).toFixed(0)}% marginal

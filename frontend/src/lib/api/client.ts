@@ -47,7 +47,10 @@ const buildUrl = (path: string, queryParams?: Record<string, string | number | u
   return url;
 };
 
-const request = async <T>(path: string, queryParams?: Record<string, string | number | undefined>): Promise<T> => {
+const request = async <T>(
+  path: string,
+  queryParams?: Record<string, string | number | undefined>,
+): Promise<T> => {
   const response = await fetch(buildUrl(path, queryParams));
 
   if (!response.ok) {
@@ -147,7 +150,8 @@ export const apiClient = {
   getAvailableYears: () => request<AvailableYearsResponse>("/taxes/tax-data/available-years"),
 
   // Tax calculation
-  calculateTaxes: (data: TaxCalculationRequest) => post<TaxCalculationResponse>("/taxes/calculate", data),
+  calculateTaxes: (data: TaxCalculationRequest) =>
+    post<TaxCalculationResponse>("/taxes/calculate", data),
   calculateFromDb: (
     year: number,
     params: {
@@ -175,12 +179,15 @@ export const apiClient = {
 
   // 1099-R Pensions
   listPensions: (year?: number) => request<Retirement1099RResponse[]>("/income/1099r", { year }),
-  createPension: (data: Retirement1099RCreate) => post<Retirement1099RResponse>("/income/1099r", data),
+  createPension: (data: Retirement1099RCreate) =>
+    post<Retirement1099RResponse>("/income/1099r", data),
   deletePension: (id: number) => del<DeleteResponse>(`/income/1099r/${id}`),
 
   // Non-taxable income
-  listNonTaxableIncome: (year?: number) => request<NonTaxableIncomeResponse[]>("/income/non-taxable", { year }),
-  createNonTaxableIncome: (data: NonTaxableIncomeCreate) => post<NonTaxableIncomeResponse>("/income/non-taxable", data),
+  listNonTaxableIncome: (year?: number) =>
+    request<NonTaxableIncomeResponse[]>("/income/non-taxable", { year }),
+  createNonTaxableIncome: (data: NonTaxableIncomeCreate) =>
+    post<NonTaxableIncomeResponse>("/income/non-taxable", data),
   deleteNonTaxableIncome: (id: number) => del<DeleteResponse>(`/income/non-taxable/${id}`),
 
   // W-4
@@ -193,9 +200,12 @@ export const apiClient = {
     post<WithholdingCalcResponse>("/w4/calculate-withholding", data),
 
   // Projections
-  projectYear: (data: ProjectYearRequest) => post<ProjectYearResponse>("/projections/project-year", data),
-  compareYears: (data: CompareYearsRequest) => post<CompareYearsResponse>("/projections/compare-years", data),
-  getDashboardProjection: (year: number) => request<DashboardProjectionResponse>(`/projections/dashboard/${year}`),
+  projectYear: (data: ProjectYearRequest) =>
+    post<ProjectYearResponse>("/projections/project-year", data),
+  compareYears: (data: CompareYearsRequest) =>
+    post<CompareYearsResponse>("/projections/compare-years", data),
+  getDashboardProjection: (year: number) =>
+    request<DashboardProjectionResponse>(`/projections/dashboard/${year}`),
 
   // App config
   getConfig: () => request<AppConfigResponse>("/config"),

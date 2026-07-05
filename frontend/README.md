@@ -5,7 +5,8 @@ React + TypeScript + Vite frontend for the Tax Tracker API.
 ## Tooling
 
 - Package manager: `pnpm`
-- Linting and formatting: `Biome`
+- Linting: `oxlint`
+- Formatting: `oxfmt`
 - Build tool: `Vite`
 
 ## Commands

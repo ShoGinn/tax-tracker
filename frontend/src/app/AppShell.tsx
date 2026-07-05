@@ -17,7 +17,9 @@ export const AppShell = () => {
       <aside className="sidebar">
         <p className="brand-kicker">Tax Tracker</p>
         <h1>Federal Planning Studio</h1>
-        <p className="brand-copy">From paychecks to W-4 moves, one command center for your federal planning.</p>
+        <p className="brand-copy">
+          From paychecks to W-4 moves, one command center for your federal planning.
+        </p>
         <nav aria-label="Main navigation">
           <ul>
             {navigation.map((item) => (

@@ -13,9 +13,9 @@ updates:
     groups:
       production:
         patterns: ['*']
-        exclude-patterns: ['@types/*', '@biomejs/*', 'typescript', 'vite', '@vitejs/*']
+        exclude-patterns: ['@types/*', 'oxlint', 'oxfmt', 'typescript', 'vite', '@vitejs/*']
       dev:
-        patterns: ['@types/*', '@biomejs/*', 'typescript', 'vite', '@vitejs/*']
+        patterns: ['@types/*', 'oxlint', 'oxfmt', 'typescript', 'vite', '@vitejs/*']
 
   # Python dependencies (uv)
   - package-ecosystem: 'uv'

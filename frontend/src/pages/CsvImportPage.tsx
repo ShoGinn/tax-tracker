@@ -96,8 +96,9 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
   return (
     <div className="card income-form mb-4">
       <p className="helper-text">
-        Upload a CSV file to bulk-import {config.label}. The system auto-detects column names and handles currency
-        symbols and multiple date formats. See <code>{config.example}</code> in the examples folder for a sample.
+        Upload a CSV file to bulk-import {config.label}. The system auto-detects column names and
+        handles currency symbols and multiple date formats. See <code>{config.example}</code> in the
+        examples folder for a sample.
       </p>
 
       <input
@@ -144,7 +145,9 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
       {mutation.isError && <p className="form-error mt-2">{mutation.error.message}</p>}
 
       {mutation.data && (
-        <div className={`csv-result ${mutation.data.errors.length > 0 ? "csv-result--warn" : "csv-result--ok"}`}>
+        <div
+          className={`csv-result ${mutation.data.errors.length > 0 ? "csv-result--warn" : "csv-result--ok"}`}
+        >
           <p>
             <strong>Imported:</strong> {mutation.data.imported} &nbsp;
             <strong>Skipped:</strong> {mutation.data.skipped}

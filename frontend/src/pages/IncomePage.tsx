@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { apiClient } from "../lib/api/client";
-import type { EmployerCreate, NonTaxableIncomeCreate, PaycheckCreate, Retirement1099RCreate } from "../lib/api/types";
+import type {
+  EmployerCreate,
+  NonTaxableIncomeCreate,
+  PaycheckCreate,
+  Retirement1099RCreate,
+} from "../lib/api/types";
 import { formatCurrency, parseDecimalString } from "../lib/money";
 
 type Tab = "paychecks" | "pensions" | "non-taxable";
@@ -46,7 +51,12 @@ const DeleteButton = ({ onConfirm }: { onConfirm: () => void }) => {
   }
 
   return (
-    <button type="button" className="btn-ghost-sm" onClick={() => setConfirm(true)} aria-label="Delete">
+    <button
+      type="button"
+      className="btn-ghost-sm"
+      onClick={() => setConfirm(true)}
+      aria-label="Delete"
+    >
       ✕
     </button>
   );
@@ -138,10 +148,16 @@ const PaychecksTab = ({ year }: { year: number }) => {
     },
   });
 
-  const totalGross = paychecks.reduce((s, p) => s + parseDecimalString(p.gross_wages) + parseDecimalString(p.bonus), 0);
+  const totalGross = paychecks.reduce(
+    (s, p) => s + parseDecimalString(p.gross_wages) + parseDecimalString(p.bonus),
+    0,
+  );
   const totalBonus = paychecks.reduce((s, p) => s + parseDecimalString(p.bonus), 0);
   const totalTaxable = paychecks.reduce((s, p) => s + parseDecimalString(p.taxable_wages), 0);
-  const totalWithholding = paychecks.reduce((s, p) => s + parseDecimalString(p.federal_withholding), 0);
+  const totalWithholding = paychecks.reduce(
+    (s, p) => s + parseDecimalString(p.federal_withholding),
+    0,
+  );
   const totalFica = paychecks.reduce(
     (s, p) => s + parseDecimalString(p.social_security) + parseDecimalString(p.medicare),
     0,
@@ -154,7 +170,11 @@ const PaychecksTab = ({ year }: { year: number }) => {
       <div className="panel-header">
         <h2 className="panel-title">W-2 Paychecks</h2>
         <div className="panel-actions">
-          <button type="button" className="btn-ghost" onClick={() => setShowEmployerForm((v) => !v)}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setShowEmployerForm((v) => !v)}
+          >
             {showEmployerForm ? "Hide employer form" : "+ Add employer"}
           </button>
           <button type="button" className="btn-primary" onClick={() => setShowForm((v) => !v)}>
@@ -205,7 +225,8 @@ const PaychecksTab = ({ year }: { year: number }) => {
               </thead>
               <tbody>
                 {paychecks.map((p) => {
-                  const fica = parseDecimalString(p.social_security) + parseDecimalString(p.medicare);
+                  const fica =
+                    parseDecimalString(p.social_security) + parseDecimalString(p.medicare);
                   return (
                     <tr key={p.id}>
                       <td>{p.pay_date}</td>
@@ -213,11 +234,15 @@ const PaychecksTab = ({ year }: { year: number }) => {
                       <td className="num">{formatCurrency(parseDecimalString(p.gross_wages))}</td>
                       {hasBonus && (
                         <td className="num">
-                          {parseDecimalString(p.bonus) > 0 ? formatCurrency(parseDecimalString(p.bonus)) : "—"}
+                          {parseDecimalString(p.bonus) > 0
+                            ? formatCurrency(parseDecimalString(p.bonus))
+                            : "—"}
                         </td>
                       )}
                       <td className="num">{formatCurrency(parseDecimalString(p.taxable_wages))}</td>
-                      <td className="num">{formatCurrency(parseDecimalString(p.federal_withholding))}</td>
+                      <td className="num">
+                        {formatCurrency(parseDecimalString(p.federal_withholding))}
+                      </td>
                       <td className="num">{formatCurrency(fica)}</td>
                       <td className="num">{formatCurrency(parseDecimalString(p.net_pay))}</td>
                       <td>
@@ -297,7 +322,8 @@ const PaycheckForm = ({
     deduction_other_posttax: "0",
   });
 
-  const set = (key: keyof PaycheckCreate, val: string | number) => setFields((prev) => ({ ...prev, [key]: val }));
+  const set = (key: keyof PaycheckCreate, val: string | number) =>
+    setFields((prev) => ({ ...prev, [key]: val }));
 
   return (
     <form
@@ -555,7 +581,10 @@ const PensionsTab = ({ year }: { year: number }) => {
   });
 
   const totalGross = pensions.reduce((s, p) => s + parseDecimalString(p.gross_amount), 0);
-  const totalWithholding = pensions.reduce((s, p) => s + parseDecimalString(p.federal_withholding), 0);
+  const totalWithholding = pensions.reduce(
+    (s, p) => s + parseDecimalString(p.federal_withholding),
+    0,
+  );
   const totalNet = pensions.reduce((s, p) => s + parseDecimalString(p.net_amount), 0);
 
   return (
@@ -604,9 +633,13 @@ const PensionsTab = ({ year }: { year: number }) => {
                     <td>{p.pay_date}</td>
                     <td>{p.source_description ?? "—"}</td>
                     <td className="num">{formatCurrency(parseDecimalString(p.gross_amount))}</td>
-                    <td className="num">{formatCurrency(parseDecimalString(p.pretax_deductions))}</td>
+                    <td className="num">
+                      {formatCurrency(parseDecimalString(p.pretax_deductions))}
+                    </td>
                     <td className="num">{formatCurrency(parseDecimalString(p.taxable_amount))}</td>
-                    <td className="num">{formatCurrency(parseDecimalString(p.federal_withholding))}</td>
+                    <td className="num">
+                      {formatCurrency(parseDecimalString(p.federal_withholding))}
+                    </td>
                     <td className="num">{formatCurrency(parseDecimalString(p.net_amount))}</td>
                     <td>
                       <DeleteButton onConfirm={() => deleteMutation.mutate(p.id)} />
@@ -660,7 +693,8 @@ const PensionForm = ({
     source_description: "",
   });
 
-  const set = (key: keyof Retirement1099RCreate, val: string) => setFields((prev) => ({ ...prev, [key]: val }));
+  const set = (key: keyof Retirement1099RCreate, val: string) =>
+    setFields((prev) => ({ ...prev, [key]: val }));
 
   return (
     <form
@@ -875,7 +909,8 @@ const NonTaxableForm = ({
     notes: "",
   });
 
-  const set = (key: keyof NonTaxableIncomeCreate, val: string) => setFields((prev) => ({ ...prev, [key]: val }));
+  const set = (key: keyof NonTaxableIncomeCreate, val: string) =>
+    setFields((prev) => ({ ...prev, [key]: val }));
 
   return (
     <form
@@ -960,8 +995,17 @@ export const IncomePage = () => {
 
       <div className="tab-bar">
         {(["paychecks", "pensions", "non-taxable"] as Tab[]).map((t) => (
-          <button key={t} type="button" className={`tab-btn${tab === t ? " active" : ""}`} onClick={() => setTab(t)}>
-            {t === "paychecks" ? "W-2 Paychecks" : t === "pensions" ? "1099-R Pensions" : "Non-taxable"}
+          <button
+            key={t}
+            type="button"
+            className={`tab-btn${tab === t ? " active" : ""}`}
+            onClick={() => setTab(t)}
+          >
+            {t === "paychecks"
+              ? "W-2 Paychecks"
+              : t === "pensions"
+                ? "1099-R Pensions"
+                : "Non-taxable"}
           </button>
         ))}
       </div>

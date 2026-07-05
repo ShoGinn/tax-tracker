@@ -3,8 +3,8 @@ export const AuthPage = () => {
     <section className="module-card auth-card">
       <h2>Authentication Placeholder</h2>
       <p>
-        This milestone includes UI placeholders only. Backend authentication is not implemented yet, so all current API
-        requests continue using unauthenticated access.
+        This milestone includes UI placeholders only. Backend authentication is not implemented yet,
+        so all current API requests continue using unauthenticated access.
       </p>
       <form className="auth-form" aria-label="Authentication placeholder form">
         <label>

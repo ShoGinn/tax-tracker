@@ -21,7 +21,10 @@ const currentYear = new Date().getFullYear();
 const TaxResultCard = ({ result }: { result: TaxCalculationResponse }) => {
   const [showBrackets, setShowBrackets] = useState(false);
 
-  const totalFica = Object.values(result.fica_taxes).reduce((s, v) => s + parseDecimalString(v as string), 0);
+  const totalFica = Object.values(result.fica_taxes).reduce(
+    (s, v) => s + parseDecimalString(v as string),
+    0,
+  );
 
   return (
     <div className="card result-card">
@@ -139,7 +142,9 @@ const ReconciliationCard = ({ result }: { result: TaxReconciliationResponse }) =
             <span>Combined tax liability</span>
             <strong>{formatCurrency(parseDecimalString(result.combined_liability))}</strong>
           </div>
-          <div className={`result-row result-highlight ${isRefund ? "text-refund" : isOwed ? "text-owed" : ""}`}>
+          <div
+            className={`result-row result-highlight ${isRefund ? "text-refund" : isOwed ? "text-owed" : ""}`}
+          >
             <span>{isRefund ? "Estimated refund" : isOwed ? "Amount owed" : "Break even"}</span>
             <strong>{isRefund || isOwed ? formatCurrency(refundAmt) : "—"}</strong>
           </div>
@@ -182,7 +187,13 @@ const DirectCalcTab = () => {
         use_standard_deduction: config.use_standard_deduction,
       }));
     }
-  }, [configLoading, config.filing_status, config.age_65_plus, config.num_children, config.use_standard_deduction]);
+  }, [
+    configLoading,
+    config.filing_status,
+    config.age_65_plus,
+    config.num_children,
+    config.use_standard_deduction,
+  ]);
 
   const mutation = useMutation({
     mutationFn: (data: TaxCalculationRequest) => apiClient.calculateTaxes(data),
@@ -401,14 +412,18 @@ const FromDbTab = () => {
         }}
       >
         <p className="helper-text">
-          Aggregates all paychecks, 1099-R, and non-taxable income from the database for the selected year and compares
-          calculated tax liability against actual withholding.
+          Aggregates all paychecks, 1099-R, and non-taxable income from the database for the
+          selected year and compares calculated tax liability against actual withholding.
         </p>
 
         <div className="form-grid">
           <label className="form-label">
             Tax year
-            <select className="form-input" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            <select
+              className="form-input"
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+            >
               {availableYears.map((y) => (
                 <option key={y} value={y}>
                   {y}
@@ -452,7 +467,11 @@ const FromDbTab = () => {
               gap: "0.5rem",
             }}
           >
-            <input type="checkbox" checked={useStandard} onChange={(e) => setUseStandard(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={useStandard}
+              onChange={(e) => setUseStandard(e.target.checked)}
+            />
             Use standard deduction
           </label>
 
