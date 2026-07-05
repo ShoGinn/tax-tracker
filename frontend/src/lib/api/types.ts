@@ -113,7 +113,11 @@ export interface DeleteResponse {
 // Tax calculation
 // ---------------------------------------------------------------------------
 
-export type FilingStatus = "single" | "married_filing_jointly" | "married_filing_separately" | "head_of_household";
+export type FilingStatus =
+  | "single"
+  | "married_filing_jointly"
+  | "married_filing_separately"
+  | "head_of_household";
 
 export interface TaxCalculationRequest {
   w2_gross_income?: string;

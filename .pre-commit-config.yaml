@@ -21,10 +21,20 @@ repos:
           - --ignore-words-list=te,HSA
           - --skip=*.lock,**/pnpm-lock.yaml,uv.lock,*.csv,tests/data/*.json,tests/data/*.txt,htmlcov/*
 
-  - repo: https://github.com/biomejs/pre-commit
-    rev: v2.4.16
+  - repo: local
     hooks:
-      - id: biome-check
+      - id: frontend-lint
+        name: frontend lint (oxlint)
+        language: system
+        entry: just frontend-lint
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^frontend/
+      - id: frontend-format
+        name: frontend format (oxfmt)
+        language: system
+        entry: just frontend-format
+        pass_filenames: false
         stages: [pre-commit]
         files: ^frontend/
 

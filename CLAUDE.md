@@ -63,7 +63,7 @@ This project is actively developed and currently versioned as v1.0.0.
 - uv for dependency management
 - just for task recipes and local CI-style workflows
 - Ruff for linting/formatting, ty for type checking
-- React 19 + TypeScript + Vite (SPA in `frontend/`), pnpm, Biome, Vitest + React Testing Library
+- React 19 + TypeScript + Vite (SPA in `frontend/`), pnpm, Oxc (`oxlint`/`oxfmt`), Vitest + React Testing Library
 
 ## Commands
 
@@ -93,8 +93,8 @@ Frontend-specific recipes (run from repo root via just):
 - `just frontend-dev` — start Vite dev server (proxies API to `http://127.0.0.1:8000`)
 - `just frontend-build` — production build to `frontend/dist`
 - `just frontend-test` — run frontend unit/component tests (Vitest)
-- `just frontend-check` — lint + typecheck + test + build (Biome + tsc + Vitest + vite)
-- `just frontend-lint` / `just frontend-lint-fix` / `just frontend-format` — Biome wrappers
+- `just frontend-check` — lint + typecheck + test + build (Oxc + tsc + Vitest + vite)
+- `just frontend-lint` / `just frontend-lint-fix` / `just frontend-format` — Oxc wrappers
 
 CI/CD expectations:
 

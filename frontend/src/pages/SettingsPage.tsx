@@ -56,7 +56,9 @@ export const SettingsPage = () => {
         <div className="settings-card">
           <div className="settings-card-header">
             <h2 className="settings-card-title">Tax Profile</h2>
-            <p className="settings-card-description">Used across the Dashboard, Projections, and W-4 optimization.</p>
+            <p className="settings-card-description">
+              Used across the Dashboard, Projections, and W-4 optimization.
+            </p>
           </div>
 
           <div className="settings-fields">
@@ -68,7 +70,13 @@ export const SettingsPage = () => {
                 id="filing-status"
                 className="settings-select"
                 value={current.filing_status ?? "married_filing_jointly"}
-                onChange={(e) => setDraft((d) => ({ ...current, ...d, filing_status: e.target.value as FilingStatus }))}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...current,
+                    ...d,
+                    filing_status: e.target.value as FilingStatus,
+                  }))
+                }
               >
                 {FILING_STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -90,7 +98,11 @@ export const SettingsPage = () => {
                 min={0}
                 value={current.num_children ?? 0}
                 onChange={(e) =>
-                  setDraft((d) => ({ ...current, ...d, num_children: Math.max(0, Number(e.target.value)) }))
+                  setDraft((d) => ({
+                    ...current,
+                    ...d,
+                    num_children: Math.max(0, Number(e.target.value)),
+                  }))
                 }
               />
             </div>
@@ -104,7 +116,9 @@ export const SettingsPage = () => {
                     type="radio"
                     name="deduction-type"
                     checked={current.use_standard_deduction ?? true}
-                    onChange={() => setDraft((d) => ({ ...current, ...d, use_standard_deduction: true }))}
+                    onChange={() =>
+                      setDraft((d) => ({ ...current, ...d, use_standard_deduction: true }))
+                    }
                   />
                   <span>Standard deduction</span>
                 </label>
@@ -114,7 +128,9 @@ export const SettingsPage = () => {
                     type="radio"
                     name="deduction-type"
                     checked={!(current.use_standard_deduction ?? true)}
-                    onChange={() => setDraft((d) => ({ ...current, ...d, use_standard_deduction: false }))}
+                    onChange={() =>
+                      setDraft((d) => ({ ...current, ...d, use_standard_deduction: false }))
+                    }
                   />
                   <span>Itemized deduction</span>
                 </label>
@@ -133,7 +149,11 @@ export const SettingsPage = () => {
                     step={100}
                     value={current.itemized_deduction_amount ?? 0}
                     onChange={(e) =>
-                      setDraft((d) => ({ ...current, ...d, itemized_deduction_amount: String(e.target.value) }))
+                      setDraft((d) => ({
+                        ...current,
+                        ...d,
+                        itemized_deduction_amount: String(e.target.value),
+                      }))
                     }
                   />
                 </div>
@@ -146,11 +166,15 @@ export const SettingsPage = () => {
                   id="age-65-plus"
                   type="checkbox"
                   checked={current.age_65_plus ?? false}
-                  onChange={(e) => setDraft((d) => ({ ...current, ...d, age_65_plus: e.target.checked }))}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...current, ...d, age_65_plus: e.target.checked }))
+                  }
                 />
                 <div>
                   <span className="settings-checkbox-label">Age 65 or older</span>
-                  <p className="settings-hint">Adds the additional standard deduction amount for seniors</p>
+                  <p className="settings-hint">
+                    Adds the additional standard deduction amount for seniors
+                  </p>
                 </div>
               </label>
             </div>
@@ -167,7 +191,11 @@ export const SettingsPage = () => {
                 className="settings-select"
                 value={current.w2_pay_frequency ?? "monthly"}
                 onChange={(e) =>
-                  setDraft((d) => ({ ...current, ...d, w2_pay_frequency: e.target.value as W2PayFrequency }))
+                  setDraft((d) => ({
+                    ...current,
+                    ...d,
+                    w2_pay_frequency: e.target.value as W2PayFrequency,
+                  }))
                 }
               >
                 <option value="weekly">Weekly (52/year)</option>

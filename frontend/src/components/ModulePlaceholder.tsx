@@ -4,7 +4,11 @@ interface ModulePlaceholderProps {
   endpointHints: string[];
 }
 
-export const ModulePlaceholder = ({ title, description, endpointHints }: ModulePlaceholderProps) => {
+export const ModulePlaceholder = ({
+  title,
+  description,
+  endpointHints,
+}: ModulePlaceholderProps) => {
   return (
     <section className="module-card">
       <h2>{title}</h2>

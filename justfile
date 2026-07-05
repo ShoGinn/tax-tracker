@@ -21,7 +21,7 @@ update-lock:
 run:
     uv run taxtracker
 
-# Frontend workflows (pnpm + Biome).
+# Frontend workflows (pnpm + Oxc).
 frontend-install:
     cd frontend && pnpm install
 

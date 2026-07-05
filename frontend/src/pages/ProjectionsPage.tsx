@@ -2,7 +2,12 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
-import type { CompareYearsRequest, FilingStatus, ProjectYearRequest, ProjectYearResponse } from "../lib/api/types";
+import type {
+  CompareYearsRequest,
+  FilingStatus,
+  ProjectYearRequest,
+  ProjectYearResponse,
+} from "../lib/api/types";
 import { FILING_STATUSES } from "../lib/constants";
 import { useAppConfig } from "../lib/hooks";
 import { formatCurrency, parseDecimalString } from "../lib/money";
@@ -446,27 +451,31 @@ const CompareYearsTab = () => {
                   <span>Taxable income change</span>
                   <span className={cmp.income_change.amount >= 0 ? "text-owed" : "text-refund"}>
                     {cmp.income_change.amount >= 0 ? "+" : ""}
-                    {formatCurrency(cmp.income_change.amount)} ({cmp.income_change.percentage.toFixed(1)}%)
+                    {formatCurrency(cmp.income_change.amount)} (
+                    {cmp.income_change.percentage.toFixed(1)}%)
                   </span>
                 </div>
                 <div className="result-row">
                   <span>Tax liability change</span>
                   <span className={cmp.tax_change.amount >= 0 ? "text-owed" : "text-refund"}>
                     {cmp.tax_change.amount >= 0 ? "+" : ""}
-                    {formatCurrency(cmp.tax_change.amount)} ({cmp.tax_change.percentage.toFixed(1)}%)
+                    {formatCurrency(cmp.tax_change.amount)} ({cmp.tax_change.percentage.toFixed(1)}
+                    %)
                   </span>
                 </div>
                 <div className="result-row">
                   <span>Effective rate</span>
                   <span>
-                    {cmp.effective_rate_change.from.toFixed(2)}% → {cmp.effective_rate_change.to.toFixed(2)}%
+                    {cmp.effective_rate_change.from.toFixed(2)}% →{" "}
+                    {cmp.effective_rate_change.to.toFixed(2)}%
                   </span>
                 </div>
                 {cmp.marginal_bracket_change.moved_bracket && (
                   <div className="result-row result-highlight">
                     <span>Moved to new tax bracket</span>
                     <span>
-                      {cmp.marginal_bracket_change.from.toFixed(0)}% → {cmp.marginal_bracket_change.to.toFixed(0)}%
+                      {cmp.marginal_bracket_change.from.toFixed(0)}% →{" "}
+                      {cmp.marginal_bracket_change.to.toFixed(0)}%
                     </span>
                   </div>
                 )}

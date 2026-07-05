@@ -71,7 +71,7 @@ The codebase is under active development and prioritizes correctness, maintainab
 - Ruff for linting and formatting
 - ty for static type checks
 - pnpm for frontend package management
-- Biome for frontend linting and formatting
+- Oxc (`oxlint` and `oxfmt`) for frontend linting and formatting
 
 ## Quick Start
 
