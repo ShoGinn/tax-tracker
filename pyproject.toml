@@ -20,18 +20,18 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "python-multipart>=0.0.32",
     "sqlalchemy[asyncio]>=2.0.51",
-    "uvicorn[standard]>=0.50.0",
+    "uvicorn[standard]>=0.51.0",
 ]
 
 [project.optional-dependencies]
-build = ["uv>=0.11.19,<1"]
+build = ["uv>=0.11.28,<1"]
 
 [project.scripts]
 taxtracker = "taxtracker.cli.app:main"
 
 [build-system]
 build-backend = "uv_build"
-requires = ["uv_build>=0.11.26,<0.12"]
+requires = ["uv_build>=0.11.28,<0.12"]
 
 [tool.semantic_release]
 build_command = """
