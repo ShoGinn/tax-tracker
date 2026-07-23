@@ -185,7 +185,7 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "pytest>=8.0.0",
-    "ruff>=0.15.22",
+    "ruff>=0.16.0",
     "ty",
     "types-python-dateutil>=2.9.0.20260716",
 ]
