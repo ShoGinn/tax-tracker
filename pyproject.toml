@@ -24,14 +24,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-build = ["uv>=0.11.29,<1"]
+build = ["uv>=0.11.31,<1"]
 
 [project.scripts]
 taxtracker = "taxtracker.cli.app:main"
 
 [build-system]
 build-backend = "uv_build"
-requires = ["uv_build>=0.11.29,<0.12"]
+requires = ["uv_build>=0.11.31,<0.12"]
 
 [tool.semantic_release]
 build_command = """
@@ -181,7 +181,7 @@ select = [
 [dependency-groups]
 dev = [
     "httpx>=0.27.0",
-    "pre-commit>=4.0.0",
+    "pre-commit>=4.6.1",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "pytest>=8.0.0",
