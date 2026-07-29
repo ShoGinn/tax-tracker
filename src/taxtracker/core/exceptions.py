@@ -26,10 +26,6 @@ class DataLoadError(TaxTrackerError):
     """Raised when loading tax data from JSON fails."""
 
 
-class DatabaseError(TaxTrackerError):
-    """Raised when database operations fail."""
-
-
 class ValidationError(TaxTrackerError):
     """Raised when input validation fails."""
 

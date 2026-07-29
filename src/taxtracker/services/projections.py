@@ -82,6 +82,7 @@ class YearProjection:
 
 def project_year(
     tax_calculator: TaxCalculator,
+    *,
     year: int,
     filing_status: FilingStatus,
     num_children: int,
@@ -94,6 +95,7 @@ def project_year(
     # Withholding estimate
     estimated_federal_withholding: Decimal,
     # Optional
+    age_65_plus: bool = False,
     use_standard_deduction: bool = True,
     itemized_deductions: float = 0.0,
 ) -> YearProjection:
@@ -105,6 +107,7 @@ def project_year(
         year: Tax year to project
         filing_status: Filing status
         num_children: Number of children
+        age_65_plus: Whether to apply the additional standard deduction
         w2_gross: Projected W-2 gross income
         w2_pretax_deductions: Projected W-2 pre-tax deductions (401k, etc.)
         pension_gross: Projected pension gross
@@ -136,6 +139,7 @@ def project_year(
         w2_gross_income=w2_taxable,
         pension_gross_income=pension_taxable,
         num_children=num_children,
+        age_65_plus=age_65_plus,
         use_standard_deduction=use_standard_deduction,
         itemized_deduction_amount=Decimal(str(itemized_deductions)) if not use_standard_deduction else None,
     )
@@ -150,8 +154,9 @@ def project_year(
     fica_liability = Decimal(str(fica_result["total_fica"]))
     total_liability = federal_liability + fica_liability
 
-    # Refund/owed
-    refund_or_owed = estimated_federal_withholding - total_liability
+    # A federal refund/balance compares federal withholding with federal income
+    # tax only. FICA remains visible as a separate payroll-tax liability.
+    refund_or_owed = estimated_federal_withholding - federal_liability
 
     return YearProjection(
         year=year,
@@ -253,6 +258,7 @@ def project_from_ytd(
     year: int,
     filing_status: FilingStatus,
     num_children: int,
+    age_65_plus: bool,
     use_standard_deduction: bool,
     itemized_deduction_amount: Decimal,
     # YTD actuals
@@ -318,6 +324,7 @@ def project_from_ytd(
         year=year,
         filing_status=filing_status,
         num_children=num_children,
+        age_65_plus=age_65_plus,
         w2_gross=proj_w2_gross,
         w2_pretax_deductions=proj_w2_pretax,
         pension_gross=proj_pension_gross,

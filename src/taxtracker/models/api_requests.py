@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from taxtracker.models.browser_records import BrowserSnapshot
 from taxtracker.models.tax_data import FilingStatus  # noqa: TC001
 
 _CURRENT_YEAR = datetime.datetime.now(datetime.UTC).year
@@ -32,7 +33,7 @@ class _D:
     remaining_pension_periods = "Optional remaining pension periods (e.g., monthly cadence)"
     remaining_non_taxable_periods = "Optional remaining non-taxable income periods (e.g., monthly cadence)"
     expected_remaining_pension_taxable = "Expected remaining taxable pension income (override DB extrapolation)"
-    employer_id = "Employer ID from the database"
+    employer_id = "Employer ID from browser storage"
     expected_remaining_gross_per_paycheck = "Expected remaining gross per paycheck for this employer"
     as_of_date = "Optional YTD cutoff date; include only entries on or before this date"
 
@@ -66,8 +67,8 @@ class EmployerRemainingOverride(BaseModel):
     )
 
 
-class MidYearDBW4OptimizeRequest(BaseModel):
-    """Request for mid-year W-4 optimization using database year-to-date data."""
+class MidYearW4OptimizeOptions(BaseModel):
+    """Options for mid-year W-4 optimization using year-to-date records."""
 
     tax_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Tax year to optimize")
     filing_status: FilingStatus = Field(description=_D.filing_status_full)
@@ -107,6 +108,30 @@ class MidYearPeriodSuggestionRequest(BaseModel):
     )
 
 
+class MidYearBrowserW4OptimizeRequest(MidYearW4OptimizeOptions, BrowserSnapshot):
+    """Mid-year optimization options plus transient browser records."""
+
+
+class MidYearBrowserPeriodSuggestionRequest(MidYearPeriodSuggestionRequest, BrowserSnapshot):
+    """Period suggestion options plus transient browser records."""
+
+
+class MidYearPeriodSuggestionResponse(BaseModel):
+    """Remaining-period suggestions for mid-year W-4 optimization."""
+
+    tax_year: int
+    as_of_date: datetime.date
+    w2_pay_frequency: str
+    remaining_pay_periods: int
+    remaining_pension_periods: int
+    remaining_non_taxable_periods: int
+    monthly_baseline_periods: int
+    current_period_has_w2_entry: bool
+    current_month_has_pension_entry: bool
+    current_month_has_non_taxable_entry: bool
+    notes: list[str]
+
+
 class WithholdingCalcRequest(BaseModel):
     """Request for per-paycheck withholding calculation."""
 
@@ -141,6 +166,7 @@ class ProjectYearRequest(BaseModel):
     projection_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Year to project taxes for")
     filing_status: FilingStatus = Field(description=_D.filing_status)
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
+    age_65_plus: bool = Field(default=False, description="Whether to apply the additional standard deduction")
     w2_gross: Decimal = Field(default=Decimal(0), ge=0, description="Expected annual W-2 gross wages")
     w2_pretax_deductions: Decimal = Field(
         default=Decimal(0), ge=0, description="Expected annual W-2 pre-tax deductions (401k, HSA, etc.)"
@@ -170,24 +196,10 @@ class CompareYearsRequest(BaseModel):
     )
     filing_status: FilingStatus = Field(description=_D.filing_status_both_years)
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
+    age_65_plus: bool = Field(default=False, description="Whether to apply the additional standard deduction")
     base_w2_gross: Decimal = Field(ge=0, description="Expected W-2 gross wages for the base year")
     comparison_w2_gross: Decimal = Field(ge=0, description="Expected W-2 gross wages for the comparison year")
     base_pension: Decimal = Field(default=Decimal(0), ge=0, description="Expected pension gross for the base year")
     comparison_pension: Decimal = Field(
         default=Decimal(0), ge=0, description="Expected pension gross for the comparison year"
-    )
-
-
-class ProjectFromDBRequest(BaseModel):
-    """Request for database-driven tax projection."""
-
-    projection_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Year to project taxes for")
-    filing_status: FilingStatus = Field(description=_D.filing_status)
-    num_children: int = Field(default=0, ge=0, description=_D.num_children)
-    expected_w2_gross: Decimal = Field(ge=0, description="Expected annual W-2 gross wages")
-    use_database_pension: bool = Field(
-        default=True, description="Use average of historical 1099-R pension entries from database"
-    )
-    use_database_va: bool = Field(
-        default=True, description="Use average of historical VA disability entries from database"
     )

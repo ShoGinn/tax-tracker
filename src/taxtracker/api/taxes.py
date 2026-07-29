@@ -1,19 +1,21 @@
 """Tax calculation API endpoints."""
 
 import json
+import logging
 from collections.abc import Callable  # noqa: TC003
 from pathlib import Path as FilePath  # noqa: TC003
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, Path, Query, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
+from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 
-from taxtracker.api.dependencies import get_db, get_tax_data
+from taxtracker.api.dependencies import get_tax_data
+from taxtracker.api.errors import internal_server_error
+from taxtracker.api.uploads import read_limited_upload
 from taxtracker.core.config import settings
 from taxtracker.core.exceptions import DataLoadError, TaxCalculationError
+from taxtracker.models.browser_records import ReconciliationSnapshot  # noqa: TC001
 from taxtracker.models.tax_data import (  # noqa: TC001
     FICALimits,
-    FilingStatus,
     TaxBrackets,
     TaxCalculationRequest,
     TaxCalculationResponse,
@@ -24,10 +26,11 @@ from taxtracker.services.data_loader import (
     validate_and_save_fica_limits,
     validate_and_save_tax_brackets,
 )
-from taxtracker.services.db_tax_calculator import calculate_taxes_from_database
+from taxtracker.services.record_tax_calculator import calculate_taxes_from_records
 from taxtracker.services.tax_calculator import TaxCalculator
 
 router = APIRouter(prefix="/taxes", tags=["Taxes"])
+logger = logging.getLogger(__name__)
 
 # Reusable path parameter types for year-scoped endpoints
 _TaxYearPath = Annotated[int, Path(description="Tax year (e.g. 2025, 2026)", ge=2020, le=2030)]
@@ -68,67 +71,31 @@ async def calculate_taxes(
     except TaxCalculationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except DataLoadError as e:
-        raise HTTPException(status_code=500, detail=f"Tax calculation failed: {e!s}") from e
+        raise internal_server_error(logger, "Tax calculation data load", e) from e
 
 
 @router.post(
-    "/calculate-from-db/{year}",
-    summary="Calculate taxes from database income",
+    "/reconcile-records/{year}",
+    summary="Reconcile taxes from browser records",
     response_description="Tax reconciliation with withholding comparison",
     responses={400: {"description": "Invalid input or unsupported tax year"}},
 )
-async def calculate_from_database(
+async def reconcile_browser_records(
     year: Annotated[int, Path(description="Tax year to calculate (e.g. 2025, 2026)", ge=2020, le=2030)],
-    filing_status: Annotated[FilingStatus, Query(description="IRS filing status")],
-    num_children: Annotated[int, Query(description="Number of qualifying children for child tax credit", ge=0)] = 0,
-    use_standard_deduction: Annotated[
-        bool,
-        Query(description="Use IRS standard deduction; set false to supply itemized amount"),
-    ] = True,
-    itemized_deduction_amount: Annotated[
-        float,
-        Query(
-            description="Total itemized deductions; only used when use_standard_deduction is false",
-            ge=0,
-        ),
-    ] = 0,
-    *,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    snapshot: ReconciliationSnapshot,
 ) -> TaxReconciliationResponse:
-    """
-    Calculate taxes using income data from database.
-
-    Aggregates all paychecks, pension, and VA disability for the year
-    and calculates total tax liability.
-
-    Args:
-        year: Tax year
-        filing_status: Filing status (single, married_jointly, etc.)
-        num_children: Number of qualifying children
-        use_standard_deduction: Whether to use standard deduction
-        itemized_deduction_amount: Itemized deduction amount if not using standard
-        db: Database session
-        calculator: Tax calculator instance (injected)
-
-    Returns:
-        Tax calculation with breakdown by income source
-    """
+    """Calculate using a transient snapshot; personal records are never persisted."""
     try:
-        # Call the service function with injected calculator
-        return await calculate_taxes_from_database(
-            db=db,
+        return calculate_taxes_from_records(
+            snapshot=snapshot,
             year=year,
             tax_calculator=TaxCalculator(tax_year=year),
-            filing_status=filing_status,
-            num_children=num_children,
-            use_standard_deduction=use_standard_deduction,
-            itemized_deductions=itemized_deduction_amount,
         )
 
     except TaxCalculationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except DataLoadError as e:
-        raise HTTPException(status_code=500, detail=f"Database tax calculation failed: {e!s}") from e
+        raise internal_server_error(logger, "Record reconciliation data load", e) from e
 
 
 @router.get(
@@ -251,7 +218,7 @@ async def _handle_json_upload(
         raise HTTPException(status_code=400, detail="File must be JSON")
 
     try:
-        content = await file.read()
+        content = await read_limited_upload(file)
         data = json.loads(content)
         filepath = validator(year, data)
         return {

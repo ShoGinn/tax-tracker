@@ -4,7 +4,7 @@ import { apiClient } from "./api/client";
 import type { AppConfigResponse } from "./api/types";
 import { DEFAULT_FILING_STATUS } from "./constants";
 
-/** Fallback config used until the DB row is loaded (or if unavailable). */
+/** Fallback config used until browser storage is loaded (or if unavailable). */
 export const DEFAULT_APP_CONFIG: AppConfigResponse = {
   filing_status: DEFAULT_FILING_STATUS,
   num_children: 0,
@@ -15,7 +15,7 @@ export const DEFAULT_APP_CONFIG: AppConfigResponse = {
 };
 
 /**
- * Fetch the singleton app config from the database.
+ * Fetch the singleton app config from IndexedDB.
  * Returns `DEFAULT_APP_CONFIG` while loading or on error so callers always
  * have a usable value — they do not need to handle `undefined`.
  */

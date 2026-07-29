@@ -6,11 +6,11 @@ from decimal import Decimal
 import pytest
 from fixtures.w4_scenarios import get_single_job_scenario, get_two_job_scenario
 
-from taxtracker.models.database import Employer, NonTaxableIncome, Paycheck, Retirement1099R
+from taxtracker.models.browser_records import BrowserEmployer, BrowserNonTaxableIncome, BrowserPaycheck, BrowserPension
 from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.data_loader import load_fica_limits_model, load_tax_brackets_model
 from taxtracker.services.tax_calculator import TaxCalculator
-from taxtracker.services.w4_calculator import _compute_irs_formula_ppc, optimize_midyear_from_db, optimize_w4
+from taxtracker.services.w4_calculator import _compute_irs_formula_ppc, optimize_midyear_from_records, optimize_w4
 
 pytestmark = pytest.mark.unit
 
@@ -404,186 +404,57 @@ class TestW4OptimizationResultToDict:
         assert "expected_results" in rec
 
 
-class TestMidYearOptimizeFromDB:
-    """Tests for DB-backed mid-year optimization workflow."""
+class TestMidYearOptimizeFromRecords:
+    """Tests for transient browser-record optimization."""
 
-    async def test_extrapolates_remaining_income(self, async_db_session, test_calculator: TaxCalculator) -> None:
-        """Should extrapolate remaining gross from YTD average when no override is provided."""
-        employer = Employer(name="Acme", start_date=date(2024, 1, 1))
-        async_db_session.add(employer)
-        await async_db_session.commit()
-
-        async_db_session.add_all(
-            [
-                Paycheck(
-                    employer_id=employer.id,
-                    pay_date=date(2024, 1, 15),
-                    gross_wages=Decimal(2000),
-                    federal_withholding=Decimal(200),
-                ),
-                Paycheck(
-                    employer_id=employer.id,
-                    pay_date=date(2024, 1, 31),
-                    gross_wages=Decimal(3000),
-                    federal_withholding=Decimal(300),
-                ),
-            ]
-        )
-        await async_db_session.commit()
-
-        result = await optimize_midyear_from_db(
-            db=async_db_session,
+    def test_extrapolates_and_honors_mixed_cadence(self, test_calculator: TaxCalculator) -> None:
+        employer = BrowserEmployer(id=1, name="Acme", start_date=date(2024, 1, 1))
+        paychecks = [
+            BrowserPaycheck(
+                id=1,
+                employer_id=1,
+                pay_date=date(2024, 1, 15),
+                gross_wages=Decimal(2000),
+                federal_withholding=Decimal(200),
+            ),
+            BrowserPaycheck(
+                id=2,
+                employer_id=1,
+                pay_date=date(2024, 1, 31),
+                gross_wages=Decimal(3000),
+                federal_withholding=Decimal(300),
+            ),
+        ]
+        result = optimize_midyear_from_records(
+            employers=[employer],
+            paychecks=paychecks,
+            pensions=[BrowserPension(id=1, pay_date=date(2024, 1, 1), gross_amount=Decimal(1000))],
+            non_taxable_income=[BrowserNonTaxableIncome(id=1, pay_date=date(2024, 1, 1), amount=Decimal(500))],
             tax_calculator=test_calculator,
             year=2024,
             filing_status=FilingStatus.SINGLE,
             remaining_pay_periods=2,
+            remaining_pension_periods=5,
+            remaining_non_taxable_periods=4,
         )
 
-        employer_summary = result["ytd_summary"]["employers"][0]
-        # Avg gross is (2000 + 3000) / 2 = 2500; projected remaining = 2500 * 2 = 5000
-        assert Decimal(employer_summary["projected_remaining_gross"]) == Decimal(5000)
+        summary = result["ytd_summary"]
+        assert Decimal(summary["employers"][0]["projected_remaining_gross"]) == Decimal(5000)
+        assert summary["remaining_pension_periods"] == 5
+        assert Decimal(result["projection_summary"]["projected_remaining_pension_taxable"]) == Decimal(5000)
 
-    async def test_employer_override_replaces_extrapolation(
-        self, async_db_session, test_calculator: TaxCalculator
-    ) -> None:
-        """Override should replace YTD-average extrapolation for the specified employer."""
-        employer = Employer(name="Override Co", start_date=date(2024, 1, 1))
-        async_db_session.add(employer)
-        await async_db_session.commit()
-
-        async_db_session.add(
-            Paycheck(
-                employer_id=employer.id,
-                pay_date=date(2024, 2, 15),
-                gross_wages=Decimal(2500),
-                federal_withholding=Decimal(200),
-            )
-        )
-        await async_db_session.commit()
-
-        result = await optimize_midyear_from_db(
-            db=async_db_session,
-            tax_calculator=test_calculator,
-            year=2024,
-            filing_status=FilingStatus.SINGLE,
-            remaining_pay_periods=3,
-            employer_overrides={employer.id: Decimal(4000)},
-        )
-
-        employer_summary = result["ytd_summary"]["employers"][0]
-        assert Decimal(employer_summary["projected_remaining_gross"]) == Decimal(12000)
-        assert any("Used override" in note for note in result["assumptions"])
-
-    async def test_requires_paychecks_for_year(self, async_db_session, test_calculator: TaxCalculator) -> None:
-        """Should fail with clear error when no paychecks are available for the requested year."""
-        async_db_session.add(
-            Retirement1099R(
-                pay_date=date(2024, 1, 1),
-                gross_amount=Decimal(3000),
-                federal_withholding=Decimal(300),
-            )
-        )
-        await async_db_session.commit()
-
+    def test_requires_paychecks(self, test_calculator: TaxCalculator) -> None:
         with pytest.raises(ValueError, match="No paychecks found"):
-            await optimize_midyear_from_db(
-                db=async_db_session,
+            optimize_midyear_from_records(
+                employers=[],
+                paychecks=[],
+                pensions=[],
+                non_taxable_income=[],
                 tax_calculator=test_calculator,
                 year=2024,
                 filing_status=FilingStatus.SINGLE,
                 remaining_pay_periods=2,
             )
-
-    async def test_as_of_date_filters_ytd_records(self, async_db_session, test_calculator: TaxCalculator) -> None:
-        """as_of_date should only include paycheck records up to that date."""
-        employer = Employer(name="Cutoff Co", start_date=date(2024, 1, 1))
-        async_db_session.add(employer)
-        await async_db_session.commit()
-
-        async_db_session.add_all(
-            [
-                Paycheck(
-                    employer_id=employer.id,
-                    pay_date=date(2024, 1, 15),
-                    gross_wages=Decimal(2000),
-                    federal_withholding=Decimal(200),
-                ),
-                Paycheck(
-                    employer_id=employer.id,
-                    pay_date=date(2024, 3, 15),
-                    gross_wages=Decimal(5000),
-                    federal_withholding=Decimal(500),
-                ),
-            ]
-        )
-        await async_db_session.commit()
-
-        result = await optimize_midyear_from_db(
-            db=async_db_session,
-            tax_calculator=test_calculator,
-            year=2024,
-            filing_status=FilingStatus.SINGLE,
-            remaining_pay_periods=2,
-            as_of_date=date(2024, 2, 1),
-        )
-
-        employer_summary = result["ytd_summary"]["employers"][0]
-        assert Decimal(employer_summary["ytd_gross"]) == Decimal(2000)
-        assert result["ytd_summary"]["as_of_date"] == "2024-02-01"
-        assert any("as_of_date cutoff" in note for note in result["assumptions"])
-
-    async def test_split_remaining_periods_for_mixed_cadence(
-        self,
-        async_db_session,
-        test_calculator: TaxCalculator,
-    ) -> None:
-        """W-2, pension, and non-taxable projections should honor separate remaining period counts."""
-        employer = Employer(name="Mixed Cadence Co", start_date=date(2024, 1, 1))
-        async_db_session.add(employer)
-        await async_db_session.commit()
-
-        async_db_session.add(
-            Paycheck(
-                employer_id=employer.id,
-                pay_date=date(2024, 4, 15),
-                gross_wages=Decimal(3000),
-                federal_withholding=Decimal(300),
-            )
-        )
-        async_db_session.add(
-            Retirement1099R(
-                pay_date=date(2024, 4, 1),
-                gross_amount=Decimal(1000),
-                federal_withholding=Decimal(100),
-            )
-        )
-        async_db_session.add(
-            NonTaxableIncome(
-                pay_date=date(2024, 4, 1),
-                amount=Decimal(500),
-                source_type="VA Disability",
-            )
-        )
-        await async_db_session.commit()
-
-        result = await optimize_midyear_from_db(
-            db=async_db_session,
-            tax_calculator=test_calculator,
-            year=2024,
-            filing_status=FilingStatus.SINGLE,
-            remaining_pay_periods=10,
-            remaining_pension_periods=5,
-            remaining_non_taxable_periods=4,
-        )
-
-        assert result["ytd_summary"]["remaining_w2_pay_periods"] == 10
-        assert result["ytd_summary"]["remaining_pension_periods"] == 5
-        assert result["ytd_summary"]["remaining_non_taxable_periods"] == 4
-        assert Decimal(result["projection_summary"]["projected_remaining_pension_taxable"]) == Decimal(5000)
-        assert Decimal(result["projection_summary"]["projected_full_year_non_taxable_income"]) == Decimal(2500)
-        assert result["optimization"].current_total_withholding == Decimal(
-            result["projection_summary"]["projected_annual_total_withholding"]
-        )
 
 
 class TestStep4bIRSFormulaRoundTrip:

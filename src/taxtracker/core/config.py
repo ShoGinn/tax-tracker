@@ -38,22 +38,13 @@ class Settings(BaseSettings):
     app_version: str = __version__
     debug: bool = False
 
-    # Database (use aiosqlite for async SQLite support)
-    database_url: str = "sqlite+aiosqlite:///./tax_tracker.db"
-
-    # Database connection pool settings (for production databases like PostgreSQL)
-    db_pool_size: int = 5
-    db_max_overflow: int = 10
-    db_pool_timeout: int = 30
-    db_pool_recycle: int = 3600  # Recycle connections after 1 hour
-    db_echo: bool = False  # Set to True for SQL query logging
-
     # Data directory - can be overridden for testing
     data_dir: Path = Field(default_factory=_default_data_dir)
 
     # API
-    api_host: str = "0.0.0.0"  # noqa: S104
+    api_host: str = "127.0.0.1"
     api_port: int = 8000
+    max_upload_bytes: int = 5 * 1024 * 1024
 
     def get_data_file(self, file_type: DataFileType, year: int) -> Path:
         """Get path to a data file for a given year.

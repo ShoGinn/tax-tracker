@@ -371,7 +371,7 @@ const DirectCalcTab = () => {
 };
 
 // ---------------------------------------------------------------------------
-// From-database reconciliation tab
+// Browser-record reconciliation tab
 // ---------------------------------------------------------------------------
 
 const FromDbTab = () => {
@@ -412,7 +412,7 @@ const FromDbTab = () => {
         }}
       >
         <p className="helper-text">
-          Aggregates all paychecks, 1099-R, and non-taxable income from the database for the
+          Aggregates all paychecks, 1099-R, and non-taxable income stored in this browser for the
           selected year and compares calculated tax liability against actual withholding.
         </p>
 

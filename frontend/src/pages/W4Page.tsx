@@ -743,8 +743,8 @@ const MidYearTab = () => {
         }}
       >
         <p className="helper-text">
-          Uses year-to-date entries from your database, projects the remaining year, and recommends
-          W-4 adjustments.
+          Uses year-to-date entries stored in this browser, projects the remaining year, and
+          recommends W-4 adjustments.
         </p>
         <p className="helper-text">
           Remaining periods are editable. Auto-suggest now comes from the backend so the same rules

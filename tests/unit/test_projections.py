@@ -93,7 +93,7 @@ class TestProjectYear:
         assert result.va_disability == Decimal(2000)
 
     def test_refund_calculation(self, test_calculator: TaxCalculator) -> None:
-        """Estimated refund/owed = withholding - total liability."""
+        """Estimated federal refund/owed excludes separately reported FICA."""
         result = project_year(
             tax_calculator=test_calculator,
             year=2024,
@@ -107,8 +107,39 @@ class TestProjectYear:
             estimated_federal_withholding=Decimal(20000),
         )
 
-        expected_refund = Decimal(20000) - result.total_tax_liability
+        expected_refund = Decimal(20000) - result.federal_tax_liability
         assert result.estimated_refund_or_owed == expected_refund
+
+    def test_fully_withheld_federal_tax_has_zero_balance_with_fica(self, test_calculator: TaxCalculator) -> None:
+        """FICA does not create a false federal balance due."""
+        initial = project_year(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_gross=Decimal(50000),
+            w2_pretax_deductions=Decimal(0),
+            pension_gross=Decimal(0),
+            pension_pretax_deductions=Decimal(0),
+            va_disability=Decimal(0),
+            estimated_federal_withholding=Decimal(0),
+        )
+
+        result = project_year(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_gross=Decimal(50000),
+            w2_pretax_deductions=Decimal(0),
+            pension_gross=Decimal(0),
+            pension_pretax_deductions=Decimal(0),
+            va_disability=Decimal(0),
+            estimated_federal_withholding=initial.federal_tax_liability,
+        )
+
+        assert result.fica_liability > 0
+        assert result.estimated_refund_or_owed == 0
 
 
 class TestYearProjectionToDict:

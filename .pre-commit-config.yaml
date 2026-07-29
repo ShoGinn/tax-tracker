@@ -7,13 +7,13 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.37.2
+    rev: 0.37.4
     hooks:
       - id: check-github-workflows
       - id: check-dependabot
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
+    rev: v2.4.3
     hooks:
       - id: codespell
         args:
@@ -22,14 +22,14 @@ repos:
           - --skip=*.lock,**/pnpm-lock.yaml,uv.lock,*.csv,tests/data/*.json,tests/data/*.txt,htmlcov/*
 
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.72.0
+    rev: v1.76.0
     hooks:
       - id: oxlint
         stages: [pre-commit]
         files: ^frontend/
 
   - repo: https://github.com/oxc-project/mirrors-oxfmt
-    rev: v0.57.0
+    rev: v0.60.0
     hooks:
       - id: oxfmt
         stages: [pre-commit]
@@ -67,7 +67,7 @@ repos:
         stages: [pre-push]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.15
+    rev: v0.16.0
     hooks:
       - id: ruff
         args: [--fix]

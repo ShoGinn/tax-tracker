@@ -1,68 +1,37 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
-const BASE_URL = "";
-
-interface CsvImportError {
-  row: number;
-  error: string;
-  data: Record<string, unknown>;
-}
-
-interface CsvImportResult {
-  imported: number;
-  skipped: number;
-  errors: CsvImportError[];
-  [key: string]: unknown;
-}
-
-type ImportType = "paychecks" | "pensions" | "non-taxable";
+import { apiClient } from "../lib/api/client";
+import type { CsvImportType } from "../lib/api/types";
 
 const IMPORT_TYPES: {
-  value: ImportType;
+  value: CsvImportType;
   label: string;
-  endpoint: string;
   example: string;
 }[] = [
   {
     value: "paychecks",
     label: "W-2 Paychecks",
-    endpoint: "/income/paychecks/import-csv",
     example: "paychecks_example.csv",
   },
   {
     value: "pensions",
     label: "1099-R Pensions",
-    endpoint: "/income/1099r/import-csv",
     example: "pension_example.csv",
   },
   {
     value: "non-taxable",
     label: "Non-Taxable Income",
-    endpoint: "/income/non-taxable/import-csv",
     example: "va_example.csv",
   },
 ];
-
-const importCsv = async (endpoint: string, file: File): Promise<CsvImportResult> => {
-  const form = new FormData();
-  form.append("file", file);
-  const resp = await fetch(`${BASE_URL}${endpoint}`, {
-    method: "POST",
-    body: form,
-  });
-  if (!resp.ok) {
-    const body = (await resp.json().catch(() => ({}))) as { detail?: string };
-    throw new Error(body.detail ?? `HTTP ${resp.status}`);
-  }
-  return resp.json() as Promise<CsvImportResult>;
-};
 
 // ---------------------------------------------------------------------------
 // Importer panel
 // ---------------------------------------------------------------------------
 
 const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
+  const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -70,7 +39,16 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
   const mutation = useMutation({
     mutationFn: () => {
       if (!file) throw new Error("No file selected");
-      return importCsv(config.endpoint, file);
+      return apiClient.importCsv(config.value, file);
+    },
+    onSuccess: () => {
+      const queryKey =
+        config.value === "paychecks"
+          ? ["paychecks"]
+          : config.value === "pensions"
+            ? ["pensions"]
+            : ["non-taxable"];
+      void queryClient.invalidateQueries({ queryKey });
     },
   });
 
@@ -96,9 +74,9 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
   return (
     <div className="card income-form mb-4">
       <p className="helper-text">
-        Upload a CSV file to bulk-import {config.label}. The system auto-detects column names and
-        handles currency symbols and multiple date formats. See <code>{config.example}</code> in the
-        examples folder for a sample.
+        Upload a CSV file to bulk-import {config.label} into this browser. Column headers should
+        match the sample, and dates should use YYYY-MM-DD. Duplicate records are reported and
+        skipped. See <code>{config.example}</code> in the examples folder for a sample.
       </p>
 
       <input
@@ -155,6 +133,10 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
           {mutation.data.errors.length > 0 && (
             <>
               <p className="form-error">Errors:</p>
+              <p className="helper-text">
+                Duplicate records are skipped safely. Correct other reported rows and import the
+                file again.
+              </p>
               <ul className="csv-error-list">
                 {mutation.data.errors.map((e) => (
                   <li key={`${e.row}-${e.error}`}>
@@ -175,7 +157,7 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
 // ---------------------------------------------------------------------------
 
 export const CsvImportPage = () => {
-  const [type, setType] = useState<ImportType>("paychecks");
+  const [type, setType] = useState<CsvImportType>("paychecks");
   const config = IMPORT_TYPES.find((t) => t.value === type) ?? IMPORT_TYPES[0];
 
   return (

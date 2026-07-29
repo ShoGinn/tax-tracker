@@ -34,6 +34,9 @@ frontend-build:
 frontend-test:
     cd frontend && pnpm test
 
+frontend-test-e2e:
+    cd frontend && pnpm test:e2e
+
 frontend-typecheck:
     cd frontend && pnpm typecheck
 
@@ -62,6 +65,10 @@ test-unit:
 
 test-integration:
     uv run pytest tests/integration
+
+# Enforce a separate high bar for calculation and data services.
+test-services:
+    uv run pytest --override-ini='addopts=--cov=taxtracker.services.tax_calculator --cov=taxtracker.services.projections --cov=taxtracker.services.w4_calculator --cov=taxtracker.services.w4_withholding --cov=taxtracker.services.record_tax_calculator --cov-report=term-missing --cov-fail-under=90 -q'
 
 test-fast:
     uv run pytest -m "not slow"
@@ -94,8 +101,8 @@ security:
     uvx uv-secure
 
 # Refresh local PSLmodels validation data.
-psl-snapshot years="2025 2026":
-    uv run python scripts/fetch_pslmodels_data.py snapshot --years {{years}}
+psl-snapshot:
+    uv run python scripts/fetch_pslmodels_data.py snapshot
 
 # Generate draft tax data for a target year.
 psl-draft year:

@@ -29,9 +29,9 @@ updates:
     groups:
       production:
         patterns: ['*']
-        exclude-patterns: ['ruff', 'ty', 'pytest*', 'httpx', 'types-*']
+        exclude-patterns: ['ruff', 'ty', 'pytest*', 'httpx2', 'types-*']
       dev:
-        patterns: ['ruff', 'ty', 'pytest*', 'httpx', 'types-*']
+        patterns: ['ruff', 'ty', 'pytest*', 'httpx2', 'types-*']
 
   # GitHub Actions
   - package-ecosystem: 'github-actions'

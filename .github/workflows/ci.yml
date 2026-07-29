@@ -17,13 +17,32 @@ jobs:
           version: 11
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: frontend-e2e
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - name: Install backend dependencies for browser tests
+        run: uv sync --dev
       - name: Install frontend dependencies
         run: cd frontend && pnpm install --frozen-lockfile
       - name: Frontend quality gate
         run: cd frontend && pnpm lint && pnpm typecheck && pnpm test && pnpm build
+      - name: Install browser for end-to-end tests
+        run: cd frontend && pnpm exec playwright install --with-deps chromium
+      - name: Browser workflow tests
+        run: cd frontend && pnpm test:e2e
+      - name: Retain browser test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
 
   lint:
     runs-on: ubuntu-latest
@@ -50,6 +69,15 @@ jobs:
           enable-cache: true
           cache-suffix: ${{ github.job }}
       - run: uv run pytest
+      - name: Enforce service-layer coverage
+        run: >-
+          uv run pytest
+          --override-ini='addopts=--cov=taxtracker.services.tax_calculator
+          --cov=taxtracker.services.projections
+          --cov=taxtracker.services.w4_calculator
+          --cov=taxtracker.services.w4_withholding
+          --cov=taxtracker.services.record_tax_calculator
+          --cov-report=term-missing --cov-fail-under=90 -q'
 
   typecheck:
     runs-on: ubuntu-latest
@@ -72,7 +100,15 @@ jobs:
           enable-cache: true
           cache-suffix: ${{ github.job }}
       - name: Scan dependencies for known vulnerabilities
-        run: uvx uv-secure
+        run: |
+          set -o pipefail
+          uvx uv-secure 2>&1 | tee uv-secure-report.txt
+      - name: Retain dependency security report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uv-secure-report
+          path: uv-secure-report.txt
 
   pslmodels-cross-check:
     runs-on: ubuntu-latest
@@ -84,7 +120,7 @@ jobs:
           enable-cache: true
           cache-suffix: ${{ github.job }}
       - name: Fetch fresh PSLmodels snapshot
-        run: uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 --years 2026
+        run: uv run python scripts/fetch_pslmodels_data.py snapshot
       - name: Run cross-validation tests against fresh snapshot
         run: uv run pytest tests/unit/test_pslmodels_cross_check.py -v --no-header --override-ini='addopts='
       - name: Check for snapshot drift
@@ -111,7 +147,7 @@ jobs:
                   print("Snapshot unchanged — PSLmodels data matches committed snapshot.")
           else:
               print("::warning::PSLmodels snapshot tax values changed. Run locally and commit:")
-              print("  uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 2026")
+              print("  uv run python scripts/fetch_pslmodels_data.py snapshot")
               subprocess.run(["git", "--no-pager", "diff", "--", str(snapshot_path)], check=False)
           PY
 

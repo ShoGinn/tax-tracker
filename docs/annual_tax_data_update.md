@@ -165,7 +165,7 @@ Add at least 2-3 calculation scenarios to `tests/unit/test_irs_calculation_verif
 Refresh the PSLmodels cross-validation snapshot to include the new year:
 
 ```bash
-uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 2026 YYYY
+uv run python scripts/fetch_pslmodels_data.py snapshot
 ```
 
 Then run the cross-check tests to confirm alignment:

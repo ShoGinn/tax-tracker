@@ -1,11 +1,7 @@
 """Pytest configuration and fixtures."""
 
-import asyncio
-import contextlib
-
-# Import IRS test data
 import sys
-from collections.abc import AsyncGenerator, Generator  # noqa: TC003
+from collections.abc import Generator  # noqa: TC003
 from pathlib import Path
 
 import pytest
@@ -15,15 +11,9 @@ from fixtures.irs_test_data import (
     IRS_2024_TAX_BRACKETS,
     get_irs_test_data,
 )
-from sqlalchemy import create_engine, event
-from sqlalchemy.engine import Engine  # noqa: TC002
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from taxtracker.api.dependencies import get_db, get_tax_data
+from taxtracker.api.dependencies import get_tax_data
 from taxtracker.cli.app import create_app
-from taxtracker.models.database import Base
 from taxtracker.services.tax_calculator import TaxCalculator
 
 tests_dir = Path(__file__).parent
@@ -105,150 +95,10 @@ def irs_2024_calculator() -> TaxCalculator:
 
 
 @pytest.fixture
-def test_engine() -> Generator[Engine]:
-    """Create a test database engine with proper SQLite configuration.
-
-    Uses StaticPool to ensure the in-memory database persists across connections.
-    This is critical for FastAPI's dependency injection which creates new sessions.
-
-    NOTE: This creates a SYNC engine for unit tests. For integration tests that use
-    the async routes, use the test_async_engine fixture instead.
-    """
-    # Use StaticPool to maintain single connection to in-memory DB
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,  # Critical: keeps single connection alive
-    )
-
-    # Enable foreign keys for SQLite
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, _connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
-
-    yield engine
-
-    # Cleanup
-    Base.metadata.drop_all(bind=engine)
-    engine.dispose()
-
-
-@pytest.fixture
-def test_async_engine():
-    """Create an async test database engine.
-
-    Uses aiosqlite for true async SQLite support, compatible with AsyncSession.
-    Uses in-memory database with check_same_thread=False for test isolation.
-    """
-
-    async def create_test_async_engine():
-        # Create async engine with in-memory SQLite
-        engine = create_async_engine(
-            "sqlite+aiosqlite:///:memory:",
-            echo=False,
-            connect_args={"check_same_thread": False},
-        )
-
-        # Initialize tables
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-        return engine
-
-    # Create the engine in the event loop
-    test_engine = asyncio.run(create_test_async_engine())
-
-    yield test_engine
-
-    # Cleanup
-    async def cleanup():
-        await test_engine.dispose()
-
-    with contextlib.suppress(RuntimeError):
-        asyncio.run(cleanup())
-
-
-@pytest.fixture
-def db_session(test_engine: Engine) -> Generator[Session]:
-    """Create a test database session (SYNC - for unit tests).
-
-    This session shares the same engine as the client, allowing tests
-    to set up data that the API can see.
-    """
-    _session_factory = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-    session = _session_factory()
-
-    yield session
-
-    session.close()
-
-    # Clean up all data after test for isolation
-    # (But don't rollback since API needs to see committed data)
-    for table in reversed(Base.metadata.sorted_tables):
-        session.execute(table.delete())
-    session.commit()
-
-
-@pytest.fixture
-async def async_db_session(test_async_engine):
-    """Create an async test database session.
-
-    This is for integration tests that need to set up data and then test
-    it via async API routes.
-    """
-
-    _async_session_factory = sessionmaker(
-        test_async_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
-    )
-
-    async with _async_session_factory() as session:
-        yield session
-
-        # Clean up all data after test for isolation
-        for table in reversed(Base.metadata.sorted_tables):
-            await session.execute(table.delete())
-        await session.commit()
-
-
-@pytest.fixture
-def client(test_async_engine, mock_tax_data_dependency) -> Generator[TestClient]:
-    """Create a test client with async test database and dependency injection.
-
-    The client uses:
-    1. Shared async engine (test_async_engine) for database
-    2. Overridden get_tax_data dependency that returns static test data
-
-    This allows integration tests to:
-    - Set up data via async_db_session fixture (same engine)
-    - Make requests via client fixture
-    - Test full API with dependency injection (no file I/O)
-    """
-
-    # Create app with skip_db_init=True (tables already created by test_async_engine)
-    # Disable frontend static serving so API tests remain deterministic.
+def client(mock_tax_data_dependency) -> Generator[TestClient]:
+    """Create a stateless test client with deterministic IRS data."""
     app = create_app(skip_db_init=True, serve_frontend=False)
-
-    # Create AsyncSession maker using the shared test_async_engine
-    _async_session_factory = sessionmaker(
-        test_async_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
-    )
-
-    # Override get_db to use the test async session
-    async def override_get_db() -> AsyncGenerator[AsyncSession]:
-        async with _async_session_factory() as session:
-            yield session
-
-    app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_tax_data] = mock_tax_data_dependency
-
-    # TestClient works with async routes
     with TestClient(app) as test_client:
         yield test_client
-
-    # Clean up
     app.dependency_overrides.clear()
