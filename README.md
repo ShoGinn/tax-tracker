@@ -10,6 +10,7 @@ Tax Tracker helps model W-2 paychecks, 1099-R pension income, and non-taxable in
 - [Key Features](#key-features)
 - [Technology Stack](#technology-stack)
 - [Quick Start](#quick-start)
+- [Deploy To Railway](#deploy-to-railway)
 - [Development Commands](#development-commands)
 - [API Capabilities](#api-capabilities)
 - [Project Structure](#project-structure)
@@ -106,6 +107,30 @@ just frontend-dev
 
 The frontend accepts `VITE_API_BASE_URL` for explicit API targets.
 If not set, it uses same-origin requests and Vite dev proxy routes to `http://127.0.0.1:8000`.
+
+## Deploy To Railway
+
+The repository includes a multi-stage `Dockerfile` that builds the React frontend and serves it
+from the FastAPI application. Railway configuration in `railway.json` uses `/health` to validate
+new deployments.
+
+1. Push the repository to a Git provider supported by Railway.
+2. In Railway, create a project and choose **Deploy from GitHub repo**.
+3. Select this repository. Railway detects the root `Dockerfile` automatically.
+4. After the deployment is healthy, open the service's **Settings → Networking** and generate a
+   public domain.
+
+No application variables or database service are required. Railway injects `PORT` automatically,
+and the container listens on `0.0.0.0:$PORT`. Personal tax data remains in each user's browser;
+there is no server-side persistent storage to configure.
+
+To verify the production image locally:
+
+```bash
+docker build -t tax-tracker .
+docker run --rm -p 8000:8000 -e PORT=8000 tax-tracker
+curl http://localhost:8000/health
+```
 
 ## Development Commands
 
