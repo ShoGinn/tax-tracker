@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING, Any
 
 from taxtracker.core.config import settings
 from taxtracker.models.tax_data import FilingStatus, TaxBrackets, TaxCalculationRequest
-from taxtracker.services.income_service import get_non_taxable_payments, get_paychecks, get_retirement_1099rs
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
-
+    from taxtracker.models.browser_records import (
+        BrowserEmployer,
+        BrowserNonTaxableIncome,
+        BrowserPaycheck,
+        BrowserPension,
+    )
     from taxtracker.services.tax_calculator import TaxCalculator
 
 
@@ -173,6 +176,7 @@ def _invert_tax_brackets(target_tax: Decimal, brackets: list[Any]) -> Decimal:
 
 
 def _compute_irs_formula_ppc(
+    *,
     gross_per_paycheck: Decimal,
     periods: int,
     step3_amount: Decimal,
@@ -207,6 +211,7 @@ def _compute_irs_formula_ppc(
 
 
 def _compute_step4b_for_reduction(
+    *,
     target_ppc: Decimal,
     job: dict[str, Any],
     filing_status: FilingStatus,
@@ -240,7 +245,13 @@ def _compute_step4b_for_reduction(
 
     # IRS formula baseline: what the formula produces with step4b=0
     baseline_ppc = _compute_irs_formula_ppc(
-        gross_per_paycheck, periods, step3_amount, step4a_amount, Decimal(0), std_ded, brackets
+        gross_per_paycheck=gross_per_paycheck,
+        periods=periods,
+        step3_amount=step3_amount,
+        step4a_amount=step4a_amount,
+        step4b_amount=Decimal(0),
+        std_ded=std_ded,
+        brackets=brackets,
     )
 
     if target_ppc >= baseline_ppc:
@@ -280,6 +291,7 @@ def _compute_step4b_for_reduction(
 
 
 def optimize_w4(
+    *,
     tax_calculator: TaxCalculator,
     year: int,
     filing_status: FilingStatus,
@@ -542,11 +554,13 @@ def _project_remaining_pension(
         projected_remaining_pension = avg_pension_taxable * remaining_pension_periods
         return (
             projected_remaining_pension,
-            "Extrapolated remaining pension taxable income using "
-            f"YTD average ${avg_pension_taxable:,.2f} for {remaining_pension_periods} remaining periods.",
+            (
+                "Extrapolated remaining pension taxable income using "
+                f"YTD average ${avg_pension_taxable:,.2f} for {remaining_pension_periods} remaining periods."
+            ),
         )
 
-    return (Decimal(0), "No pension records found in DB; projected remaining pension taxable income as $0.00.")
+    return (Decimal(0), "No pension records found; projected remaining pension taxable income as $0.00.")
 
 
 def _project_remaining_non_taxable(
@@ -562,13 +576,19 @@ def _project_remaining_non_taxable(
     projected_va_remaining = avg_va * remaining_non_taxable_periods
     return (
         projected_va_remaining,
-        "Extrapolated non-taxable income using "
-        f"YTD average ${avg_va:,.2f} for {remaining_non_taxable_periods} periods.",
+        (
+            "Extrapolated non-taxable income using "
+            f"YTD average ${avg_va:,.2f} for {remaining_non_taxable_periods} periods."
+        ),
     )
 
 
-async def optimize_midyear_from_db(
-    db: AsyncSession,
+def optimize_midyear_from_records(
+    *,
+    employers: list[BrowserEmployer],
+    paychecks: list[BrowserPaycheck],
+    pensions: list[BrowserPension],
+    non_taxable_income: list[BrowserNonTaxableIncome],
     tax_calculator: TaxCalculator,
     year: int,
     filing_status: FilingStatus,
@@ -583,7 +603,7 @@ async def optimize_midyear_from_db(
     employer_overrides: dict[int, Decimal] | None = None,
     expected_remaining_pension_taxable: Decimal | None = None,
 ) -> dict[str, Any]:
-    """Optimize W-4 settings mid-year using already-entered database records.
+    """Optimize W-4 settings mid-year using browser-supplied records.
 
     This projects full-year income from year-to-date actuals plus remaining-period assumptions,
     then reuses the existing full-year optimizer to produce W-4 recommendations.
@@ -592,20 +612,24 @@ async def optimize_midyear_from_db(
     if as_of_date and as_of_date.year != year:
         raise ValueError("as_of_date must be within the requested tax_year")
 
-    paychecks = _filter_records_by_as_of_date(await get_paychecks(db, year=year, limit=None), as_of_date)
+    paychecks = _filter_records_by_as_of_date(
+        [record for record in paychecks if record.pay_date.year == year],
+        as_of_date,
+    )
 
     if not paychecks:
         cutoff_note = f" on or before {as_of_date.isoformat()}" if as_of_date else ""
-        raise ValueError(f"No paychecks found in database for tax year {year}{cutoff_note}")
+        raise ValueError(f"No paychecks found for tax year {year}{cutoff_note}")
 
     retirement_1099rs = _filter_records_by_as_of_date(
-        await get_retirement_1099rs(db, year=year, limit=None),
+        [record for record in pensions if record.pay_date.year == year],
         as_of_date,
     )
     non_taxable_payments = _filter_records_by_as_of_date(
-        await get_non_taxable_payments(db, year=year, limit=None),
+        [record for record in non_taxable_income if record.pay_date.year == year],
         as_of_date,
     )
+    employer_names = {employer.id: employer.name for employer in employers}
 
     overrides = employer_overrides or {}
     pension_periods = remaining_pension_periods or remaining_pay_periods
@@ -623,7 +647,7 @@ async def optimize_midyear_from_db(
     )
 
     for paycheck in paychecks:
-        employer_name = paycheck.employer.name if paycheck.employer else f"Employer {paycheck.employer_id}"
+        employer_name = employer_names.get(paycheck.employer_id, f"Employer {paycheck.employer_id}")
         stats = employer_stats.setdefault(
             paycheck.employer_id,
             {
@@ -635,7 +659,7 @@ async def optimize_midyear_from_db(
             },
         )
         stats["paycheck_count"] += 1
-        stats["ytd_gross"] += paycheck.gross_wages + paycheck.bonus + paycheck.taxable_benefit
+        stats["ytd_gross"] += paycheck.gross_wages + paycheck.bonus
         stats["ytd_pretax"] += paycheck.total_pretax_deductions
         stats["ytd_federal_withholding"] += paycheck.federal_withholding
 

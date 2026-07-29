@@ -76,6 +76,7 @@ const ProjectYearTab = () => {
     projection_year: currentYear + 1,
     filing_status: config.filing_status,
     num_children: 0,
+    age_65_plus: config.age_65_plus,
     w2_gross: "",
     w2_pretax_deductions: "0",
     pension_gross: "0",
@@ -89,9 +90,14 @@ const ProjectYearTab = () => {
   useEffect(() => {
     if (!configLoading && !didInitialSync.current) {
       didInitialSync.current = true;
-      setFields((prev) => ({ ...prev, filing_status: config.filing_status }));
+      setFields((prev) => ({
+        ...prev,
+        filing_status: config.filing_status,
+        num_children: config.num_children,
+        age_65_plus: config.age_65_plus,
+      }));
     }
-  }, [configLoading, config.filing_status]);
+  }, [configLoading, config.age_65_plus, config.filing_status, config.num_children]);
 
   const mutation = useMutation({
     mutationFn: (data: ProjectYearRequest) => apiClient.projectYear(data),

@@ -22,7 +22,7 @@ jobs:
               run: cp tests/data/pslmodels_snapshot.json /tmp/pslmodels_snapshot_baseline.json
 
             - name: Fetch fresh PSLmodels snapshot
-              run: uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 --years 2026
+              run: uv run python scripts/fetch_pslmodels_data.py snapshot
 
             - name: Run cross-validation tests against fresh snapshot
               run: uv run pytest tests/unit/test_pslmodels_cross_check.py -v --no-header --override-ini='addopts='

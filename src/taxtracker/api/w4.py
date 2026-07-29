@@ -1,31 +1,32 @@
 """W-4 optimization and withholding calculation endpoints."""
 
+import logging
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
+from fastapi import APIRouter, HTTPException
 
-from taxtracker.api.dependencies import get_db
+from taxtracker.api.errors import internal_server_error
 from taxtracker.core.config import current_tax_year
 from taxtracker.core.exceptions import W4CalculationError
-from taxtracker.models.api_requests import (  # noqa: TC001
+from taxtracker.models.api_requests import (
     AnnualWithholdingRequest,
-    MidYearDBW4OptimizeRequest,
-    MidYearPeriodSuggestionRequest,
+    MidYearBrowserPeriodSuggestionRequest,
+    MidYearBrowserW4OptimizeRequest,
+    MidYearPeriodSuggestionResponse,
     W4OptimizeRequest,
     WithholdingCalcRequest,
 )
-from taxtracker.models.schemas import MidYearPeriodSuggestionResponse
 from taxtracker.services.midyear_periods import suggest_midyear_periods
 from taxtracker.services.tax_calculator import TaxCalculator
-from taxtracker.services.w4_calculator import W4OptimizationResult, optimize_midyear_from_db, optimize_w4
+from taxtracker.services.w4_calculator import W4OptimizationResult, optimize_midyear_from_records, optimize_w4
 from taxtracker.services.w4_withholding import (
     calculate_withholding_per_paycheck,
     estimate_annual_withholding_from_w4,
 )
 
 router = APIRouter(prefix="/w4", tags=["W-4"])
+logger = logging.getLogger(__name__)
 
 
 def _serialize_w4_result(result: W4OptimizationResult) -> dict[str, Any]:
@@ -109,29 +110,30 @@ async def optimize_w4_settings(request: W4OptimizeRequest) -> dict[str, Any]:
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"W-4 optimization failed: {e!s}") from e
+        raise internal_server_error(logger, "W-4 optimization", e) from e
 
 
 @router.post(
-    "/optimize-midyear-from-db",
-    summary="Optimize mid-year W-4 settings using database actuals",
-    response_description="Mid-year W-4 recommendations with DB-based YTD snapshot and projection assumptions",
+    "/optimize-midyear",
+    summary="Optimize mid-year W-4 settings using browser records",
+    response_description="Mid-year W-4 recommendations with a transient YTD snapshot",
     responses={400: {"description": "Invalid input or calculation error"}},
 )
-async def optimize_midyear_w4_from_db(
-    request: MidYearDBW4OptimizeRequest,
-    *,
-    db: Annotated[AsyncSession, Depends(get_db)],
+async def optimize_midyear_w4(
+    request: MidYearBrowserW4OptimizeRequest,
 ) -> dict[str, Any]:
-    """Optimize W-4 settings for remaining paychecks using database year-to-date entries."""
+    """Optimize W-4 settings without persisting the supplied records."""
     try:
         override_map = {
             override.employer_id: override.expected_remaining_gross_per_paycheck
             for override in request.employer_overrides
         }
 
-        result = await optimize_midyear_from_db(
-            db=db,
+        result = optimize_midyear_from_records(
+            employers=request.employers,
+            paychecks=request.paychecks,
+            pensions=request.pensions,
+            non_taxable_income=request.non_taxable_income,
             tax_calculator=TaxCalculator(tax_year=request.tax_year),
             year=request.tax_year,
             filing_status=request.filing_status,
@@ -158,7 +160,7 @@ async def optimize_midyear_w4_from_db(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Mid-year W-4 optimization failed: {e!s}") from e
+        raise internal_server_error(logger, "Mid-year W-4 optimization", e) from e
 
 
 @router.post(
@@ -169,14 +171,14 @@ async def optimize_midyear_w4_from_db(
     responses={400: {"description": "Invalid input or calculation error"}},
 )
 async def suggest_periods(
-    request: MidYearPeriodSuggestionRequest,
-    *,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    request: MidYearBrowserPeriodSuggestionRequest,
 ) -> MidYearPeriodSuggestionResponse:
-    """Suggest remaining periods for mid-year W-4 optimization using backend DB data."""
+    """Suggest remaining periods from browser-supplied dates."""
     try:
-        return await suggest_midyear_periods(
-            db,
+        return suggest_midyear_periods(
+            request.paychecks,
+            request.pensions,
+            request.non_taxable_income,
             tax_year=request.tax_year,
             as_of_date=request.as_of_date,
             w2_pay_frequency=request.w2_pay_frequency,
@@ -184,7 +186,7 @@ async def suggest_periods(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Period suggestion failed: {e!s}") from e
+        raise internal_server_error(logger, "Period suggestion", e) from e
 
 
 @router.post(
@@ -217,7 +219,7 @@ async def calculate_withholding(request: WithholdingCalcRequest) -> dict[str, An
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Withholding calculation failed: {e!s}") from e
+        raise internal_server_error(logger, "Withholding calculation", e) from e
 
 
 @router.post(
@@ -256,4 +258,4 @@ async def estimate_withholding(request: AnnualWithholdingRequest) -> dict[str, A
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid input: {e!s}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Withholding estimation failed: {e!s}") from e
+        raise internal_server_error(logger, "Withholding estimation", e) from e

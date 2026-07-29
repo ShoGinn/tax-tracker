@@ -40,6 +40,7 @@ def _calculate_progressive_tax(taxable_income: Decimal, brackets: TaxBrackets, f
 
 
 def calculate_withholding_per_paycheck(
+    *,
     gross_pay: Decimal,
     pay_frequency: str,  # "weekly", "biweekly", "semimonthly", "monthly"
     filing_status: FilingStatus,
@@ -135,6 +136,7 @@ def calculate_withholding_per_paycheck(
 
 
 def estimate_annual_withholding_from_w4(
+    *,
     annual_gross: Decimal,
     pay_frequency: str,
     filing_status: FilingStatus,

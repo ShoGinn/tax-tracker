@@ -4,6 +4,7 @@ import { useState } from "react";
 import { apiClient } from "../lib/api/client";
 import type { AppConfigUpdate, FilingStatus, W2PayFrequency } from "../lib/api/types";
 import { FILING_STATUSES } from "../lib/constants";
+import { browserStore, type BrowserBackup } from "../lib/storage/browserStore";
 
 export const SettingsPage = () => {
   const queryClient = useQueryClient();
@@ -15,6 +16,7 @@ export const SettingsPage = () => {
 
   const [draft, setDraft] = useState<AppConfigUpdate | null>(null);
   const [saved, setSaved] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<string | null>(null);
 
   const config = configQuery.data;
   const current: AppConfigUpdate = draft ?? {
@@ -37,6 +39,30 @@ export const SettingsPage = () => {
       setTimeout(() => setSaved(false), 2000);
     },
   });
+
+  const exportBackup = async () => {
+    const backup = await browserStore.exportBackup();
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tax-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setBackupStatus("Backup downloaded.");
+  };
+
+  const importBackup = async (file: File) => {
+    try {
+      await browserStore.importBackup(JSON.parse(await file.text()) as BrowserBackup);
+      await queryClient.invalidateQueries();
+      setDraft(null);
+      setBackupStatus("Backup restored in this browser.");
+    } catch (error) {
+      setBackupStatus(error instanceof Error ? error.message : "Backup restore failed.");
+    }
+  };
 
   if (configQuery.isLoading) return <p className="status-message">Loading settings…</p>;
   if (configQuery.isError)
@@ -220,6 +246,39 @@ export const SettingsPage = () => {
             >
               {mutation.isPending ? "Saving…" : saved ? "Saved ✓" : "Save Settings"}
             </button>
+          </div>
+        </div>
+
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <h2 className="settings-card-title">Browser Data</h2>
+            <p className="settings-card-description">
+              Your financial records stay in this browser. Export a backup before clearing browser
+              data or moving to another browser profile.
+            </p>
+          </div>
+          <div className="settings-footer">
+            {backupStatus && (
+              <p className="status-message" role="status">
+                {backupStatus}
+              </p>
+            )}
+            <button type="button" className="btn-primary" onClick={() => void exportBackup()}>
+              Export Backup
+            </button>
+            <label className="btn-secondary">
+              Restore Backup
+              <input
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void importBackup(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
           </div>
         </div>
       </div>

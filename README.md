@@ -1,6 +1,6 @@
 # Tax Tracker
 
-Personal federal tax calculation and W-4 optimization system built with FastAPI.
+Single-browser federal tax calculation and W-4 optimization system built with React and FastAPI.
 
 Tax Tracker helps model W-2 paychecks, 1099-R pension income, and non-taxable income to calculate federal tax liability, reconcile withholding, and optimize W-4 settings.
 
@@ -27,6 +27,7 @@ This project focuses on federal tax workflows only. It provides:
 - Direct calculation endpoints for quick what-if tax scenarios
 - W-4 optimization to target a desired refund or balance due
 - Year-over-year projections and annual tax data extensibility
+- Local-first persistence: personal records and settings stay in the current browser
 
 The codebase is under active development and prioritizes correctness, maintainability, and verified tax logic over internal backward compatibility.
 
@@ -36,7 +37,8 @@ The codebase is under active development and prioritizes correctness, maintainab
 
 - Detailed paycheck entry with full deduction and withholding breakdown
 - Summary tax calculation mode via request payloads
-- CSV bulk import with flexible column mapping and date/currency normalization
+- CSV bulk import directly into browser storage
+- Portable JSON backup and restore from Settings
 
 ### Supported Income Types
 
@@ -55,7 +57,7 @@ The codebase is under active development and prioritizes correctness, maintainab
 ### W-4 Optimization And Projections
 
 - W-4 recommendation generation (steps 2, 3, 4a-4c)
-- Mid-year W-4 optimization from database YTD data with backend-backed remaining-period suggestions per income cadence (W-2, pension, non-taxable)
+- Mid-year W-4 optimization from browser-stored YTD data with remaining-period suggestions per income cadence
 - Per-paycheck withholding estimator (IRS Publication 15-T method)
 - Annual projections and year-over-year comparison
 
@@ -63,9 +65,9 @@ The codebase is under active development and prioritizes correctness, maintainab
 
 - Python 3.14
 - FastAPI
-- SQLAlchemy async ORM with SQLite and aiosqlite
 - Pydantic v2
 - React 19 + TypeScript + Vite (frontend in `frontend/`)
+- IndexedDB via Dexie 4 for browser persistence
 - uv for package and environment workflows
 - just for local task automation
 - Ruff for linting and formatting
@@ -78,6 +80,8 @@ The codebase is under active development and prioritizes correctness, maintainab
 ### Prerequisites
 
 - Python 3.14
+- Node.js 24 LTS
+- pnpm 11
 - uv
 - just
 
@@ -113,6 +117,7 @@ just ci             # full local CI gate (includes frontend-check)
 just test           # full test suite (80% coverage minimum)
 just test-unit
 just test-integration
+just test-services    # calculation/service coverage gate (95%)
 just test-fast
 just lint
 just lint-fix
@@ -123,6 +128,7 @@ just frontend-install
 just frontend-dev
 just frontend-build
 just frontend-test
+just frontend-test-e2e
 just frontend-typecheck
 just frontend-lint
 just frontend-lint-fix
@@ -164,15 +170,14 @@ This repository includes an automated hook update workflow at [`.github/workflow
 
 ## API Capabilities
 
-The service includes endpoints for:
+The browser owns all personal data. The stateless calculation service includes endpoints for:
 
-- Income CRUD for employers, paychecks, retirement income, and non-taxable income
 - Tax calculations from direct payload input
-- Database-backed reconciliation of withholding versus liability
+- Reconciliation of transient browser snapshots versus tax liability
 - W-4 optimization and withholding estimates
-- Backend-backed mid-year remaining-period suggestions via `POST /w4/suggest-periods`
-- Mid-year W-4 optimization from DB-backed YTD actuals via `POST /w4/optimize-midyear-from-db` with optional `as_of_date` cutoff and split remaining periods (`remaining_pay_periods`, optional `remaining_pension_periods`, optional `remaining_non_taxable_periods`)
-- Tax projections based on expected or historical income patterns
+- Mid-year remaining-period suggestions via `POST /w4/suggest-periods`
+- Mid-year W-4 optimization via `POST /w4/optimize-midyear`, receiving records only for that request
+- Tax projections based on expected income or a transient browser snapshot
 
 For implementation details and route handlers, see source packages under src/taxtracker/api.
 
@@ -184,8 +189,10 @@ src/taxtracker/
 ├── cli/          # app factory and entrypoint
 ├── core/         # config and exceptions
 ├── data/         # IRS-sourced tax and FICA JSON files
-├── models/       # ORM and Pydantic models
-├── services/     # tax, W-4, import, and projection logic
+├── models/       # Pydantic request, snapshot, and response models
+├── services/     # tax, W-4, and projection logic
+frontend/src/lib/storage/
+└── browserStore.ts # Versioned Dexie schema, CRUD, CSV, and backups
 tests/
 ├── unit/
 ├── integration/
@@ -225,6 +232,8 @@ Additional documentation:
 
 - docs/irs_data_sources.md
 - docs/annual_tax_data_update.md
+Browser data can be exported and restored from the Settings page. IndexedDB is origin- and
+browser-profile-specific; clearing site data removes the working copy, so periodic exports are recommended.
 
 ## Development Guidelines
 

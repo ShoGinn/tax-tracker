@@ -16,6 +16,7 @@ export interface EmployerCreate {
   end_date?: string | null;
   notes?: string | null;
 }
+export type EmployerUpdate = Partial<EmployerCreate>;
 
 export interface PaycheckResponse {
   id: number;
@@ -58,6 +59,7 @@ export interface PaycheckCreate {
   deduction_other_posttax?: string;
   notes?: string | null;
 }
+export type PaycheckUpdate = Partial<Omit<PaycheckCreate, "employer_id">>;
 
 export interface Retirement1099RResponse {
   id: number;
@@ -83,6 +85,7 @@ export interface Retirement1099RCreate {
   source_description?: string | null;
   notes?: string | null;
 }
+export type Retirement1099RUpdate = Partial<Retirement1099RCreate>;
 
 export interface NonTaxableIncomeResponse {
   id: number;
@@ -98,6 +101,22 @@ export interface NonTaxableIncomeCreate {
   source_type?: string | null;
   notes?: string | null;
 }
+export type NonTaxableIncomeUpdate = Partial<NonTaxableIncomeCreate>;
+
+export interface CsvImportError {
+  row: number;
+  error: string;
+  data: Record<string, unknown>;
+}
+
+export interface CsvImportResult {
+  imported: number;
+  skipped: number;
+  total_rows: number;
+  errors: CsvImportError[];
+}
+
+export type CsvImportType = "paychecks" | "pensions" | "non-taxable";
 
 export interface AvailableYearsResponse {
   available_years: number[];
@@ -337,6 +356,7 @@ export interface ProjectYearRequest {
   projection_year?: number;
   filing_status: FilingStatus;
   num_children?: number;
+  age_65_plus?: boolean;
   w2_gross?: string;
   w2_pretax_deductions?: string;
   pension_gross?: string;
@@ -368,6 +388,7 @@ export interface CompareYearsRequest {
   comparison_year?: number;
   filing_status: FilingStatus;
   num_children?: number;
+  age_65_plus?: boolean;
   base_w2_gross: string;
   comparison_w2_gross: string;
   base_pension?: string;

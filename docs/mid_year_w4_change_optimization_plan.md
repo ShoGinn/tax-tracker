@@ -10,8 +10,8 @@ Current behavior assumes a single full-year withholding profile. This feature wi
 
 Implemented backend path:
 
-- Endpoint: `POST /w4/optimize-midyear-from-db`
-- Data source: all entries already recorded in the database for the requested tax year
+- Endpoint: `POST /w4/optimize-midyear`
+- Data source: a transient snapshot of entries stored in the current browser for the requested tax year
 - YTD model: supports optional `as_of_date` cutoff (includes entries with `pay_date <= as_of_date`); if omitted, uses all entries in tax year
 - Remaining income model: extrapolates from YTD per-employer averages by default, with optional per-employer overrides
 - Output: full W-4 recommendations plus YTD breakdown, projection summary, and assumptions

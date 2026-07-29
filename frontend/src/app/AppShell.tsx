@@ -8,7 +8,6 @@ const navigation = [
   { to: "/projections", label: "Projections" },
   { to: "/imports", label: "CSV Import" },
   { to: "/settings", label: "Settings" },
-  { to: "/auth", label: "Auth" },
 ];
 
 export const AppShell = () => {

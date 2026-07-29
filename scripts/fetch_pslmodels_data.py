@@ -9,7 +9,7 @@ be verified against IRS publications before use.
 
 Usage:
     # Generate snapshot for cross-validation tests
-    uv run python scripts/fetch_pslmodels_data.py snapshot --years 2025 2026
+    uv run python scripts/fetch_pslmodels_data.py snapshot
 
     # Generate draft data files for a new tax year
     uv run python scripts/fetch_pslmodels_data.py draft --year 2027
@@ -411,11 +411,17 @@ def cli() -> None:
     "--years",
     type=int,
     multiple=True,
-    required=True,
-    help="Tax years to extract (e.g., --years 2025 --years 2026).",
+    help="Tax years to extract. Defaults to years with both local tax and FICA data files.",
 )
 def snapshot(years: tuple[int, ...]) -> None:
     """Generate snapshot JSON for cross-validation tests."""
+    if not years:
+        bracket_years = {path.stem.removeprefix("tax_brackets_") for path in DATA_DIR.glob("tax_brackets_*.json")}
+        fica_years = {path.stem.removeprefix("fica_limits_") for path in DATA_DIR.glob("fica_limits_*.json")}
+        years = tuple(sorted(int(year) for year in bracket_years & fica_years))
+    if not years:
+        raise click.ClickException("No supported tax years were found in the local data directory")
+
     data = fetch_pslmodels_data()
 
     snapshot_data: dict[str, Any] = {

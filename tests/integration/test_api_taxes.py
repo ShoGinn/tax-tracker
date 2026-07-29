@@ -294,10 +294,6 @@ class TestTaxesAPI:
 
 
 @pytest.mark.integration
-class TestTaxesDatabaseAPI:
-    """Tests for database-based tax calculations."""
-
-
 @pytest.mark.integration
 class TestTaxesAPIDocs:
     """Test API documentation is accessible."""

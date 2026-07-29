@@ -5,13 +5,12 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Protocol
 
-from taxtracker.models.schemas import MidYearPeriodSuggestionResponse
-from taxtracker.services.income_service import get_non_taxable_payments, get_paychecks, get_retirement_1099rs
+from taxtracker.models.api_requests import MidYearPeriodSuggestionResponse
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from taxtracker.models.browser_records import BrowserNonTaxableIncome, BrowserPaycheck, BrowserPension
 
 
 class _HasPayDate(Protocol):
@@ -102,22 +101,24 @@ def has_w2_entry_in_current_period(
     raise ValueError(f"Unsupported pay frequency: {frequency}")
 
 
-async def suggest_midyear_periods(
-    db: AsyncSession,
+def suggest_midyear_periods(
+    paychecks: list[BrowserPaycheck],
+    pensions: list[BrowserPension],
+    non_taxable_income: list[BrowserNonTaxableIncome],
     *,
     tax_year: int,
     as_of_date: date | None,
     w2_pay_frequency: str,
 ) -> MidYearPeriodSuggestionResponse:
-    """Build remaining-period suggestions using DB records for pension and non-taxable income."""
+    """Build remaining-period suggestions from transient browser records."""
 
     effective_date = as_of_date or datetime.now(UTC).date()
     remaining_pay_periods = suggest_remaining_periods(effective_date, w2_pay_frequency)
     monthly_baseline_periods = suggest_remaining_periods(effective_date, "monthly")
 
-    paychecks = await get_paychecks(db, year=tax_year, limit=None)
-    retirement_1099rs = await get_retirement_1099rs(db, year=tax_year, limit=None)
-    non_taxable_payments = await get_non_taxable_payments(db, year=tax_year, limit=None)
+    paychecks = [record for record in paychecks if record.pay_date.year == tax_year]
+    retirement_1099rs = [record for record in pensions if record.pay_date.year == tax_year]
+    non_taxable_payments = [record for record in non_taxable_income if record.pay_date.year == tax_year]
 
     current_period_has_w2_entry = has_w2_entry_in_current_period(paychecks, effective_date, w2_pay_frequency)
     current_month_has_pension_entry = has_recorded_entry_in_as_of_month(retirement_1099rs, effective_date)
