@@ -118,9 +118,9 @@ export const DashboardPage = () => {
               <span aria-hidden="true" /> Updated from your records
             </span>
           </div>
-          <p id="plan-status-heading" className="plan-status-label">
+          <h2 id="plan-status-heading" className="plan-status-label">
             {projection ? balanceLabel : "Plan snapshot"}
-          </p>
+          </h2>
           <p className="plan-status-value">
             {projection ? formatCurrency(Math.abs(projectedBalance)) : "Add income to get started"}
           </p>
