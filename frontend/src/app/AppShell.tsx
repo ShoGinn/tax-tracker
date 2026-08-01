@@ -100,7 +100,7 @@ export const AppShell = () => {
           <NavigationList items={manageNavigation} />
           <ul>
             <li>
-              <a className="nav-link" href={githubUrl} target="_blank" rel="noreferrer">
+              <a className="nav-link" href={githubUrl} target="_blank" rel="noopener noreferrer">
                 <span className="nav-marker" aria-hidden="true">
                   GH
                 </span>
