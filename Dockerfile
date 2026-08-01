@@ -3,7 +3,7 @@ FROM node:26-bookworm-slim AS frontend-build
 WORKDIR /app/frontend
 
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN package_manager="$(node --print "require('./package.json').packageManager")" \
+RUN package_manager="$(node --print 'require("./package.json").packageManager')" \
     && npm install --global "$package_manager"
 
 RUN pnpm install --frozen-lockfile
