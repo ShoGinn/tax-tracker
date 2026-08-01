@@ -6,7 +6,7 @@ test("create browser income, calculate taxes, and open projection and W-4 workfl
   const unique = Date.now();
   const taxYear = new Date().getFullYear();
   await page.goto("/income");
-  await expect(page.getByRole("heading", { name: "Income" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Income records" })).toBeVisible();
   await page.getByRole("button", { name: "+ Add employer" }).click();
   await page.getByPlaceholder("Employer name").fill(`E2E Employer ${unique}`);
   await page.getByRole("button", { name: "Add employer" }).click();
@@ -24,10 +24,10 @@ test("create browser income, calculate taxes, and open projection and W-4 workfl
   await expect(page.getByText("Federal tax liability")).toBeVisible();
 
   await page.goto("/projections");
-  await expect(page.getByRole("heading", { name: "Projections" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Future scenarios" })).toBeVisible();
 
   await page.goto("/w4");
-  await expect(page.getByRole("heading", { name: "W-4 Optimization" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Withholding plan" })).toBeVisible();
 });
 
 test("import a paycheck CSV using an employer name", async ({ page }) => {
@@ -39,7 +39,7 @@ test("import a paycheck CSV using an employer name", async ({ page }) => {
   ].join("\n");
 
   await page.goto("/imports");
-  await expect(page.getByRole("heading", { name: "CSV Import" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Import records" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Download example CSV" })).toHaveAttribute(
     "download",
     "paychecks_example.csv",

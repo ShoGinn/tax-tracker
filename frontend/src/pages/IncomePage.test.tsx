@@ -26,7 +26,7 @@ describe("IncomePage", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "Income" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "W-2 Paychecks" })).toBeInTheDocument();
     expect(await screen.findByText(/No paychecks for/)).toBeInTheDocument();
   });
 });

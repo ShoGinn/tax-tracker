@@ -74,10 +74,6 @@ export const SettingsPage = () => {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">Settings</h1>
-      </div>
-
       <div className="settings-layout">
         <div className="settings-card">
           <div className="settings-card-header">

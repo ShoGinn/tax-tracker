@@ -67,7 +67,7 @@ The codebase is under active development and prioritizes correctness, maintainab
 - Python 3.14
 - FastAPI
 - Pydantic v2
-- React 19 + TypeScript + Vite (frontend in `frontend/`)
+- React 19 + React Router 8 + TypeScript 7 + Vite 8 (frontend in `frontend/`)
 - IndexedDB via Dexie 4 for browser persistence
 - uv for package and environment workflows
 - just for local task automation
@@ -81,7 +81,7 @@ The codebase is under active development and prioritizes correctness, maintainab
 ### Prerequisites
 
 - Python 3.14
-- Node.js 24 LTS
+- Node.js 26
 - pnpm 11
 - uv
 - just

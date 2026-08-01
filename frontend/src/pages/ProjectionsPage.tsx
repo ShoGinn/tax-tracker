@@ -505,10 +505,6 @@ export const ProjectionsPage = () => {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">Tax Projections</h1>
-      </div>
-
       <div className="tab-bar">
         <button
           type="button"

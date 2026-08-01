@@ -514,10 +514,6 @@ export const TaxesPage = () => {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">Federal Taxes</h1>
-      </div>
-
       <div className="tab-bar">
         <button
           type="button"
