@@ -988,8 +988,8 @@ export const IncomePage = () => {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">Income</h1>
+      <div className="page-toolbar">
+        <p className="context-note">Choose a year, then keep each income stream up to date.</p>
         <YearFilter year={year} onChange={setYear} />
       </div>
 

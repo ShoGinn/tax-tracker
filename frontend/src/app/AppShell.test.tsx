@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { AppShell } from "./AppShell";
@@ -14,8 +14,9 @@ describe("AppShell", () => {
 
     expect(screen.getByText("Tax Tracker")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Main navigation" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Income" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Taxes" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Tax position" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your federal tax plan" })).toBeInTheDocument();
   });
 });

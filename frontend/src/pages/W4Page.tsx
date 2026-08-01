@@ -1264,10 +1264,6 @@ export const W4Page = () => {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">W-4 Optimization</h1>
-      </div>
-
       <div className="tab-bar">
         <button
           type="button"

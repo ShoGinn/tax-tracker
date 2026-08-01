@@ -31,7 +31,7 @@ describe("TaxesPage", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: "Federal Taxes" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Direct Tax Calculator" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText("Age 65+")).toBeChecked());
   });
 });
