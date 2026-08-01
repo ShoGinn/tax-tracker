@@ -45,7 +45,7 @@ def calculate_taxes_from_records(
             w2_gross_income=w2_taxable,
             pension_gross_income=pension_taxable,
             num_children=options.num_children,
-            age_65_plus=snapshot.config.age_65_plus,
+            age_65_plus=options.age_65_plus,
             use_standard_deduction=options.use_standard_deduction,
             itemized_deduction_amount=(
                 options.itemized_deduction_amount if not options.use_standard_deduction else None

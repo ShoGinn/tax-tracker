@@ -92,6 +92,26 @@ class TestProjectYear:
         assert result.total_taxable_income == Decimal(117000)
         assert result.va_disability == Decimal(2000)
 
+    def test_itemized_deduction_preserves_decimal_precision(self, test_calculator: TaxCalculator) -> None:
+        """Itemized deductions remain Decimal values throughout projection math."""
+        itemized = Decimal("30000.123456789")
+        result = project_year(
+            tax_calculator=test_calculator,
+            year=2024,
+            filing_status=FilingStatus.SINGLE,
+            num_children=0,
+            w2_gross=Decimal(75000),
+            w2_pretax_deductions=Decimal(0),
+            pension_gross=Decimal(0),
+            pension_pretax_deductions=Decimal(0),
+            va_disability=Decimal(0),
+            estimated_federal_withholding=Decimal(0),
+            use_standard_deduction=False,
+            itemized_deductions=itemized,
+        )
+
+        assert result.deduction_amount == itemized
+
     def test_refund_calculation(self, test_calculator: TaxCalculator) -> None:
         """Estimated federal refund/owed excludes separately reported FICA."""
         result = project_year(

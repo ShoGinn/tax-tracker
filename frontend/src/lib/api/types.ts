@@ -206,6 +206,7 @@ export interface W4OptimizeRequest {
   paychecks_per_year: number;
   filing_status: FilingStatus;
   num_children?: number;
+  age_65_plus?: boolean;
   other_annual_income?: string;
   itemized_deductions?: string;
   target_refund?: string;
@@ -259,6 +260,7 @@ export interface MidYearDBW4OptimizeRequest {
   remaining_pension_periods?: number;
   remaining_non_taxable_periods?: number;
   num_children?: number;
+  age_65_plus?: boolean;
   target_refund?: DecimalString;
   use_standard_deduction?: boolean;
   itemized_deductions?: DecimalString;
@@ -389,6 +391,8 @@ export interface CompareYearsRequest {
   filing_status: FilingStatus;
   num_children?: number;
   age_65_plus?: boolean;
+  use_standard_deduction?: boolean;
+  itemized_deduction_amount?: string;
   base_w2_gross: string;
   comparison_w2_gross: string;
   base_pension?: string;

@@ -168,8 +168,9 @@ const OptimizerTab = () => {
     paychecks_per_year: 26,
     filing_status: config.filing_status,
     num_children: config.num_children,
+    age_65_plus: config.age_65_plus,
     other_annual_income: "0",
-    itemized_deductions: "0",
+    itemized_deductions: config.use_standard_deduction ? "0" : config.itemized_deduction_amount,
     target_refund: "0",
     year: currentYear,
   });
@@ -185,10 +186,20 @@ const OptimizerTab = () => {
         ...prev,
         filing_status: config.filing_status,
         num_children: config.num_children,
+        age_65_plus: config.age_65_plus,
+        itemized_deductions: config.use_standard_deduction ? "0" : config.itemized_deduction_amount,
         paychecks_per_year: frequencyToCount(config.w2_pay_frequency),
       }));
     }
-  }, [configLoading, config.filing_status, config.num_children, config.w2_pay_frequency]);
+  }, [
+    configLoading,
+    config.filing_status,
+    config.num_children,
+    config.age_65_plus,
+    config.use_standard_deduction,
+    config.itemized_deduction_amount,
+    config.w2_pay_frequency,
+  ]);
 
   const mutation = useMutation({
     mutationFn: (data: W4OptimizeRequest) => apiClient.optimizeW4(data),
@@ -296,6 +307,22 @@ const OptimizerTab = () => {
               value={fields.num_children}
               onChange={(e) => set("num_children", Number(e.target.value))}
             />
+          </label>
+
+          <label
+            className="form-label"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={fields.age_65_plus ?? false}
+              onChange={(e) => set("age_65_plus", e.target.checked)}
+            />
+            Age 65+
           </label>
 
           <label className="form-label">
@@ -636,9 +663,10 @@ const MidYearTab = () => {
       remaining_pension_periods: 1,
       remaining_non_taxable_periods: 1,
       num_children: config.num_children,
+      age_65_plus: config.age_65_plus,
       target_refund: "0",
-      use_standard_deduction: true,
-      itemized_deductions: "0",
+      use_standard_deduction: config.use_standard_deduction,
+      itemized_deductions: config.itemized_deduction_amount,
       employer_overrides: [],
     };
   });
@@ -658,9 +686,20 @@ const MidYearTab = () => {
         ...prev,
         filing_status: config.filing_status,
         num_children: config.num_children,
+        age_65_plus: config.age_65_plus,
+        use_standard_deduction: config.use_standard_deduction,
+        itemized_deductions: config.itemized_deduction_amount,
       }));
     }
-  }, [configLoading, config.filing_status, config.num_children, config.w2_pay_frequency]);
+  }, [
+    configLoading,
+    config.filing_status,
+    config.num_children,
+    config.age_65_plus,
+    config.use_standard_deduction,
+    config.itemized_deduction_amount,
+    config.w2_pay_frequency,
+  ]);
   const [employerOverrides, setEmployerOverrides] = useState<OverrideRow[]>([]);
 
   const employersQuery = useQuery({
@@ -885,6 +924,22 @@ const MidYearTab = () => {
             />
           </label>
 
+          <label
+            className="form-label"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={fields.age_65_plus ?? false}
+              onChange={(e) => set("age_65_plus", e.target.checked)}
+            />
+            Age 65+
+          </label>
+
           <label className="form-label">
             Expected remaining pension taxable (optional)
             <input
@@ -1037,7 +1092,7 @@ const WithholdingTab = () => {
 
   const [fields, setFields] = useState<WithholdingCalcRequest>({
     gross_pay_per_paycheck: "",
-    pay_frequency: "biweekly",
+    pay_frequency: config.w2_pay_frequency,
     filing_status: config.filing_status,
     multiple_jobs_checkbox: false,
     dependents_amount: "0",
@@ -1051,9 +1106,13 @@ const WithholdingTab = () => {
   useEffect(() => {
     if (!configLoading && !didInitialSync.current) {
       didInitialSync.current = true;
-      setFields((prev) => ({ ...prev, filing_status: config.filing_status }));
+      setFields((prev) => ({
+        ...prev,
+        filing_status: config.filing_status,
+        pay_frequency: config.w2_pay_frequency,
+      }));
     }
-  }, [configLoading, config.filing_status]);
+  }, [configLoading, config.filing_status, config.w2_pay_frequency]);
 
   const mutation = useMutation({
     mutationFn: (data: WithholdingCalcRequest) => apiClient.calculateWithholding(data),

@@ -97,7 +97,7 @@ def project_year(
     # Optional
     age_65_plus: bool = False,
     use_standard_deduction: bool = True,
-    itemized_deductions: float = 0.0,
+    itemized_deductions: Decimal = Decimal(0),
 ) -> YearProjection:
     """
     Project taxes for a future year.
@@ -141,7 +141,7 @@ def project_year(
         num_children=num_children,
         age_65_plus=age_65_plus,
         use_standard_deduction=use_standard_deduction,
-        itemized_deduction_amount=Decimal(str(itemized_deductions)) if not use_standard_deduction else None,
+        itemized_deduction_amount=itemized_deductions if not use_standard_deduction else None,
     )
 
     tax_result = tax_calculator.calculate_taxes(tax_request)
@@ -332,7 +332,7 @@ def project_from_ytd(
         va_disability=proj_va,
         estimated_federal_withholding=ytd_w2_federal_withheld + ytd_pension_federal_withheld,
         use_standard_deduction=use_standard_deduction,
-        itemized_deductions=float(itemized_deduction_amount),
+        itemized_deductions=itemized_deduction_amount,
     )
 
     return {

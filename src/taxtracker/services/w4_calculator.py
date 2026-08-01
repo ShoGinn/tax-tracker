@@ -296,6 +296,7 @@ def optimize_w4(
     year: int,
     filing_status: FilingStatus,
     num_children: int,
+    age_65_plus: bool = False,
     # Income projections
     w2_jobs: list[dict[str, Any]],  # [{"employer": "Sample Services", "annual_gross": 155000, "paychecks_per_year": 26, ...}]
     pension_taxable: Decimal,
@@ -318,6 +319,7 @@ def optimize_w4(
         year: Tax year
         filing_status: Filing status
         num_children: Number of children
+        age_65_plus: Whether to apply the additional standard deduction
         w2_jobs: List of W-2 jobs with projections
         pension_taxable: Taxable pension income
         va_disability: non-taxable benefit (non-taxable)
@@ -348,6 +350,7 @@ def optimize_w4(
         w2_gross_income=total_w2_taxable,
         pension_gross_income=pension_taxable,
         num_children=num_children,
+        age_65_plus=age_65_plus,
         use_standard_deduction=use_standard_deduction,
         itemized_deduction_amount=Decimal(str(itemized_deductions)) if not use_standard_deduction else None,
     )
@@ -597,6 +600,7 @@ def optimize_midyear_from_records(
     remaining_non_taxable_periods: int | None = None,
     as_of_date: datetime.date | None = None,
     num_children: int = 0,
+    age_65_plus: bool = False,
     target_refund: Decimal = Decimal(0),
     use_standard_deduction: bool = True,
     itemized_deductions: float = 0.0,
@@ -772,6 +776,7 @@ def optimize_midyear_from_records(
         year=year,
         filing_status=filing_status,
         num_children=num_children,
+        age_65_plus=age_65_plus,
         w2_jobs=w2_jobs,
         pension_taxable=projected_pension_taxable,
         va_disability=projected_va_income,

@@ -169,7 +169,7 @@ const DirectCalcTab = () => {
     age_65_plus: config.age_65_plus,
     num_children: config.num_children,
     use_standard_deduction: config.use_standard_deduction,
-    itemized_deduction_amount: null,
+    itemized_deduction_amount: config.itemized_deduction_amount,
     retirement_pretax_deductions: "0",
     non_taxable_income: "0",
     tax_year: currentYear,
@@ -185,6 +185,7 @@ const DirectCalcTab = () => {
         age_65_plus: config.age_65_plus,
         num_children: config.num_children,
         use_standard_deduction: config.use_standard_deduction,
+        itemized_deduction_amount: config.itemized_deduction_amount,
       }));
     }
   }, [
@@ -193,6 +194,7 @@ const DirectCalcTab = () => {
     config.age_65_plus,
     config.num_children,
     config.use_standard_deduction,
+    config.itemized_deduction_amount,
   ]);
 
   const mutation = useMutation({
@@ -375,22 +377,44 @@ const DirectCalcTab = () => {
 // ---------------------------------------------------------------------------
 
 const FromDbTab = () => {
+  const { config, isLoading: configLoading } = useAppConfig();
+  const didInitialSync = useRef(false);
   const { data: yearsData } = useQuery({
     queryKey: ["available-tax-years"],
     queryFn: apiClient.getAvailableYears,
   });
 
   const [year, setYear] = useState(currentYear);
-  const [filingStatus, setFilingStatus] = useState<FilingStatus>("single");
-  const [numChildren, setNumChildren] = useState(0);
-  const [useStandard, setUseStandard] = useState(true);
-  const [itemized, setItemized] = useState(0);
+  const [filingStatus, setFilingStatus] = useState<FilingStatus>(config.filing_status);
+  const [numChildren, setNumChildren] = useState(config.num_children);
+  const [age65Plus, setAge65Plus] = useState(config.age_65_plus);
+  const [useStandard, setUseStandard] = useState(config.use_standard_deduction);
+  const [itemized, setItemized] = useState(Number(config.itemized_deduction_amount));
+
+  useEffect(() => {
+    if (!configLoading && !didInitialSync.current) {
+      didInitialSync.current = true;
+      setFilingStatus(config.filing_status);
+      setNumChildren(config.num_children);
+      setAge65Plus(config.age_65_plus);
+      setUseStandard(config.use_standard_deduction);
+      setItemized(Number(config.itemized_deduction_amount));
+    }
+  }, [
+    configLoading,
+    config.filing_status,
+    config.num_children,
+    config.age_65_plus,
+    config.use_standard_deduction,
+    config.itemized_deduction_amount,
+  ]);
 
   const mutation = useMutation({
     mutationFn: () =>
       apiClient.calculateFromDb(year, {
         filing_status: filingStatus,
         num_children: numChildren,
+        age_65_plus: age65Plus,
         use_standard_deduction: useStandard,
         itemized_deduction_amount: itemized,
       }),
@@ -457,6 +481,22 @@ const FromDbTab = () => {
               value={numChildren}
               onChange={(e) => setNumChildren(Number(e.target.value))}
             />
+          </label>
+
+          <label
+            className="form-label"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={age65Plus}
+              onChange={(e) => setAge65Plus(e.target.checked)}
+            />
+            Age 65+
           </label>
 
           <label
