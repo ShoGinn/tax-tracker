@@ -63,3 +63,49 @@ def test_legacy_database_route_is_removed(client: TestClient) -> None:
         params={"filing_status": "single"},
     )
     assert response.status_code == 404
+
+
+def test_reconciliation_uses_explicit_age_and_itemized_options(client: TestClient) -> None:
+    snapshot = {
+        "employers": [{"id": 1, "name": "Local Corp", "start_date": "2024-01-01"}],
+        "paychecks": [
+            {
+                "id": 1,
+                "employer_id": 1,
+                "pay_date": "2024-01-15",
+                "gross_wages": "80000",
+                "federal_withholding": "10000",
+            }
+        ],
+        "pensions": [],
+        "non_taxable_income": [],
+        "config": {"filing_status": "single", "age_65_plus": False},
+    }
+    standard = client.post(
+        "/taxes/reconcile-records/2024",
+        json={
+            **snapshot,
+            "options": {
+                "filing_status": "single",
+                "age_65_plus": True,
+                "use_standard_deduction": True,
+            },
+        },
+    )
+    itemized = client.post(
+        "/taxes/reconcile-records/2024",
+        json={
+            **snapshot,
+            "options": {
+                "filing_status": "single",
+                "age_65_plus": False,
+                "use_standard_deduction": False,
+                "itemized_deduction_amount": "30000",
+            },
+        },
+    )
+
+    assert standard.status_code == 200
+    assert itemized.status_code == 200
+    assert float(standard.json()["deduction_amount"]) > 14600
+    assert itemized.json()["deduction_amount"] == "30000"

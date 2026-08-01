@@ -211,4 +211,32 @@ describe("W4Page", () => {
       );
     });
   });
+
+  it("loads saved age, deduction, and frequency settings across W-4 tools", async () => {
+    vi.mocked(apiClient.getConfig).mockResolvedValue({
+      filing_status: "single",
+      num_children: 1,
+      use_standard_deduction: false,
+      itemized_deduction_amount: "23000",
+      age_65_plus: true,
+      w2_pay_frequency: "semimonthly",
+    });
+    renderWithQueryClient();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Age 65+")).toBeChecked();
+      expect(screen.getByLabelText("Itemized deductions (0 = standard)")).toHaveValue(23000);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Mid-Year Optimizer" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Age 65+")).toBeChecked();
+      expect(screen.getByLabelText("Use standard deduction")).not.toBeChecked();
+      expect(screen.getByLabelText("Itemized deductions")).toHaveValue(23000);
+      expect(screen.getByLabelText("W-2 pay frequency")).toHaveValue("semimonthly");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Per-Paycheck Calculator" }));
+    await waitFor(() => expect(screen.getByLabelText("Pay frequency")).toHaveValue("semimonthly"));
+  });
 });

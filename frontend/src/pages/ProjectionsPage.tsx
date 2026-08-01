@@ -82,8 +82,8 @@ const ProjectYearTab = () => {
     pension_gross: "0",
     pension_pretax_deductions: "0",
     va_disability: "0",
-    use_standard_deduction: true,
-    itemized_deduction_amount: "0",
+    use_standard_deduction: config.use_standard_deduction,
+    itemized_deduction_amount: config.itemized_deduction_amount,
   });
 
   // Sync filing status from DB config once it loads (no-op if already cached at mount)
@@ -95,9 +95,18 @@ const ProjectYearTab = () => {
         filing_status: config.filing_status,
         num_children: config.num_children,
         age_65_plus: config.age_65_plus,
+        use_standard_deduction: config.use_standard_deduction,
+        itemized_deduction_amount: config.itemized_deduction_amount,
       }));
     }
-  }, [configLoading, config.age_65_plus, config.filing_status, config.num_children]);
+  }, [
+    configLoading,
+    config.age_65_plus,
+    config.filing_status,
+    config.num_children,
+    config.use_standard_deduction,
+    config.itemized_deduction_amount,
+  ]);
 
   const mutation = useMutation({
     mutationFn: (data: ProjectYearRequest) => apiClient.projectYear(data),
@@ -238,6 +247,22 @@ const ProjectYearTab = () => {
           >
             <input
               type="checkbox"
+              checked={fields.age_65_plus ?? false}
+              onChange={(e) => set("age_65_plus", e.target.checked)}
+            />
+            Age 65+
+          </label>
+
+          <label
+            className="form-label"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <input
+              type="checkbox"
               checked={fields.use_standard_deduction}
               onChange={(e) => set("use_standard_deduction", e.target.checked)}
             />
@@ -284,7 +309,10 @@ const CompareYearsTab = () => {
     base_year: currentYear,
     comparison_year: currentYear + 1,
     filing_status: config.filing_status,
-    num_children: 0,
+    num_children: config.num_children,
+    age_65_plus: config.age_65_plus,
+    use_standard_deduction: config.use_standard_deduction,
+    itemized_deduction_amount: config.itemized_deduction_amount,
     base_w2_gross: "",
     comparison_w2_gross: "",
     base_pension: "0",
@@ -295,9 +323,23 @@ const CompareYearsTab = () => {
   useEffect(() => {
     if (!configLoading && !didInitialSync.current) {
       didInitialSync.current = true;
-      setFields((prev) => ({ ...prev, filing_status: config.filing_status }));
+      setFields((prev) => ({
+        ...prev,
+        filing_status: config.filing_status,
+        num_children: config.num_children,
+        age_65_plus: config.age_65_plus,
+        use_standard_deduction: config.use_standard_deduction,
+        itemized_deduction_amount: config.itemized_deduction_amount,
+      }));
     }
-  }, [configLoading, config.filing_status]);
+  }, [
+    configLoading,
+    config.filing_status,
+    config.num_children,
+    config.age_65_plus,
+    config.use_standard_deduction,
+    config.itemized_deduction_amount,
+  ]);
 
   const mutation = useMutation({
     mutationFn: (data: CompareYearsRequest) => apiClient.compareYears(data),
@@ -346,6 +388,53 @@ const CompareYearsTab = () => {
               onChange={(e) => set("num_children", Number(e.target.value))}
             />
           </label>
+
+          <label
+            className="form-label"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={fields.age_65_plus ?? false}
+              onChange={(e) => set("age_65_plus", e.target.checked)}
+            />
+            Age 65+
+          </label>
+
+          <label
+            className="form-label"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={fields.use_standard_deduction ?? true}
+              onChange={(e) => set("use_standard_deduction", e.target.checked)}
+            />
+            Use standard deduction
+          </label>
+
+          {!(fields.use_standard_deduction ?? true) && (
+            <label className="form-label">
+              Itemized deductions total
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="form-input"
+                value={fields.itemized_deduction_amount ?? "0"}
+                onChange={(e) => set("itemized_deduction_amount", e.target.value)}
+                placeholder="0.00"
+              />
+            </label>
+          )}
 
           <label className="form-label">
             Base year

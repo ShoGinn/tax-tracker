@@ -117,6 +117,7 @@ export const apiClient = {
     params: {
       filing_status: FilingStatus;
       num_children: number;
+      age_65_plus: boolean;
       use_standard_deduction: boolean;
       itemized_deduction_amount: number;
     },
@@ -126,6 +127,7 @@ export const apiClient = {
       options: {
         filing_status: params.filing_status,
         num_children: params.num_children,
+        age_65_plus: params.age_65_plus,
         use_standard_deduction: params.use_standard_deduction,
         itemized_deduction_amount: params.itemized_deduction_amount,
       },

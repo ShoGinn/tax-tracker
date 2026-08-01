@@ -45,6 +45,7 @@ class W4OptimizeRequest(BaseModel):
     paychecks_per_year: int = Field(ge=1, description="Number of paychecks per year (e.g. 26 biweekly, 24 semimonthly)")
     filing_status: FilingStatus = Field(description=_D.filing_status_full)
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
+    age_65_plus: bool = Field(default=False, description="Whether to apply the additional standard deduction")
     other_annual_income: Decimal = Field(
         default=Decimal(0), ge=0, description="Annual pension or other non-W-2 taxable income"
     )
@@ -81,6 +82,7 @@ class MidYearW4OptimizeOptions(BaseModel):
         description=_D.remaining_non_taxable_periods,
     )
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
+    age_65_plus: bool = Field(default=False, description="Whether to apply the additional standard deduction")
     target_refund: Decimal = Field(
         default=Decimal(0), description="Target refund amount (0 = break even, negative = owed)"
     )
@@ -197,6 +199,8 @@ class CompareYearsRequest(BaseModel):
     filing_status: FilingStatus = Field(description=_D.filing_status_both_years)
     num_children: int = Field(default=0, ge=0, description=_D.num_children)
     age_65_plus: bool = Field(default=False, description="Whether to apply the additional standard deduction")
+    use_standard_deduction: bool = Field(default=True, description=_D.use_standard_deduction)
+    itemized_deduction_amount: Decimal = Field(default=Decimal(0), ge=0, description=_D.itemized_deductions)
     base_w2_gross: Decimal = Field(ge=0, description="Expected W-2 gross wages for the base year")
     comparison_w2_gross: Decimal = Field(ge=0, description="Expected W-2 gross wages for the comparison year")
     base_pension: Decimal = Field(default=Decimal(0), ge=0, description="Expected pension gross for the base year")

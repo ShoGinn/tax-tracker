@@ -25,6 +25,7 @@ describe("apiClient", () => {
     await apiClient.calculateFromDb(2026, {
       filing_status: "single",
       num_children: 0,
+      age_65_plus: false,
       use_standard_deduction: true,
       itemized_deduction_amount: 0,
     });
