@@ -13,6 +13,8 @@ const manageNavigation = [
   { to: "/settings", label: "Profile & backup", marker: "•" },
 ];
 
+const githubUrl = "https://github.com/ShoGinn/tax-tracker";
+
 const pageMeta: Record<string, { eyebrow: string; title: string; description: string }> = {
   "/": {
     eyebrow: "Plan overview",
@@ -96,6 +98,16 @@ export const AppShell = () => {
           <NavigationList items={planNavigation} />
           <p className="nav-section-label nav-section-label--spaced">Manage</p>
           <NavigationList items={manageNavigation} />
+          <ul>
+            <li>
+              <a className="nav-link" href={githubUrl} target="_blank" rel="noreferrer">
+                <span className="nav-marker" aria-hidden="true">
+                  GH
+                </span>
+                <span>GitHub</span>
+              </a>
+            </li>
+          </ul>
         </nav>
 
         <div className="sidebar-note">

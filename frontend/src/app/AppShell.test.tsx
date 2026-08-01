@@ -17,6 +17,10 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Income" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Tax position" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "GitHub" })).toHaveAttribute(
+      "href",
+      "https://github.com/ShoGinn/tax-tracker",
+    );
     expect(screen.getByRole("heading", { name: "Your federal tax plan" })).toBeInTheDocument();
   });
 });
