@@ -322,7 +322,7 @@ def optimize_w4(
         age_65_plus: Whether to apply the additional standard deduction
         w2_jobs: List of W-2 jobs with projections
         pension_taxable: Taxable pension income
-        va_disability: non-taxable benefit (non-taxable)
+        va_disability: Non-taxable benefit income
         current_federal_withholding: Current year's federal withholding
         target_refund: Desired refund amount (default: $0)
         use_standard_deduction: Use standard or itemized

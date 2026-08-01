@@ -243,7 +243,7 @@ class TaxCalculationRequest(BaseModel):
         default=Decimal(0), ge=0, description="Pre-tax deductions from retirement income"
     )
     non_taxable_income: Decimal = Field(
-        default=Decimal(0), ge=0, description="Non-taxable income (non-taxable benefit, SSA, gifts, etc.)"
+        default=Decimal(0), ge=0, description="Non-taxable income (benefits, SSA, gifts, etc.)"
     )
     tax_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Tax year for calculation")
 
@@ -269,7 +269,7 @@ class TaxCalculationResponse(BaseModel):
     marginal_tax_rate: Decimal
     breakdown_by_bracket: list[dict[str, Any]]
     fica_taxes: dict[str, Decimal]
-    total_household_income: Decimal  # Including non-taxable benefit
+    total_household_income: Decimal  # Including non-taxable income
     notes: list[str]
 
 

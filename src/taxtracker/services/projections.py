@@ -112,7 +112,7 @@ def project_year(
         w2_pretax_deductions: Projected W-2 pre-tax deductions (401k, etc.)
         pension_gross: Projected pension gross
         pension_pretax_deductions: Projected pension pre-tax (SBP, etc.)
-        va_disability: Projected non-taxable benefit (non-taxable)
+        va_disability: Projected non-taxable benefit income
         estimated_federal_withholding: Estimated federal withholding
         use_standard_deduction: Use standard or itemized
         itemized_deductions: Itemized deduction amount

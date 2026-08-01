@@ -180,7 +180,7 @@ class ProjectYearRequest(BaseModel):
     va_disability: Decimal = Field(
         default=Decimal(0),
         ge=0,
-        description="Expected annual non-taxable benefit income (non-taxable, tracked for household totals)",
+        description="Expected annual non-taxable benefit income, tracked for household totals",
     )
     use_standard_deduction: bool = Field(default=True, description=_D.use_standard_deduction)
     itemized_deduction_amount: Decimal = Field(default=Decimal(0), ge=0, description=_D.itemized_deductions)

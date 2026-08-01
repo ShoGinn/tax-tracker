@@ -1,0 +1,5 @@
+Employer,Pay Date,Gross Pay,401k,Health Insurance,Federal Tax,Social Security,Medicare,Net Pay,Notes
+Example Company,01/15/2025,"$3,000.00",$150.00,$75.00,$250.00,$186.00,$43.50,"$2,295.50",Synthetic example
+Example Company,01/31/2025,"$3,000.00",$150.00,$75.00,$250.00,$186.00,$43.50,"$2,295.50",Synthetic example
+Sample Services,02/14/2025,"$4,000.00",$200.00,$100.00,$400.00,$248.00,$58.00,"$2,994.00",Synthetic example
+Sample Services,02/28/2025,"$4,000.00",$200.00,$100.00,$400.00,$248.00,$58.00,"$2,994.00",Synthetic example
