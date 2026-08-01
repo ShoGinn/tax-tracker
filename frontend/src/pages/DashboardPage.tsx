@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
 
 import { apiClient } from "../lib/api/client";
 import { formatCurrency, parseDecimalString } from "../lib/money";
 
 const currentYear = new Date().getFullYear();
-
-// ---------------------------------------------------------------------------
-// Dashboard
-// ---------------------------------------------------------------------------
 
 export const DashboardPage = () => {
   const { data: yearsData } = useQuery({
@@ -27,18 +24,25 @@ export const DashboardPage = () => {
       ]);
 
       const w2Gross = paychecks.reduce(
-        (total, p) => total + parseDecimalString(p.gross_wages) + parseDecimalString(p.bonus),
+        (total, paycheck) =>
+          total + parseDecimalString(paycheck.gross_wages) + parseDecimalString(paycheck.bonus),
         0,
       );
       const federalWithholding =
-        paychecks.reduce((total, p) => total + parseDecimalString(p.federal_withholding), 0) +
-        pensions.reduce((total, p) => total + parseDecimalString(p.federal_withholding), 0);
+        paychecks.reduce(
+          (total, paycheck) => total + parseDecimalString(paycheck.federal_withholding),
+          0,
+        ) +
+        pensions.reduce(
+          (total, pension) => total + parseDecimalString(pension.federal_withholding),
+          0,
+        );
       const pensionGross = pensions.reduce(
-        (total, p) => total + parseDecimalString(p.gross_amount),
+        (total, pension) => total + parseDecimalString(pension.gross_amount),
         0,
       );
       const nonTaxableGross = nonTaxableIncome.reduce(
-        (total, e) => total + parseDecimalString(e.amount),
+        (total, entry) => total + parseDecimalString(entry.amount),
         0,
       );
 
@@ -66,7 +70,7 @@ export const DashboardPage = () => {
   });
 
   if (summaryQuery.isLoading) {
-    return <p className="status-message">Loading dashboard for {selectedYear}...</p>;
+    return <p className="status-message">Preparing your {selectedYear} plan…</p>;
   }
 
   if (summaryQuery.isError) {
@@ -82,133 +86,177 @@ export const DashboardPage = () => {
   const summary = summaryQuery.data;
   if (!summary) return <p className="status-message">No data available yet.</p>;
 
-  const proj = projectionQuery.data;
-  const projNote = proj?.is_current_year
-    ? `Projected from YTD + remaining pay periods (as of ${proj.as_of_date})`
-    : `Full year ${selectedYear}`;
+  const projection = projectionQuery.data;
+  const projectedIncome = projection
+    ? parseDecimalString(projection.projected.w2_gross) +
+      parseDecimalString(projection.projected.pension_gross) +
+      parseDecimalString(projection.projected.va_income)
+    : 0;
+  const projectedBalance = projection ? parseDecimalString(projection.projected.refund_or_owed) : 0;
+  const hasRecords =
+    summary.counts.paychecks + summary.counts.pensions + summary.counts.nonTaxable > 0;
+  const balanceLabel =
+    projectedBalance > 0
+      ? "Projected refund"
+      : projectedBalance < 0
+        ? "Projected amount due"
+        : "Projected balance";
+  const balanceTone =
+    projectedBalance > 0
+      ? "plan-status--positive"
+      : projectedBalance < 0
+        ? "plan-status--attention"
+        : "plan-status--neutral";
 
   return (
-    <section className="dashboard-grid">
-      {/* ── YTD actuals ── */}
-      <article className="metric-card feature">
-        <p className="metric-label">Household Cashflow ({summary.year})</p>
-        <p className="metric-value">{formatCurrency(summary.totals.householdCashflow)}</p>
-        <p className="metric-caption">W-2 + 1099-R + non-taxable income tracked this year</p>
-      </article>
-
-      <article className="metric-card">
-        <p className="metric-label">Federal Withholding</p>
-        <p className="metric-value">{formatCurrency(summary.totals.federalWithholding)}</p>
-      </article>
-
-      <article className="metric-card">
-        <p className="metric-label">W-2 Gross</p>
-        <p className="metric-value">{formatCurrency(summary.totals.w2Gross)}</p>
-      </article>
-
-      <article className="metric-card">
-        <p className="metric-label">1099-R Gross</p>
-        <p className="metric-value">{formatCurrency(summary.totals.pensionGross)}</p>
-      </article>
-
-      <article className="metric-card">
-        <p className="metric-label">Non-taxable Income</p>
-        <p className="metric-value">{formatCurrency(summary.totals.nonTaxableGross)}</p>
-      </article>
-
-      <article className="metric-card compact">
-        <p className="metric-label">Records Loaded</p>
-        <p className="metric-caption">
-          {summary.counts.paychecks} paychecks • {summary.counts.pensions} pensions •{" "}
-          {summary.counts.nonTaxable} non-taxable entries
-        </p>
-      </article>
-
-      {/* ── Full-year projections from backend ── */}
-      {projectionQuery.isLoading && (
-        <article className="metric-card">
-          <p className="metric-caption">Calculating full-year projection…</p>
-        </article>
-      )}
-
-      {projectionQuery.isError && (
-        <article className="metric-card">
-          <p className="metric-caption error">
-            Projection unavailable:{" "}
-            {projectionQuery.error instanceof Error
-              ? projectionQuery.error.message
-              : "Unknown error"}
+    <div className="dashboard-page">
+      <section className={`plan-status ${balanceTone}`} aria-labelledby="plan-status-heading">
+        <div className="plan-status-copy">
+          <div className="status-kicker-row">
+            <span className="status-kicker">{selectedYear} outlook</span>
+            <span className="live-badge">
+              <span aria-hidden="true" /> Updated from your records
+            </span>
+          </div>
+          <p id="plan-status-heading" className="plan-status-label">
+            {projection ? balanceLabel : "Plan snapshot"}
           </p>
-        </article>
-      )}
+          <p className="plan-status-value">
+            {projection ? formatCurrency(Math.abs(projectedBalance)) : "Add income to get started"}
+          </p>
+          <p className="plan-status-detail">
+            {projection
+              ? `${parseDecimalString(projection.projected.effective_rate).toFixed(1)}% effective federal rate · ${parseDecimalString(projection.projected.marginal_rate).toFixed(0)}% marginal rate · ${formatCurrency(parseDecimalString(projection.projected.total_withheld))} projected withholding`
+              : "Once records are available, we’ll estimate your full-year income, liability, and withholding balance."}
+          </p>
+        </div>
+        <div className="plan-status-action">
+          <span>Next best step</span>
+          <strong>{hasRecords ? "Review your W-4 plan" : "Add your first income record"}</strong>
+          <Link to={hasRecords ? "/w4" : "/income"}>
+            {hasRecords ? "Open withholding plan" : "Add income"} <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      </section>
 
-      {proj && (
-        <>
-          <article className="metric-card feature prediction-feature">
-            <p className="metric-label">Projected Household Cashflow ({selectedYear})</p>
-            <p className="metric-value">
-              {formatCurrency(
-                parseDecimalString(proj.projected.w2_gross) +
-                  parseDecimalString(proj.projected.pension_gross) +
-                  parseDecimalString(proj.projected.va_income),
-              )}
-            </p>
-            <p className="metric-caption">{projNote}</p>
+      <section className="dashboard-section" aria-labelledby="snapshot-heading">
+        <div className="section-heading">
+          <div>
+            <p className="section-kicker">Recorded so far</p>
+            <h2 id="snapshot-heading">Year-to-date snapshot</h2>
+          </div>
+          <Link to="/income">Manage income →</Link>
+        </div>
+        <div className="metric-grid">
+          <article className="metric-card metric-card--primary">
+            <p className="metric-label">Household Cashflow</p>
+            <p className="metric-value">{formatCurrency(summary.totals.householdCashflow)}</p>
+            <p className="metric-caption">Taxable and non-taxable income recorded</p>
           </article>
-
           <article className="metric-card">
-            <p className="metric-label">Projected Federal Withholding</p>
-            <p className="metric-value">
-              {formatCurrency(parseDecimalString(proj.projected.total_withheld))}
-            </p>
+            <p className="metric-label">Federal Withholding</p>
+            <p className="metric-value">{formatCurrency(summary.totals.federalWithholding)}</p>
+            <p className="metric-caption">W-2 and pension withholding</p>
           </article>
-
           <article className="metric-card">
-            <p className="metric-label">Projected W-2 Gross</p>
-            <p className="metric-value">
-              {formatCurrency(parseDecimalString(proj.projected.w2_gross))}
-            </p>
+            <p className="metric-label">W-2 Gross</p>
+            <p className="metric-value">{formatCurrency(summary.totals.w2Gross)}</p>
+            <p className="metric-caption">Across {summary.counts.paychecks} paychecks</p>
           </article>
-
           <article className="metric-card">
-            <p className="metric-label">Projected 1099-R Gross</p>
-            <p className="metric-value">
-              {formatCurrency(parseDecimalString(proj.projected.pension_gross))}
-            </p>
+            <p className="metric-label">Retirement income</p>
+            <p className="metric-value">{formatCurrency(summary.totals.pensionGross)}</p>
+            <p className="metric-caption">Across {summary.counts.pensions} 1099-R records</p>
           </article>
+        </div>
+      </section>
 
-          <article className="metric-card">
-            <p className="metric-label">Projected Non-taxable Income</p>
-            <p className="metric-value">
-              {formatCurrency(parseDecimalString(proj.projected.va_income))}
-            </p>
-          </article>
+      <div className="dashboard-lower-grid">
+        <section
+          className="dashboard-section projection-panel"
+          aria-labelledby="projection-heading"
+        >
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">Looking ahead</p>
+              <h2 id="projection-heading">Full-year projection</h2>
+            </div>
+            <Link to="/projections">Explore scenarios →</Link>
+          </div>
+          {projectionQuery.isLoading && <p className="loading-text">Calculating projection…</p>}
+          {projectionQuery.isError && (
+            <p className="error-text">Projection unavailable: {projectionQuery.error.message}</p>
+          )}
+          {projection && (
+            <div className="projection-list">
+              <div>
+                <span>Projected household income</span>
+                <strong>{formatCurrency(projectedIncome)}</strong>
+              </div>
+              <div>
+                <span>Total federal tax liability</span>
+                <strong>
+                  {formatCurrency(parseDecimalString(projection.projected.total_tax_liability))}
+                </strong>
+              </div>
+              <div>
+                <span>Projected net after tax</span>
+                <strong>
+                  {formatCurrency(
+                    projectedIncome - parseDecimalString(projection.projected.total_tax_liability),
+                  )}
+                </strong>
+              </div>
+              <p>
+                {projection.is_current_year
+                  ? `Based on records through ${projection.as_of_date} and remaining pay periods.`
+                  : `Based on the complete ${selectedYear} tax year.`}
+              </p>
+            </div>
+          )}
+        </section>
 
-          <article className="metric-card">
-            <p className="metric-label">Projected Total Tax Liability</p>
-            <p className="metric-value">
-              {formatCurrency(parseDecimalString(proj.projected.total_tax_liability))}
-            </p>
-            <p className="metric-caption">
-              {parseDecimalString(proj.projected.effective_rate).toFixed(1)}% effective •{" "}
-              {parseDecimalString(proj.projected.marginal_rate).toFixed(0)}% marginal
-            </p>
-          </article>
-
-          <article className="metric-card">
-            <p className="metric-label">Projected Net Take-home</p>
-            <p className="metric-value">
-              {formatCurrency(
-                parseDecimalString(proj.projected.w2_gross) +
-                  parseDecimalString(proj.projected.pension_gross) +
-                  parseDecimalString(proj.projected.va_income) -
-                  parseDecimalString(proj.projected.total_tax_liability),
-              )}
-            </p>
-            <p className="metric-caption">Cashflow minus total tax liability</p>
-          </article>
-        </>
-      )}
-    </section>
+        <section className="dashboard-section workflow-panel" aria-labelledby="workflow-heading">
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">Planning path</p>
+              <h2 id="workflow-heading">Keep your plan current</h2>
+            </div>
+          </div>
+          <ol className="workflow-list">
+            <li>
+              <span>1</span>
+              <div>
+                <strong>Confirm your profile</strong>
+                <p>Filing status, dependents, and deduction choices</p>
+              </div>
+              <Link to="/settings" aria-label="Confirm your tax profile">
+                →
+              </Link>
+            </li>
+            <li>
+              <span>2</span>
+              <div>
+                <strong>Keep income current</strong>
+                <p>{hasRecords ? "Records are available for this year" : "No records added yet"}</p>
+              </div>
+              <Link to="/income" aria-label="Manage income records">
+                →
+              </Link>
+            </li>
+            <li>
+              <span>3</span>
+              <div>
+                <strong>Act on your outlook</strong>
+                <p>Review liability, then tune withholding if needed</p>
+              </div>
+              <Link to="/taxes" aria-label="Review tax position">
+                →
+              </Link>
+            </li>
+          </ol>
+        </section>
+      </div>
+    </div>
   );
 };
