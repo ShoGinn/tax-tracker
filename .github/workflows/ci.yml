@@ -56,7 +56,7 @@ jobs:
         run: cd frontend && pnpm test:e2e
       - name: Retain browser test diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
@@ -125,7 +125,7 @@ jobs:
           uvx uv-secure 2>&1 | tee uv-secure-report.txt
       - name: Retain dependency security report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: uv-secure-report
           path: uv-secure-report.txt
