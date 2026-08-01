@@ -25,7 +25,7 @@ const IMPORT_TYPES: {
     example: "pension_example.csv",
     requiredColumns: "pay_date, gross_amount",
     sample:
-      "pay_date,gross_amount,pretax_deductions,posttax_deductions,federal_withholding,source_description\n2026-01-01,2400.00,120.00,0.00,250.00,Retirement Pay\n",
+      "pay_date,gross_amount,pretax_deductions,posttax_deductions,federal_withholding,source_description\n2026-01-01,2400.00,120.00,80.00,200.00,Example pension\n",
   },
   {
     value: "non-taxable",
@@ -33,7 +33,7 @@ const IMPORT_TYPES: {
     example: "non_taxable_example.csv",
     requiredColumns: "pay_date, amount",
     sample:
-      "pay_date,amount,source_type,notes\n2026-01-01,1500.00,Example non-taxable benefit,Monthly payment\n",
+      "pay_date,amount,source_type,notes\n2026-01-01,1500.00,Example non-taxable benefit,Synthetic example\n",
   },
 ];
 

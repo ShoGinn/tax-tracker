@@ -200,7 +200,7 @@ const ProjectYearTab = () => {
           </label>
 
           <label className="form-label">
-            Pension pre-tax deductions (SBP, insurance)
+            Pension pre-tax deductions
             <input
               type="number"
               step="0.01"

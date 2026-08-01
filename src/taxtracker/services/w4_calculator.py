@@ -298,7 +298,7 @@ def optimize_w4(
     num_children: int,
     age_65_plus: bool = False,
     # Income projections
-    w2_jobs: list[dict[str, Any]],  # [{"employer": "Sample Services", "annual_gross": 155000, "paychecks_per_year": 26, ...}]
+    w2_jobs: list[dict[str, Any]],  # [{"employer": "Example Company", "annual_gross": 78000, ...}]
     pension_taxable: Decimal,
     va_disability: Decimal,
     # Current withholding (from actual data)

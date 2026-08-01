@@ -24,6 +24,7 @@ Tax Tracker combines a React interface with a stateless FastAPI calculation serv
 - Imports paycheck CSV files and exports portable JSON backups
 
 Current tax and FICA data files cover tax years **2025 and 2026**.
+All records and monetary values under `examples/` are fictional and exist only to demonstrate import formats.
 
 ## Privacy Model
 

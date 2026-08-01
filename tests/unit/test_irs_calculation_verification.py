@@ -236,7 +236,7 @@ class TestCombinedScenarios2025:
     """Full tax calculation scenarios combining income tax + FICA."""
 
     def test_synthetic_mixed_income_household(self, calc_2025: TaxCalculator) -> None:
-        """W-2 wages, a taxable pension, and other non-taxable income.
+        """Synthetic W-2, pension, and non-taxable-income scenario.
 
         Hand computation:
           W-2 gross:  $100,000

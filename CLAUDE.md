@@ -1,6 +1,6 @@
 # Tax Tracker
 
-Personal federal tax calculation and W-4 optimization system. FastAPI backend with SQLAlchemy/SQLite. Tracks W-2 paychecks, 1099-R pension income, and non-taxable income (non-taxable benefit, etc.) to calculate federal tax liability, reconcile withholding, and optimize W-4 settings.
+Personal federal tax calculation and W-4 optimization system. Tracks W-2 paychecks, 1099-R pension income, and other non-taxable income to calculate federal tax liability, reconcile withholding, and optimize W-4 settings.
 
 ## Development Status
 
@@ -24,12 +24,12 @@ This project is actively developed and currently versioned as v1.0.0.
 
 1. **Detailed paycheck entry** — enter each paycheck with full breakdowns (gross, all pre-tax deductions, post-tax deductions, each tax withheld). System computes taxable wages, net pay, and all totals automatically.
 2. **Direct/summary calculation** — skip the database entirely. Enter gross income, filing status, and deduction info to `POST /taxes/calculate` for an instant tax liability result.
-3. **CSV bulk import** — upload CSV files for paychecks, pensions, or VA income. Flexible column mapping, auto-employer creation, handles currency symbols and multiple date formats.
+3. **CSV bulk import** — upload CSV files for paychecks, pensions, or non-taxable income. Flexible column mapping, auto-employer creation, handles currency symbols and multiple date formats.
 
 ### Income types
 - **W-2 Paychecks** — full deduction modeling (401k, HSA, FSA, health/dental/vision, commuter, Roth, etc.)
-- **1099-R Pension/Retirement** — gross distributions with pre-tax deductions (SBP, insurance), federal withholding
-- **Non-taxable income** — non-taxable benefit, SSA disability, gifts — tracked for household totals and W-4 calculations
+- **1099-R Pension/Retirement** — gross distributions with pre-tax deductions and federal withholding
+- **Non-taxable income** — benefits, gifts, and similar sources tracked for household totals and W-4 calculations
 
 ### Tax Calculation
 - Federal income tax with bracket-by-bracket breakdown
@@ -136,7 +136,7 @@ Layered: API routes -> Services (business logic) -> Models/DB. Dependency inject
 Key domain concept: three income types with different tax treatments:
 - **W-2 (Paycheck)** — subject to income tax + FICA, has pre/post-tax deductions
 - **1099-R (Retirement)** — subject to income tax only (no FICA)
-- **Non-taxable** — non-taxable benefit, SSA, gifts — tracked but not taxed
+- **Non-taxable** — benefits, gifts, and similar sources tracked but not taxed
 
 Tax brackets use pre-computed cumulative tax for O(1) bracket lookups.
 

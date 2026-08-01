@@ -313,8 +313,8 @@ class TestTaxCalculatorEdgeCases:
         assert result.adjusted_gross_income == Decimal(45000)
         assert result.retirement_pretax_deductions == Decimal(5000)
 
-    def test_va_disability_tracking(self, test_calculator):
-        """Test non-taxable benefit income tracking (non-taxable)."""
+    def test_non_taxable_income_tracking(self, test_calculator):
+        """Test non-taxable household income tracking."""
         request = TaxCalculationRequest(
             tax_year=2030,
             filing_status=FilingStatus.SINGLE,

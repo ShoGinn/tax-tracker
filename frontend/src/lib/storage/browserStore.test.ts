@@ -104,7 +104,7 @@ describe("browserStore", () => {
 
   it("normalizes legacy pension dates so imported records appear in year filters", async () => {
     const file = csvFile(
-      "pay_date,gross_amount,pretax_deductions,source_description\n1/1/2026,2400.00,120.00,Retirement Pay",
+      "pay_date,gross_amount,pretax_deductions,source_description\n1/1/2026,2400.00,120.00,Example pension",
       "ussf.csv",
     );
 
@@ -118,7 +118,7 @@ describe("browserStore", () => {
   });
 
   it("reports actionable validation errors without inserting invalid rows", async () => {
-    const file = csvFile("pay_date,amount\nnot-a-date,1500.00", "va.csv");
+    const file = csvFile("pay_date,amount\nnot-a-date,1500.00", "nontaxable.csv");
 
     await expect(browserStore.importCsv("non-taxable", file)).resolves.toMatchObject({
       imported: 0,
