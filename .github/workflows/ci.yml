@@ -35,14 +35,18 @@ jobs:
         run: docker build --tag tax-tracker:ci .
       - name: Smoke test production container
         run: |
-          docker run --detach --name tax-tracker-ci --publish 127.0.0.1:8000:8000 --env PORT=8000 tax-tracker:ci
-          trap 'docker logs tax-tracker-ci; docker rm --force tax-tracker-ci' EXIT
+          container_id="$(docker run --detach --publish 127.0.0.1:8000:8000 --env PORT=8000 tax-tracker:ci)"
+          cleanup() {
+            docker rm --force "$container_id" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
           for attempt in {1..30}; do
-            if curl --fail --silent --show-error http://127.0.0.1:8000/health; then
+            if curl --fail --silent http://127.0.0.1:8000/health; then
               exit 0
             fi
             sleep 1
           done
+          docker logs "$container_id" || true
           exit 1
 
   e2e:
