@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest a focused product or calculation improvement.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: Please use synthetic examples and do not include personal financial or identifying information.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem or missing workflow should this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the desired behavior and any important alternatives.
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Tax authority sources
+      description: For tax behavior, link the relevant IRS, SSA, or statutory source.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Income tracking
+        - Federal tax calculation
+        - W-4 and withholding
+        - Projections
+        - Import, export, or browser storage
+        - Accessibility or user experience
+        - API or developer experience
+        - Documentation
+    validations:
+      required: true

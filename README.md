@@ -1,80 +1,69 @@
 # Tax Tracker
 
-Single-browser federal tax calculation and W-4 optimization system built with React and FastAPI.
+[![CI](https://github.com/ShoGinn/tax-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/ShoGinn/tax-tracker/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/ShoGinn/tax-tracker)](https://github.com/ShoGinn/tax-tracker/releases/latest)
+[![Python 3.14](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 
-Tax Tracker helps model W-2 paychecks, 1099-R pension income, and non-taxable income to calculate federal tax liability, reconcile withholding, and optimize W-4 settings.
+A local-first federal tax calculator and W-4 optimizer for modeling income, reconciling withholding, and planning the rest of the tax year.
 
-## Table Of Contents
+Tax Tracker combines a React interface with a stateless FastAPI calculation service. Personal records and settings stay in the browser; the API receives calculation inputs only for the duration of each request and does not persist them.
 
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Technology Stack](#technology-stack)
-- [Quick Start](#quick-start)
-- [Deploy To Railway](#deploy-to-railway)
-- [Development Commands](#development-commands)
-- [API Capabilities](#api-capabilities)
-- [Project Structure](#project-structure)
-- [Tax Calculation Flow](#tax-calculation-flow)
-- [Data Sources And Validation](#data-sources-and-validation)
-- [Development Guidelines](#development-guidelines)
-- [Known Limitations](#known-limitations)
-- [Roadmap](#roadmap)
+> [!IMPORTANT]
+> Tax Tracker is planning software, not tax, legal, or financial advice. Verify results against current IRS guidance and consult a qualified professional for decisions with material consequences. Do not enter real financial data into a deployment you do not trust.
 
-## Overview
+## What It Does
 
-This project focuses on federal tax workflows only. It provides:
+- Models W-2 paychecks, 1099-R pension income, and non-taxable household income
+- Calculates federal income tax with a per-bracket breakdown
+- Calculates Social Security, Medicare, and Additional Medicare tax
+- Reconciles projected tax against withholding to estimate a refund or balance due
+- Suggests W-4 Steps 2, 3, and 4(a-c) for a target year-end result
+- Optimizes mid-year W-4 changes using year-to-date records and remaining pay periods
+- Compares annual projections across supported tax years
+- Imports paycheck CSV files and exports portable JSON backups
 
-- Detailed paycheck-based modeling for real-world withholding reconciliation
-- Direct calculation endpoints for quick what-if tax scenarios
-- W-4 optimization to target a desired refund or balance due
-- Year-over-year projections and annual tax data extensibility
-- Local-first persistence: personal records and settings stay in the current browser
+Current tax and FICA data files cover tax years **2025 and 2026**.
 
-The codebase is under active development and prioritizes correctness, maintainability, and verified tax logic over internal backward compatibility.
+## Privacy Model
 
-## Key Features
+| Data | Where it lives |
+| --- | --- |
+| Paychecks, pensions, settings, and saved scenarios | IndexedDB in the current browser profile |
+| CSV imports and JSON backups | Processed locally in the browser |
+| Calculation requests | Sent transiently to the FastAPI service and not stored server-side |
+| Accounts and server database | Not used |
 
-### Income Tracking
+Browser storage is specific to an origin and browser profile. Clearing site data removes the working copy, so export backups periodically from **Settings**.
 
-- Detailed paycheck entry with full deduction and withholding breakdown
-- Summary tax calculation mode via request payloads
-- CSV bulk import directly into browser storage
-- Portable JSON backup and restore from Settings
+## Supported Calculations
 
-### Supported Income Types
+### Income and deductions
 
-- W-2 paychecks with pre-tax and post-tax deductions
+- W-2 wages with pre-tax and post-tax deductions
 - 1099-R pension and retirement distributions
-- Non-taxable income (for household totals and planning context)
+- Non-taxable income for household planning context
+- Standard or itemized deductions
+- Child tax credit inputs
 
-### Tax And Withholding
+### Withholding and planning
 
-- Federal bracket calculation with per-bracket breakdown
-- FICA (Social Security, Medicare, Additional Medicare)
-- Child tax credits
-- Standard versus itemized deduction handling
-- Withholding reconciliation (refund or amount owed)
+- Federal withholding reconciliation
+- IRS Publication 15-T per-paycheck withholding estimates
+- W-4 recommendation generation
+- Mid-year remaining-period suggestions by income cadence
+- Annual and year-over-year projections
 
-### W-4 Optimization And Projections
+### Known limitations
 
-- W-4 recommendation generation (steps 2, 3, 4a-4c)
-- Mid-year W-4 optimization from browser-stored YTD data with remaining-period suggestions per income cadence
-- Per-paycheck withholding estimator (IRS Publication 15-T method)
-- Annual projections and year-over-year comparison
+The project currently focuses on common federal wage and pension workflows. It does not yet model:
 
-## Technology Stack
-
-- Python 3.14
-- FastAPI
-- Pydantic v2
-- React 19 + React Router 8 + TypeScript 7 + Vite 8 (frontend in `frontend/`)
-- IndexedDB via Dexie 4 for browser persistence
-- uv for package and environment workflows
-- just for local task automation
-- Ruff for linting and formatting
-- ty for static type checks
-- pnpm for frontend package management
-- Oxc (`oxlint` and `oxfmt`) for frontend linting and formatting
+- State or local taxes
+- Alternative minimum tax (AMT)
+- Net investment income tax (NIIT)
+- Self-employment tax
+- Preferential capital-gains or qualified-dividend rates
+- Education credits, earned income tax credit, or estimated quarterly payments
 
 ## Quick Start
 
@@ -83,141 +72,81 @@ The codebase is under active development and prioritizes correctness, maintainab
 - Python 3.14
 - Node.js 26
 - pnpm 11
-- uv
-- just
+- [uv](https://docs.astral.sh/uv/)
+- [just](https://just.systems/)
 
-### Setup
+### Install
 
 ```bash
+git clone https://github.com/ShoGinn/tax-tracker.git
+cd tax-tracker
 just install
+just frontend-install
 ```
 
-### Run The API
+### Run for development
+
+Start the API:
 
 ```bash
 just run
 ```
 
-### Run The Frontend
+In a second terminal, start the frontend:
 
 ```bash
-just frontend-install
 just frontend-dev
 ```
 
-The frontend accepts `VITE_API_BASE_URL` for explicit API targets.
-If not set, it uses same-origin requests and Vite dev proxy routes to `http://127.0.0.1:8000`.
+Open `http://localhost:5173`. The Vite development server proxies API routes to `http://127.0.0.1:8000` by default. Set `VITE_API_BASE_URL` to target a different API origin.
 
-## Deploy To Railway
-
-The repository includes a multi-stage `Dockerfile` that builds the React frontend and serves it
-from the FastAPI application. Railway configuration in `railway.json` uses `/health` to validate
-new deployments.
-
-1. Push the repository to a Git provider supported by Railway.
-2. In Railway, create a project and choose **Deploy from GitHub repo**.
-3. Select this repository. Railway detects the root `Dockerfile` automatically.
-4. After the deployment is healthy, open the service's **Settings → Networking** and generate a
-   public domain.
-
-No application variables or database service are required. Railway injects `PORT` automatically,
-and the container listens on `0.0.0.0:$PORT`. Personal tax data remains in each user's browser;
-there is no server-side persistent storage to configure.
-
-To verify the production image locally:
+### Run the production container
 
 ```bash
 docker build -t tax-tracker .
 docker run --rm -p 8000:8000 -e PORT=8000 tax-tracker
-curl http://localhost:8000/health
 ```
 
-## Development Commands
+Open `http://localhost:8000`. The multi-stage image builds the React frontend and serves it from FastAPI.
 
-Preferred workflow uses just recipes:
+## Development
+
+The main quality gates are:
 
 ```bash
-just check          # fast quality gate: format-check, lint, typecheck, test-fast, frontend-check
-just ci             # full local CI gate (includes frontend-check)
-just test           # full test suite (80% coverage minimum)
-just test-unit
-just test-integration
-just test-services    # calculation/service coverage gate (95%)
-just test-fast
-just lint
-just lint-fix
-just format
-just format-check
-just typecheck
-just frontend-install
-just frontend-dev
-just frontend-build
-just frontend-test
-just frontend-test-e2e
-just frontend-typecheck
-just frontend-lint
-just frontend-lint-fix
-just frontend-format
-just frontend-check   # frontend lint + typecheck + test + build
-just security
-just psl-snapshot years="2025 2026"
-just psl-draft year=YYYY
-just test-psl
+just check             # Fast local backend and frontend checks
+just ci                # Full local CI suite
+just test              # Python tests with 80% overall coverage minimum
+just test-services     # Calculation-service coverage gate
+just frontend-check    # Frontend lint, types, tests, and build
+just frontend-test-e2e # Browser workflow tests
+just security          # Dependency vulnerability scan
 ```
 
-Direct uv commands are also supported:
+Run `just --list` for all available recipes. Direct `uv`, `pytest`, and `pnpm` commands are also supported.
 
-```bash
-uv run pytest
-uv run ruff check src/ tests/ scripts/
-uv run ty check
-```
+### Technology
 
-### Automated PSL Snapshot Monitoring
+- FastAPI, Pydantic v2, and Python 3.14
+- React 19, React Router 8, TypeScript 7, and Vite 8
+- IndexedDB through Dexie 4
+- uv, Ruff, ty, pytest, pnpm, Oxc, Vitest, and Playwright
+- Docker and Railway deployment configuration
 
-This repository includes an automated monitor workflow at [`.github/workflows/pslmodels-snapshot-monitor.yml`](.github/workflows/pslmodels-snapshot-monitor.yml):
-
-- Runs weekly and also supports manual execution via `workflow_dispatch`
-- Regenerates `tests/data/pslmodels_snapshot.json` from PSLmodels
-- Runs `tests/unit/test_pslmodels_cross_check.py`
-- Opens or updates a pull request automatically only when tax values drift
-- Ignores date-only `generated_date` churn to avoid noisy metadata-only PRs
-
-The existing CI PSL check still runs on push and pull request, but now distinguishes tax-value drift from date-only metadata updates.
-
-### Automated Pre-commit Hook Updates
-
-This repository includes an automated hook update workflow at [`.github/workflows/pre-commit-autoupdate.yml`](.github/workflows/pre-commit-autoupdate.yml):
-
-- Runs weekly and also supports manual execution via `workflow_dispatch`
-- Runs `pre-commit autoupdate` to refresh remote hook revisions
-- Opens or updates a pull request automatically when `.pre-commit-config.yaml` changes
-
-## API Capabilities
-
-The browser owns all personal data. The stateless calculation service includes endpoints for:
-
-- Tax calculations from direct payload input
-- Reconciliation of transient browser snapshots versus tax liability
-- W-4 optimization and withholding estimates
-- Mid-year remaining-period suggestions via `POST /w4/suggest-periods`
-- Mid-year W-4 optimization via `POST /w4/optimize-midyear`, receiving records only for that request
-- Tax projections based on expected income or a transient browser snapshot
-
-For implementation details and route handlers, see source packages under src/taxtracker/api.
-
-## Project Structure
+### Project layout
 
 ```text
 src/taxtracker/
 ├── api/          # FastAPI route handlers
-├── cli/          # app factory and entrypoint
-├── core/         # config and exceptions
-├── data/         # IRS-sourced tax and FICA JSON files
-├── models/       # Pydantic request, snapshot, and response models
-├── services/     # tax, W-4, and projection logic
-frontend/src/lib/storage/
-└── browserStore.ts # Versioned Dexie schema, CRUD, CSV, and backups
+├── cli/          # Application factory and entry point
+├── core/         # Configuration and exceptions
+├── data/         # IRS-sourced tax and FICA data
+├── models/       # Pydantic request and response models
+└── services/     # Tax, W-4, withholding, and projection logic
+frontend/
+├── src/pages/    # Product screens
+├── src/lib/      # API client, storage, and utilities
+└── e2e/          # Playwright workflows
 tests/
 ├── unit/
 ├── integration/
@@ -227,64 +156,64 @@ tests/
 
 ## Tax Calculation Flow
 
-The core flow is:
+The core federal calculation:
 
-1. Gross income from taxable sources
-2. Subtract eligible pre-tax deductions
-3. Compute AGI
-4. Apply standard or itemized deduction
-5. Compute federal income tax by bracket
-6. Apply child tax credits
-7. Add FICA components where applicable
+1. Totals taxable income
+2. Subtracts eligible pre-tax deductions
+3. Computes adjusted gross income
+4. Applies the standard or itemized deduction
+5. Calculates federal income tax by bracket
+6. Applies supported credits
+7. Adds applicable FICA components
+8. Reconciles the result against withholding
 
-## Data Sources And Validation
+## Data Sources and Validation
 
-Tax constants are manually curated from IRS publications and cross-checked with independent references.
+Tax constants are curated from IRS and SSA publications and cross-checked against independent tax models. Changes to tax math are treated as high-risk and require source-backed tests.
 
-Primary references:
+- [IRS data sources](docs/irs_data_sources.md)
+- [Annual tax data update process](docs/annual_tax_data_update.md)
+- [Mid-year W-4 optimization plan](docs/mid_year_w4_change_optimization_plan.md)
 
-- IRS federal tax bracket publications for each year
-- SSA wage base publication for Social Security limits
-- PSLmodels Tax-Calculator and other cross-reference sources
+Validation includes year-specific unit tests, integration tests, IRS example cases, service-layer coverage thresholds, and automated comparisons with PSLmodels Tax-Calculator data.
 
-Validation strategy:
+## API
 
-- Unit tests assert IRS data values and calculation correctness
-- Year-specific tests verify behavior for current supported years
-- W-4 tests verify recommendation and withholding math
+FastAPI exposes interactive OpenAPI documentation at `/docs` while the service is running. Major capabilities include:
 
-Additional documentation:
+- Direct federal tax calculations and bracket/FICA data lookup
+- Reconciliation of transient browser snapshots
+- W-4 optimization and Publication 15-T withholding estimates
+- Mid-year period suggestions and W-4 optimization
+- Annual and year-over-year projections
 
-- docs/irs_data_sources.md
-- docs/annual_tax_data_update.md
-Browser data can be exported and restored from the Settings page. IndexedDB is origin- and
-browser-profile-specific; clearing site data removes the working copy, so periodic exports are recommended.
+The API is stateless with respect to personal tax records.
 
-## Development Guidelines
+## Deployment
 
-- Federal taxes only (state tax logic is out of scope)
-- Treat tax math changes as high-risk and verify with tests
-- Prefer clean refactors over compatibility shims during active development
-- Keep tax data updates tied to explicit source citations
-- For tax-calculation tests, use IRS/SSA-backed fixture data (or values derived from loaded tax models) for numeric correctness assertions; reserve synthetic data for behavioral/flow tests
+The included [`Dockerfile`](Dockerfile) builds the frontend and backend into one image. [`railway.json`](railway.json) configures Railway to use the Dockerfile and validate deployments through `/health`.
 
-## Known Limitations
+No database or application secrets are required for the default deployment. Railway supplies `PORT`; the container listens on `0.0.0.0:$PORT`.
 
-Out of scope unless explicitly planned:
+## Automation
 
-- AMT
-- NIIT
-- Self-employment tax flows
-- Preferential capital gains and qualified dividend rates
-- Education credits and EITC
-- Estimated quarterly payments
+GitHub Actions provides:
 
-## Roadmap
+- Backend and frontend CI, coverage, type checking, and dependency scanning
+- Production-container smoke testing
+- Playwright end-to-end testing
+- Weekly PSLmodels tax-data drift monitoring
+- Weekly pre-commit hook update pull requests
+- Semantic releases from `main`
 
-Planned next major enhancement:
+## Contributing
 
-- Mid-year W-4 optimization refinements (manual YTD mode, variable schedule modeling, richer scenario comparison)
+Bug reports, feature proposals, documentation fixes, and source-backed tax updates are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request, and never attach real tax records, credentials, or personally identifiable information to an issue.
 
-Planning document:
+## Security
 
-- docs/mid_year_w4_change_optimization_plan.md
+Please report vulnerabilities privately according to [SECURITY.md](SECURITY.md). Do not use a public issue for security reports or include real financial data in reproduction steps.
+
+## License
+
+This repository does not currently include a software license. Public visibility does not grant permission to use, modify, or redistribute the code beyond rights provided by GitHub's Terms of Service.
