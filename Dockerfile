@@ -2,7 +2,8 @@ FROM node:26-bookworm-slim AS frontend-build
 
 WORKDIR /app/frontend
 
-RUN corepack enable
+ARG PNPM_VERSION=11.18.0
+RUN npm install --global "pnpm@${PNPM_VERSION}"
 
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
