@@ -11,6 +11,20 @@ vi.mock("../lib/api/client", () => ({
 }));
 
 describe("CsvImportPage", () => {
+  it("provides an in-app example with the required columns", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <CsvImportPage />
+      </QueryClientProvider>,
+    );
+
+    const example = screen.getByRole("link", { name: "Download example CSV" });
+    expect(example).toHaveAttribute("download", "paychecks_example.csv");
+    expect(screen.getByText(/employer_name \(or employer_id\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/examples folder/i)).not.toBeInTheDocument();
+  });
+
   it("uploads through the shared client and explains skipped duplicates", async () => {
     vi.mocked(apiClient.importCsv).mockResolvedValue({
       imported: 1,
