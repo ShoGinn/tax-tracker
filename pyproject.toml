@@ -10,7 +10,7 @@ description = "Personal tax calculation and W-4 optimization system"
 name = "taxtracker"
 readme = "README.md"
 requires-python = ">=3.14"
-version = "1.10.0"
+version = "1.11.0"
 
 dependencies = [
     "fastapi>=0.141.1",
