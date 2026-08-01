@@ -7,6 +7,8 @@
 
 A local-first federal tax calculator and W-4 optimizer for modeling income, reconciling withholding, and planning the rest of the tax year.
 
+**[Open Tax Tracker on Railway](https://shoginn-tax-tracker.up.railway.app)**
+
 Tax Tracker combines a React interface with a stateless FastAPI calculation service. Personal records and settings stay in the browser; the API receives calculation inputs only for the duration of each request and does not persist them.
 
 > [!IMPORTANT]
