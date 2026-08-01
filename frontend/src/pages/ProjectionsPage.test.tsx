@@ -108,4 +108,32 @@ describe("ProjectionsPage – rate display", () => {
     });
     expect(screen.getByText("$15,110.00")).toBeInTheDocument();
   });
+
+  it("loads the complete saved profile into both projection tabs", async () => {
+    vi.mocked(apiClient.getConfig).mockResolvedValue({
+      filing_status: "head_of_household",
+      num_children: 3,
+      use_standard_deduction: false,
+      itemized_deduction_amount: "28000",
+      age_65_plus: true,
+      w2_pay_frequency: "biweekly",
+    });
+    renderWithQueryClient();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Qualifying children")).toHaveValue(3);
+      expect(screen.getByLabelText("Age 65+")).toBeChecked();
+      expect(screen.getByLabelText("Use standard deduction")).not.toBeChecked();
+      expect(screen.getByLabelText("Itemized deductions total")).toHaveValue(28000);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Year Comparison" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Filing status")).toHaveValue("head_of_household");
+      expect(screen.getByLabelText("Qualifying children")).toHaveValue(3);
+      expect(screen.getByLabelText("Age 65+")).toBeChecked();
+      expect(screen.getByLabelText("Use standard deduction")).not.toBeChecked();
+      expect(screen.getByLabelText("Itemized deductions total")).toHaveValue(28000);
+    });
+  });
 });

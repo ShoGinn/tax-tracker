@@ -100,6 +100,8 @@ async def compare_tax_years(request: CompareYearsRequest) -> dict[str, Any]:
             pension_pretax_deductions=Decimal(0),
             va_disability=Decimal(0),
             estimated_federal_withholding=Decimal(0),
+            use_standard_deduction=request.use_standard_deduction,
+            itemized_deductions=float(request.itemized_deduction_amount),
         )
 
         comp_projection = project_year(
@@ -114,6 +116,8 @@ async def compare_tax_years(request: CompareYearsRequest) -> dict[str, Any]:
             pension_pretax_deductions=Decimal(0),
             va_disability=Decimal(0),
             estimated_federal_withholding=Decimal(0),
+            use_standard_deduction=request.use_standard_deduction,
+            itemized_deductions=float(request.itemized_deduction_amount),
         )
 
         return compare_years([base_projection, comp_projection])

@@ -119,6 +119,7 @@ class ReconciliationOptions(BaseModel):
 
     filing_status: FilingStatus
     num_children: int = Field(default=0, ge=0)
+    age_65_plus: bool = False
     use_standard_deduction: bool = True
     itemized_deduction_amount: Decimal = Field(default=Decimal(0), ge=0)
 

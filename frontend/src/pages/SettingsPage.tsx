@@ -25,7 +25,7 @@ export const SettingsPage = () => {
     use_standard_deduction: config?.use_standard_deduction ?? true,
     itemized_deduction_amount: config?.itemized_deduction_amount,
     age_65_plus: config?.age_65_plus ?? false,
-    w2_pay_frequency: config?.w2_pay_frequency ?? "monthly",
+    w2_pay_frequency: config?.w2_pay_frequency ?? "biweekly",
   };
 
   const mutation = useMutation({
@@ -211,7 +211,7 @@ export const SettingsPage = () => {
               <select
                 id="w2-pay-frequency"
                 className="settings-select"
-                value={current.w2_pay_frequency ?? "monthly"}
+                value={current.w2_pay_frequency ?? "biweekly"}
                 onChange={(e) =>
                   setDraft((d) => ({
                     ...current,

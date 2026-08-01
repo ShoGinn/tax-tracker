@@ -87,3 +87,40 @@ def test_suggest_periods_uses_browser_dates(client: TestClient) -> None:
     )
     assert response.status_code == 200
     assert response.json()["current_month_has_pension_entry"] is True
+
+
+def test_w4_optimizers_apply_age_65_plus(client: TestClient) -> None:
+    full_year_request = {
+        "total_annual_w2_income": 60000,
+        "paychecks_per_year": 26,
+        "filing_status": "single",
+        "year": 2024,
+    }
+    full_year_under_65 = client.post("/w4/optimize", json=full_year_request)
+    full_year_65_plus = client.post(
+        "/w4/optimize",
+        json={**full_year_request, "age_65_plus": True},
+    )
+
+    midyear_request = {
+        **_snapshot(),
+        "tax_year": 2024,
+        "filing_status": "single",
+        "remaining_pay_periods": 10,
+    }
+    midyear_under_65 = client.post("/w4/optimize-midyear", json=midyear_request)
+    midyear_65_plus = client.post(
+        "/w4/optimize-midyear",
+        json={**midyear_request, "age_65_plus": True},
+    )
+
+    assert full_year_under_65.status_code == 200
+    assert full_year_65_plus.status_code == 200
+    assert midyear_under_65.status_code == 200
+    assert midyear_65_plus.status_code == 200
+    assert float(full_year_65_plus.json()["estimated_tax_liability"]) < float(
+        full_year_under_65.json()["estimated_tax_liability"]
+    )
+    assert float(midyear_65_plus.json()["estimated_tax_liability"]) < float(
+        midyear_under_65.json()["estimated_tax_liability"]
+    )
