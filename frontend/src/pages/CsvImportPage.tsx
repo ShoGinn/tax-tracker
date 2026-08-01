@@ -8,21 +8,32 @@ const IMPORT_TYPES: {
   value: CsvImportType;
   label: string;
   example: string;
+  requiredColumns: string;
+  sample: string;
 }[] = [
   {
     value: "paychecks",
     label: "W-2 Paychecks",
     example: "paychecks_example.csv",
+    requiredColumns: "employer_name (or employer_id), pay_date, gross_wages",
+    sample:
+      "employer_name,pay_date,gross_wages,federal_withholding,social_security,medicare,bonus,deduction_401k\nExample Employer,2026-01-15,2500.00,300.00,155.00,36.25,0.00,125.00\n",
   },
   {
     value: "pensions",
     label: "1099-R Pensions",
     example: "pension_example.csv",
+    requiredColumns: "pay_date, gross_amount",
+    sample:
+      "pay_date,gross_amount,pretax_deductions,posttax_deductions,federal_withholding,source_description\n2026-01-01,2400.00,120.00,0.00,250.00,Retirement Pay\n",
   },
   {
     value: "non-taxable",
     label: "Non-Taxable Income",
     example: "non_taxable_example.csv",
+    requiredColumns: "pay_date, amount",
+    sample:
+      "pay_date,amount,source_type,notes\n2026-01-01,1500.00,Example non-taxable benefit,Monthly payment\n",
   },
 ];
 
@@ -49,6 +60,9 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
             ? ["pensions"]
             : ["non-taxable"];
       void queryClient.invalidateQueries({ queryKey });
+      if (config.value === "paychecks") {
+        void queryClient.invalidateQueries({ queryKey: ["employers"] });
+      }
     },
   });
 
@@ -74,10 +88,20 @@ const ImportPanel = ({ config }: { config: (typeof IMPORT_TYPES)[number] }) => {
   return (
     <div className="card income-form mb-4">
       <p className="helper-text">
-        Upload a CSV file to bulk-import {config.label} into this browser. Column headers should
-        match the sample, and dates should use YYYY-MM-DD. Duplicate records are reported and
-        skipped. See <code>{config.example}</code> in the examples folder for a sample.
+        Upload a CSV file to import {config.label} into this browser. Dates may use YYYY-MM-DD or
+        MM/DD/YYYY, and currency may include dollar signs and commas. Duplicate records are reported
+        and skipped.
       </p>
+      <p className="helper-text">
+        <strong>Required columns:</strong> <code>{config.requiredColumns}</code>
+      </p>
+      <a
+        className="btn-ghost-sm csv-example-download"
+        href={`data:text/csv;charset=utf-8,${encodeURIComponent(config.sample)}`}
+        download={config.example}
+      >
+        Download example CSV
+      </a>
 
       <input
         ref={inputRef}

@@ -835,6 +835,17 @@ a {
    CSV import
    ============================================================ */
 
+.csv-example-download {
+  display: inline-block;
+  margin-bottom: 1rem;
+  text-decoration: none;
+}
+
+.csv-example-download:hover {
+  border-color: var(--teal-500);
+  color: var(--teal-500);
+}
+
 .csv-drop-zone {
   border: 2px dashed rgba(20, 23, 31, 0.2);
   border-radius: 8px;

@@ -183,7 +183,125 @@ const parseCsv = (text: string): string[][] => {
   return rows;
 };
 
-const normalizeHeader = (value: string) => value.trim().toLowerCase().replaceAll(" ", "_");
+const normalizeHeader = (value: string) =>
+  value
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+
+const HEADER_ALIASES: Record<CsvImportType, Record<string, string>> = {
+  paychecks: {
+    employer: "employer_name",
+    date: "pay_date",
+    gross: "gross_wages",
+    gross_pay: "gross_wages",
+    federal_tax: "federal_withholding",
+    health_insurance: "deduction_health_insurance",
+    "401k": "deduction_401k",
+    "403b": "deduction_403b",
+  },
+  pensions: {
+    date: "pay_date",
+    gross: "gross_amount",
+    sbp: "pretax_deductions",
+    health_insurance: "posttax_deductions",
+    federal_tax: "federal_withholding",
+  },
+  "non-taxable": {
+    date: "pay_date",
+    source: "source_type",
+  },
+};
+
+const MONEY_FIELDS = new Set([
+  "gross_wages",
+  "bonus",
+  "federal_withholding",
+  "social_security",
+  "medicare",
+  "deduction_401k",
+  "deduction_403b",
+  "deduction_health_insurance",
+  "deduction_dental_insurance",
+  "deduction_vision_insurance",
+  "deduction_hsa",
+  "deduction_fsa",
+  "deduction_dependent_care_fsa",
+  "deduction_commuter",
+  "deduction_other_pretax",
+  "deduction_roth_401k",
+  "deduction_roth_403b",
+  "deduction_other_posttax",
+  "gross_amount",
+  "pretax_deductions",
+  "posttax_deductions",
+  "amount",
+]);
+
+const normalizeDate = (value: string): string => {
+  const trimmed = value.trim();
+  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
+  const usMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(trimmed);
+  let year: number;
+  let month: number;
+  let day: number;
+
+  if (isoMatch) {
+    [, year, month, day] = isoMatch.map(Number);
+  } else if (usMatch) {
+    month = Number(usMatch[1]);
+    day = Number(usMatch[2]);
+    year = Number(usMatch[3]);
+    if (year < 100) year += 2000;
+  } else {
+    throw new Error(`Invalid date "${value}"; use YYYY-MM-DD or MM/DD/YYYY`);
+  }
+
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    candidate.getUTCFullYear() !== year ||
+    candidate.getUTCMonth() !== month - 1 ||
+    candidate.getUTCDate() !== day
+  ) {
+    throw new Error(`Invalid date "${value}"`);
+  }
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};
+
+const normalizeMoney = (field: string, value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const negative = trimmed.startsWith("(") && trimmed.endsWith(")");
+  const normalized = trimmed.replaceAll("$", "").replaceAll(",", "").replace(/[()]/g, "");
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized)) {
+    throw new Error(`Invalid amount "${value}" in ${field}`);
+  }
+  return `${negative ? "-" : ""}${normalized.replace(/^\+/, "")}`;
+};
+
+const requireValue = (data: Record<string, string>, field: string): string => {
+  const value = data[field]?.trim();
+  if (!value) throw new Error(`Missing required column or value: ${field}`);
+  return value;
+};
+
+const normalizeImportRow = (
+  type: CsvImportType,
+  headers: string[],
+  values: string[],
+): Record<string, string> => {
+  const aliases = HEADER_ALIASES[type];
+  const data = Object.fromEntries(
+    headers.map((header, column) => [aliases[header] ?? header, values[column] ?? ""]),
+  );
+  if (data.pay_date) data.pay_date = normalizeDate(data.pay_date);
+  for (const field of MONEY_FIELDS) {
+    if (field in data) data[field] = normalizeMoney(field, data[field]);
+  }
+  return data;
+};
 const deleted = (): DeleteResponse => ({ message: "Deleted" });
 const recordYear = (payDate: string) => Number(payDate.slice(0, 4));
 
@@ -425,15 +543,40 @@ export const browserStore = {
     const errors: CsvImportResult["errors"] = [];
     let imported = 0;
     for (const [index, values] of rows.slice(1).entries()) {
-      const data = Object.fromEntries(
+      let data = Object.fromEntries(
         headers.map((header, column) => [header, values[column] ?? ""]),
       );
       try {
+        data = normalizeImportRow(type, headers, values);
         if (type === "paychecks") {
+          const payDate = requireValue(data, "pay_date");
+          requireValue(data, "gross_wages");
+          const employerIdValue = data.employer_id?.trim();
+          const employerName = data.employer_name?.trim();
+          let employer: EmployerResponse | undefined;
+
+          if (employerIdValue) {
+            const employerId = Number(employerIdValue);
+            if (!Number.isInteger(employerId) || employerId < 1) {
+              throw new Error(`Invalid employer_id "${employerIdValue}"`);
+            }
+            employer = await taxTrackerDatabase.employers.get(employerId);
+            if (!employer) throw new Error(`Employer ${employerId} not found`);
+          } else if (employerName) {
+            const normalizedName = employerName.toLocaleLowerCase();
+            employer = (await taxTrackerDatabase.employers.toArray()).find(
+              (candidate) => candidate.name.trim().toLocaleLowerCase() === normalizedName,
+            );
+            employer ??= await this.createEmployer({ name: employerName, start_date: payDate });
+          } else {
+            throw new Error("Missing required column or value: employer_name or employer_id");
+          }
+
           const paycheck = {
             ...(data as unknown as PaycheckCreate),
-            employer_id: Number(data.employer_id),
+            employer_id: employer.id,
           };
+          delete (paycheck as PaycheckCreate & { employer_name?: string }).employer_name;
           const duplicate = (
             await taxTrackerDatabase.paychecks
               .where("[employer_id+pay_date]")
@@ -443,6 +586,8 @@ export const browserStore = {
           if (duplicate) throw new Error("Duplicate paycheck skipped");
           await this.createPaycheck(paycheck);
         } else if (type === "pensions") {
+          requireValue(data, "pay_date");
+          requireValue(data, "gross_amount");
           const pension = data as unknown as Retirement1099RCreate;
           const duplicate = (
             await taxTrackerDatabase.pensions.where("pay_date").equals(pension.pay_date).toArray()
@@ -450,6 +595,8 @@ export const browserStore = {
           if (duplicate) throw new Error("Duplicate pension payment skipped");
           await this.createPension(pension);
         } else {
+          requireValue(data, "pay_date");
+          requireValue(data, "amount");
           const payment = data as unknown as NonTaxableIncomeCreate;
           const duplicate = (
             await taxTrackerDatabase.nonTaxable.where("pay_date").equals(payment.pay_date).toArray()
