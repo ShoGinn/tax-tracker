@@ -2,10 +2,10 @@ FROM node:26-bookworm-slim AS frontend-build
 
 WORKDIR /app/frontend
 
-ARG PNPM_VERSION=11.18.0
-RUN npm install --global "pnpm@${PNPM_VERSION}"
-
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN package_manager="$(node --print "require('./package.json').packageManager")" \
+    && npm install --global "$package_manager"
+
 RUN pnpm install --frozen-lockfile
 
 COPY frontend/ ./
