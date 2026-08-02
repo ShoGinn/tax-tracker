@@ -4,10 +4,9 @@
 [![Latest release](https://img.shields.io/github/v/release/ShoGinn/tax-tracker)](https://github.com/ShoGinn/tax-tracker/releases/latest)
 [![Python 3.14](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Railway deployment](https://img.shields.io/badge/Railway-live-0B0D0E?logo=railway&logoColor=white)](https://shoginn-tax-tracker.up.railway.app)
 
 A local-first federal tax calculator and W-4 optimizer for modeling income, reconciling withholding, and planning the rest of the tax year.
-
-**[Open Tax Tracker on Railway](https://shoginn-tax-tracker.up.railway.app)**
 
 Tax Tracker combines a React interface with a stateless FastAPI calculation service. Personal records and settings stay in the browser; the API receives calculation inputs only for the duration of each request and does not persist them.
 

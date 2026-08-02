@@ -17,7 +17,7 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Income" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Tax position" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "GitHub" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View source on GitHub" })).toHaveAttribute(
       "href",
       "https://github.com/ShoGinn/tax-tracker",
     );
