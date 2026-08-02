@@ -2,6 +2,8 @@
 
 Thanks for helping improve Tax Tracker. Contributions are welcome for bug fixes, documentation, accessibility, tests, and source-backed tax calculations.
 
+By participating, you agree to follow the project [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Before You Start
 
 - Search existing issues and pull requests before opening a duplicate.

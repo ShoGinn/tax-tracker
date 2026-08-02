@@ -210,7 +210,7 @@ GitHub Actions provides:
 
 ## Contributing
 
-Bug reports, feature proposals, documentation fixes, and source-backed tax updates are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request, and never attach real tax records, credentials, or personally identifiable information to an issue.
+Bug reports, feature proposals, documentation fixes, and source-backed tax updates are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) before participating, and never attach real tax records, credentials, or personally identifiable information to an issue.
 
 ## Security
 
@@ -218,4 +218,4 @@ Please report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
 
 ## License
 
-This repository does not currently include a software license. Public visibility does not grant permission to use, modify, or redistribute the code beyond rights provided by GitHub's Terms of Service.
+Tax Tracker is available under the [MIT License](LICENSE).
