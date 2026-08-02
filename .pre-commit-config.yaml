@@ -22,14 +22,14 @@ repos:
           - --skip=*.lock,**/pnpm-lock.yaml,uv.lock,*.csv,tests/data/*.json,tests/data/*.txt,htmlcov/*
 
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.76.0
+    rev: v1.60.0
     hooks:
       - id: oxlint
         stages: [pre-commit]
         files: ^frontend/
 
   - repo: https://github.com/oxc-project/mirrors-oxfmt
-    rev: v0.60.0
+    rev: v0.45.0
     hooks:
       - id: oxfmt
         stages: [pre-commit]
