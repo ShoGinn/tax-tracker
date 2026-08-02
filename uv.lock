@@ -510,7 +510,7 @@ wheels = [
 
 [[package]]
 name = "taxtracker"
-version = "1.12.1"
+version = "1.12.2"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
