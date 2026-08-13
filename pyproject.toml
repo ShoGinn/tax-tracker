@@ -16,7 +16,7 @@ version = "1.12.2"
 
 dependencies = [
     "fastapi>=0.141.1",
-    "pydantic-settings>=2.14.2",
+    "pydantic-settings>=2.15.0",
     "pydantic>=2.13.4",
     "python-dateutil>=2.9.0.post0",
     "python-multipart>=0.0.32",
@@ -24,14 +24,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-build = ["uv>=0.12.1,<0.13"]
+build = ["uv>=0.12.3,<0.13"]
 
 [project.scripts]
 taxtracker = "taxtracker.cli.app:main"
 
 [build-system]
 build-backend = "uv_build"
-requires = ["uv_build>=0.12.1,<0.13"]
+requires = ["uv_build>=0.12.3,<0.13"]
 
 [tool.semantic_release]
 build_command = """
