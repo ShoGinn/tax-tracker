@@ -1,6 +1,6 @@
 """W-4 Optimizer - Calculate optimal W-4 settings to hit target refund amount."""
 
-import datetime  # noqa: TC003
+import datetime as dt  # noqa: TC003
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -532,7 +532,7 @@ def optimize_w4(
     )
 
 
-def _filter_records_by_as_of_date(records: list[Any], as_of_date: datetime.date | None) -> list[Any]:
+def _filter_records_by_as_of_date(records: list[Any], as_of_date: dt.date | None) -> list[Any]:
     """Return records constrained to pay_date <= as_of_date when provided."""
     if not as_of_date:
         return records
@@ -598,7 +598,7 @@ def optimize_midyear_from_records(
     remaining_pay_periods: int,
     remaining_pension_periods: int | None = None,
     remaining_non_taxable_periods: int | None = None,
-    as_of_date: datetime.date | None = None,
+    as_of_date: dt.date | None = None,
     num_children: int = 0,
     age_65_plus: bool = False,
     target_refund: Decimal = Decimal(0),

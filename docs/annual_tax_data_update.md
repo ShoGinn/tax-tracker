@@ -143,6 +143,7 @@ class TestTaxBracketsYYYY:
 
     def test_mfj_10_threshold(self) -> None:
         assert self.data.tax_brackets["married_filing_jointly"][0].threshold == Decimal(...)
+
     # ... etc for all brackets, deductions, CTC
 ```
 

@@ -1,6 +1,6 @@
 """Tax data models for validation and type safety."""
 
-import datetime
+import datetime as dt
 from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-_CURRENT_YEAR = datetime.datetime.now(datetime.UTC).year
+_CURRENT_YEAR = dt.datetime.now(dt.UTC).year
 
 
 class FilingStatus(StrEnum):

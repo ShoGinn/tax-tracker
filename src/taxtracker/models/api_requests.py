@@ -1,6 +1,6 @@
 """Pydantic request models for W-4 and projection API endpoints."""
 
-import datetime
+import datetime as dt
 from decimal import Decimal
 from typing import Literal
 
@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from taxtracker.models.browser_records import BrowserSnapshot
 from taxtracker.models.tax_data import FilingStatus  # noqa: TC001
 
-_CURRENT_YEAR = datetime.datetime.now(datetime.UTC).year
+_CURRENT_YEAR = dt.datetime.now(dt.UTC).year
 
 
 class _D:
@@ -73,7 +73,7 @@ class MidYearW4OptimizeOptions(BaseModel):
 
     tax_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Tax year to optimize")
     filing_status: FilingStatus = Field(description=_D.filing_status_full)
-    as_of_date: datetime.date | None = Field(default=None, description=_D.as_of_date)
+    as_of_date: dt.date | None = Field(default=None, description=_D.as_of_date)
     remaining_pay_periods: int = Field(ge=1, description=_D.remaining_pay_periods)
     remaining_pension_periods: int | None = Field(default=None, ge=1, description=_D.remaining_pension_periods)
     remaining_non_taxable_periods: int | None = Field(
@@ -103,7 +103,7 @@ class MidYearPeriodSuggestionRequest(BaseModel):
     """Request for mid-year remaining-period suggestions."""
 
     tax_year: int = Field(default=_CURRENT_YEAR, ge=2024, le=2030, description="Tax year to inspect")
-    as_of_date: datetime.date | None = Field(default=None, description=_D.as_of_date)
+    as_of_date: dt.date | None = Field(default=None, description=_D.as_of_date)
     w2_pay_frequency: Literal["weekly", "biweekly", "semimonthly", "monthly"] = Field(
         default="biweekly",
         description=_D.pay_frequency,
@@ -122,7 +122,7 @@ class MidYearPeriodSuggestionResponse(BaseModel):
     """Remaining-period suggestions for mid-year W-4 optimization."""
 
     tax_year: int
-    as_of_date: datetime.date
+    as_of_date: dt.date
     w2_pay_frequency: str
     remaining_pay_periods: int
     remaining_pension_periods: int

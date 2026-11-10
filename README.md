@@ -127,6 +127,32 @@ just security          # Dependency vulnerability scan
 
 Run `just --list` for all available recipes. Direct `uv`, `pytest`, and `pnpm` commands are also supported.
 
+### Zed editor
+
+Open the repository root in [Zed](https://zed.dev/) after installing the locked dependencies:
+
+```bash
+uv sync --locked --dev
+pnpm --dir frontend install --frozen-lockfile
+zed .
+```
+
+Use `toolchain: select` in the command palette to select this checkout's `.venv` Python interpreter.
+Zed uses the Ruff and ty binaries installed in that environment, matching `just lint` and
+`just typecheck`. Python saves apply Ruff fixes, organize imports, and format using the rules
+in `pyproject.toml`. The pre-commit hook has its own Ruff version pin in
+`.pre-commit-config.yaml`; keep it aligned with the project dependency when updating Ruff.
+
+The shared `.zed/settings.json` enables ty and Ruff for Python and uses the frontend's installed
+Oxfmt for JavaScript, TypeScript, JSX/TSX, CSS, and JSON formatting on save. Zed's built-in
+TypeScript support supplies frontend navigation and completions; use the frontend lint and
+typecheck tasks for the repository's Oxc and TypeScript checks.
+
+Run `task: spawn` from the command palette to start the API and frontend in separate terminals,
+run tests (including the current Python file), or invoke the existing `just` quality checks.
+The task definitions live in `.zed/tasks.json`. See Zed's [Python setup](https://zed.dev/docs/languages/python)
+and [task documentation](https://zed.dev/docs/tasks) for toolchain and task details.
+
 ### Technology
 
 - FastAPI, Pydantic v2, and Python 3.14

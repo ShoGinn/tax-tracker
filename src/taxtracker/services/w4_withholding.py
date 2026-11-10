@@ -1,6 +1,6 @@
 """W-4 Withholding Calculator - Simulates federal withholding based on W-4 settings."""
 
-import datetime
+import datetime as dt
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -73,7 +73,7 @@ def calculate_withholding_per_paycheck(
     Returns:
         Dictionary with withholding amount and breakdown
     """
-    tax_year = year if year is not None else datetime.datetime.now(datetime.UTC).year
+    tax_year = year if year is not None else dt.datetime.now(dt.UTC).year
     tax_brackets_model = load_tax_brackets_model(tax_year)
 
     if pay_frequency not in PAY_PERIODS:

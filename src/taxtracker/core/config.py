@@ -1,6 +1,6 @@
 """Application configuration and settings."""
 
-import datetime
+import datetime as dt
 from decimal import Decimal
 from enum import StrEnum
 from importlib.resources import files
@@ -74,5 +74,5 @@ def current_tax_year() -> int:
     During tax filing season (Jan-Apr), returns the previous year since most
     users are filing for that year. After April, returns the current year.
     """
-    today = datetime.datetime.now(tz=datetime.UTC).date()
+    today = dt.datetime.now(tz=dt.UTC).date()
     return today.year if today.month > TAX_FILING_DEADLINE_MONTH else today.year - 1
