@@ -1,0 +1,95 @@
+[
+  {
+    "label": "Run API",
+    "command": "just",
+    "args": [
+      "run"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all",
+    "use_new_terminal": true
+  },
+  {
+    "label": "Run frontend",
+    "command": "just",
+    "args": [
+      "frontend-dev"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all",
+    "use_new_terminal": true
+  },
+  {
+    "label": "Lint Python",
+    "command": "just",
+    "args": [
+      "lint"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all"
+  },
+  {
+    "label": "Check Python types",
+    "command": "just",
+    "args": [
+      "typecheck"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all"
+  },
+  {
+    "label": "Test Python",
+    "command": "just",
+    "args": [
+      "test"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all"
+  },
+  {
+    "label": "Test current Python file",
+    "command": "just",
+    "args": [
+      "test-file",
+      "$ZED_FILE"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all"
+  },
+  {
+    "label": "Lint frontend",
+    "command": "just",
+    "args": [
+      "frontend-lint"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all"
+  },
+  {
+    "label": "Check frontend types",
+    "command": "just",
+    "args": [
+      "frontend-typecheck"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all"
+  },
+  {
+    "label": "Test frontend",
+    "command": "just",
+    "args": [
+      "frontend-test"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all"
+  },
+  {
+    "label": "Run local checks",
+    "command": "just",
+    "args": [
+      "check"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "save": "all"
+  }
+]
