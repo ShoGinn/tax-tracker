@@ -153,6 +153,36 @@ run tests (including the current Python file), or invoke the existing `just` qua
 The task definitions live in `.zed/tasks.json`. See Zed's [Python setup](https://zed.dev/docs/languages/python)
 and [task documentation](https://zed.dev/docs/tasks) for toolchain and task details.
 
+### CI job selection
+
+CI starts on every pull request to `main` and every push to `main`. Pre-commit checks and
+regression tests for the change filters always run. The remaining jobs use the complete Git
+diff (the PR merge base or the previous push tip), including deletions and renames:
+
+| Changed inputs | Selected checks |
+| --- | --- |
+| Frontend files or Node version | Frontend gate, browser E2E, production container |
+| Backend runtime source | Backend tests, typecheck, browser E2E, production container |
+| Backend tests or scripts | Backend tests; PSL cross-check for its specific inputs |
+| Python dependencies or Python version | Backend tests, typecheck, browser E2E, PSL cross-check |
+| Python dependency manifest or lockfile | Dependency security scan in addition to applicable checks above |
+| Tax data, data models, loader, or PSL snapshot tooling/fixtures | PSL cross-check in addition to applicable checks above |
+| Dockerfile, Docker ignore rules, or root README | Production container |
+| CI configuration, editor settings, or other documentation | Always-on checks only |
+
+The container also runs for `pyproject.toml` changes because it installs the backend package.
+Frontend paths intentionally include its tests and tool configuration. Unknown paths or unavailable
+comparison history run the full suite. Use **Run workflow** on CI for a manual full run.
+The weekly PSL snapshot monitor continues checking upstream drift independently.
+
+`CI required checks` accepts deliberately skipped jobs and fails if any selected job fails or is
+cancelled. Releases on `main` depend on this gate, so selective skips do not block release evaluation.
+The existing job names remain available for branch protection; `CI required checks` can be used as
+a single required status. Repository branch-protection settings are managed separately.
+
+Selection rules and their regression tests live in `.github/scripts/ci_changes.py` and
+`.github/scripts/test_ci_changes.py`. When adding runtime inputs, update the rules and tests together.
+
 ### Technology
 
 - FastAPI, Pydantic v2, and Python 3.14
