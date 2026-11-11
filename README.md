@@ -235,6 +235,11 @@ Tax constants are curated from IRS and SSA publications and cross-checked agains
 
 Validation includes year-specific unit tests, integration tests, IRS example cases, service-layer coverage thresholds, and automated comparisons with PSLmodels Tax-Calculator data.
 
+Repository workflows pin GitHub-hosted runners to Ubuntu 24.04 for a stable CI environment.
+Release and hook-update workflows use the repository variable `RELEASE_APP_CLIENT_ID`
+and secret `RELEASE_APP_PRIVATE_KEY` for the existing release App. Date-only PSL
+snapshot changes are logged normally; changes to tax values still emit a warning.
+
 ## API
 
 FastAPI exposes interactive OpenAPI documentation at `/docs` while the service is running. Major capabilities include:

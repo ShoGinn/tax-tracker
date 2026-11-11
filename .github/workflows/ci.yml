@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       container: ${{ steps.filter.outputs.container }}
@@ -36,7 +36,7 @@ jobs:
         run: python3 .github/scripts/ci_changes.py
 
   frontend-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: changes
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     steps:
@@ -55,7 +55,7 @@ jobs:
         run: cd frontend && pnpm lint && pnpm typecheck && pnpm test && pnpm build
 
   container-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: changes
     if: ${{ needs.changes.outputs.container == 'true' }}
@@ -80,7 +80,7 @@ jobs:
           exit 1
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: changes
     if: ${{ needs.changes.outputs.e2e == 'true' }}
@@ -120,7 +120,7 @@ jobs:
           retention-days: 7
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -134,7 +134,7 @@ jobs:
       - run: uv run pre-commit run --all-files
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: changes
     if: ${{ needs.changes.outputs.test == 'true' }}
     steps:
@@ -155,7 +155,7 @@ jobs:
           --cov-report=term-missing --cov-fail-under=90 -q'
 
   typecheck:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: changes
     if: ${{ needs.changes.outputs.typecheck == 'true' }}
     steps:
@@ -167,7 +167,7 @@ jobs:
       - run: uv run ty check
 
   security:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: changes
     if: ${{ needs.changes.outputs.security == 'true' }}
     steps:
@@ -188,7 +188,7 @@ jobs:
           path: uv-secure-report.txt
 
   pslmodels-cross-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: changes
     if: ${{ needs.changes.outputs.psl == 'true' }}
     steps:
@@ -220,7 +220,7 @@ jobs:
 
           if normalize(current) == normalize(committed):
               if current.get("generated_date") != committed.get("generated_date"):
-                  print("::notice::PSL snapshot generated_date changed only; tax values are unchanged.")
+                  print("PSL snapshot generated_date changed only; tax values are unchanged.")
               else:
                   print("Snapshot unchanged — PSLmodels data matches committed snapshot.")
           else:
@@ -231,7 +231,7 @@ jobs:
 
   ci-success:
     name: CI required checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [changes, frontend-check, container-check, e2e, lint, test, typecheck, security, pslmodels-cross-check]
     if: always()
     steps:
@@ -248,7 +248,7 @@ jobs:
           test "$HAS_CANCELLED" = false
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: ci-success
     if: ${{ !cancelled() && needs.ci-success.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip ci]') }}
     permissions:
@@ -258,7 +258,7 @@ jobs:
         id: release-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           permission-contents: write
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
