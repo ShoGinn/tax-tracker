@@ -6,6 +6,7 @@ import type {
   EmployerCreate,
   NonTaxableIncomeCreate,
   PaycheckCreate,
+  PaycheckResponse,
   Retirement1099RCreate,
 } from "../lib/api/types";
 import { formatCurrency, parseDecimalString } from "../lib/money";
@@ -13,6 +14,22 @@ import { formatCurrency, parseDecimalString } from "../lib/money";
 type Tab = "paychecks" | "pensions" | "non-taxable";
 
 const currentYear = new Date().getFullYear();
+
+// This is a review hint, never an automatic correction: payroll tax bases can differ.
+const needsBonusWithholdingReview = (paycheck: PaycheckResponse) => {
+  const gross = parseDecimalString(paycheck.gross_wages);
+  const bonus = parseDecimalString(paycheck.bonus);
+  const medicare = parseDecimalString(paycheck.medicare);
+  const socialSecurity = parseDecimalString(paycheck.social_security);
+  const close = (a: number, b: number) => Math.abs(a - b) <= 0.02;
+  return (
+    gross > 0 &&
+    bonus > 0 &&
+    close(medicare, gross * 0.0145) &&
+    close(socialSecurity, gross * 0.062) &&
+    !close(medicare, (gross + bonus) * 0.0145)
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -153,6 +170,10 @@ const PaychecksTab = ({ year }: { year: number }) => {
     0,
   );
   const totalBonus = paychecks.reduce((s, p) => s + parseDecimalString(p.bonus), 0);
+  const totalPretax = paychecks.reduce(
+    (s, p) => s + parseDecimalString(p.total_pretax_deductions),
+    0,
+  );
   const totalTaxable = paychecks.reduce((s, p) => s + parseDecimalString(p.taxable_wages), 0);
   const totalWithholding = paychecks.reduce(
     (s, p) => s + parseDecimalString(p.federal_withholding),
@@ -209,14 +230,20 @@ const PaychecksTab = ({ year }: { year: number }) => {
           <p className="empty-text">No paychecks for {year}. Add one above.</p>
         ) : (
           <div className="table-wrapper">
+            <p className="helper-text">
+              Federal taxable wages = gross including bonuses − pre-tax deductions. The bonus column
+              is already included in gross; do not add it again. Withholding does not reduce taxable
+              wages.
+            </p>
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Date</th>
                   <th>Employer</th>
-                  <th className="num">Gross wages</th>
-                  {hasBonus && <th className="num">Bonus</th>}
-                  <th className="num">Taxable wages</th>
+                  <th className="num">Gross including bonuses</th>
+                  {hasBonus && <th className="num">Bonus (included in gross)</th>}
+                  <th className="num">Pre-tax deductions</th>
+                  <th className="num">Federal taxable wages</th>
                   <th className="num">Fed. withheld</th>
                   <th className="num">FICA</th>
                   <th className="num">Net pay</th>
@@ -230,8 +257,22 @@ const PaychecksTab = ({ year }: { year: number }) => {
                   return (
                     <tr key={p.id}>
                       <td>{p.pay_date}</td>
-                      <td>{p.employer.name}</td>
-                      <td className="num">{formatCurrency(parseDecimalString(p.gross_wages))}</td>
+                      <td>
+                        {p.employer.name}
+                        {needsBonusWithholdingReview(p) && (
+                          <p className="helper-text" role="note">
+                            Check bonus or withholding entry: recorded payroll withholding matches
+                            gross wages before adding the bonus. Verify gross wages, bonus, and
+                            withholding against the pay stub. Other payroll adjustments can also
+                            explain differences.
+                          </p>
+                        )}
+                      </td>
+                      <td className="num">
+                        {formatCurrency(
+                          parseDecimalString(p.gross_wages) + parseDecimalString(p.bonus),
+                        )}
+                      </td>
                       {hasBonus && (
                         <td className="num">
                           {parseDecimalString(p.bonus) > 0
@@ -239,6 +280,9 @@ const PaychecksTab = ({ year }: { year: number }) => {
                             : "—"}
                         </td>
                       )}
+                      <td className="num">
+                        {formatCurrency(parseDecimalString(p.total_pretax_deductions))}
+                      </td>
                       <td className="num">{formatCurrency(parseDecimalString(p.taxable_wages))}</td>
                       <td className="num">
                         {formatCurrency(parseDecimalString(p.federal_withholding))}
@@ -265,6 +309,9 @@ const PaychecksTab = ({ year }: { year: number }) => {
                       <strong>{formatCurrency(totalBonus)}</strong>
                     </td>
                   )}
+                  <td className="num">
+                    <strong>{formatCurrency(totalPretax)}</strong>
+                  </td>
                   <td className="num">
                     <strong>{formatCurrency(totalTaxable)}</strong>
                   </td>
@@ -381,6 +428,11 @@ const PaycheckForm = ({
               />
             </label>
 
+            <p className="helper-text">
+              Enter gross wages excluding any amount entered separately as a bonus. If your pay
+              stub’s gross already includes the bonus, subtract it here or leave the separate bonus
+              field at zero.
+            </p>
             <label className="form-label">
               Bonus
               <input

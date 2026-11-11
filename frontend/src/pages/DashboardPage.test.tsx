@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,11 +37,10 @@ const defaultDashboardProjection = {
   as_of_date: "2025-05-31",
   ytd: {
     w2_gross: "40000.00",
-    w2_pretax: "5000.00",
-    w2_federal_withheld: "4800.00",
+    w2_pretax_deductions: "5000.00",
+    federal_withheld: "4800.00",
     pension_gross: "0.00",
-    pension_pretax: "0.00",
-    pension_federal_withheld: "0.00",
+    pension_pretax_deductions: "0.00",
     va_income: "0.00",
     paycheck_count: 4,
     pension_count: 0,
@@ -49,35 +48,39 @@ const defaultDashboardProjection = {
   },
   projected: {
     w2_gross: "80000.00",
-    w2_pretax: "10000.00",
+    w2_taxable: "70000.00",
     pension_gross: "0.00",
-    pension_pretax: "0.00",
+    pension_taxable: "0.00",
+    total_taxable_income: "70000.00",
+    taxable_income: "37800.00",
+    deduction_type: "Standard Deduction",
+    deduction_amount: "32200.00",
     va_income: "0.00",
     total_tax_liability: "15120.00",
-    federal_income_tax: "9000.00",
-    fica_total: "6120.00",
+    federal_tax_liability: "9000.00",
+    fica_liability: "6120.00",
     effective_rate: "18.9",
     marginal_rate: "22",
-    total_withheld: "9600.00",
-    refund_or_owed: "-5520.00",
+    estimated_withholding: "9600.00",
+    estimated_refund_or_owed: "-5520.00",
   },
   remaining_periods: { w2: 8, pension: 7, non_taxable: 7 },
 };
 
-describe("DashboardPage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(apiClient.getAvailableYears).mockResolvedValue({
-      available_years: [currentYear],
-      latest_year: currentYear,
-      data_directory: "/data",
-    });
-    vi.mocked(apiClient.listPaychecks).mockResolvedValue([]);
-    vi.mocked(apiClient.listPensions).mockResolvedValue([]);
-    vi.mocked(apiClient.listNonTaxableIncome).mockResolvedValue([]);
-    vi.mocked(apiClient.getDashboardProjection).mockResolvedValue(defaultDashboardProjection);
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(apiClient.getAvailableYears).mockResolvedValue({
+    available_years: [currentYear],
+    latest_year: currentYear,
+    data_directory: "/data",
   });
+  vi.mocked(apiClient.listPaychecks).mockResolvedValue([]);
+  vi.mocked(apiClient.listPensions).mockResolvedValue([]);
+  vi.mocked(apiClient.listNonTaxableIncome).mockResolvedValue([]);
+  vi.mocked(apiClient.getDashboardProjection).mockResolvedValue(defaultDashboardProjection);
+});
 
+describe("DashboardPage", () => {
   it("renders YTD cashflow section", async () => {
     renderWithQueryClient();
     const cashflowCards = await screen.findAllByText(/Household Cashflow/);
@@ -111,7 +114,7 @@ describe("DashboardPage", () => {
     renderWithQueryClient();
     await screen.findByText("Full-year projection");
     expect(screen.getByText("Projected household income")).toBeInTheDocument();
-    expect(screen.getByText("Total federal tax liability")).toBeInTheDocument();
+    expect(screen.getByText("Federal income tax liability")).toBeInTheDocument();
     expect(screen.getByText("Projected net after tax")).toBeInTheDocument();
   });
 
@@ -127,4 +130,54 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Tax Settings")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Filing Status")).not.toBeInTheDocument();
   });
+});
+
+it.each([
+  ["1300", "Projected refund", "$1,300.00"],
+  ["-700", "Projected amount due", "$700.00"],
+  ["0", "Projected balance", "$0.00"],
+])("renders the backend balance %s", async (balance, label, amount) => {
+  vi.mocked(apiClient.getDashboardProjection).mockResolvedValue({
+    ...defaultDashboardProjection,
+    projected: { ...defaultDashboardProjection.projected, estimated_refund_or_owed: balance },
+  });
+  renderWithQueryClient();
+  await screen.findByRole("heading", { name: label });
+  expect(within(screen.getByRole("region", { name: label })).getByText(amount)).toBeInTheDocument();
+});
+
+it("does not turn an incomplete response into a zero balance", async () => {
+  const incomplete = structuredClone(defaultDashboardProjection);
+  // Simulate a server contract regression despite the compile-time type.
+  Reflect.deleteProperty(incomplete.projected, "estimated_refund_or_owed");
+  vi.mocked(apiClient.getDashboardProjection).mockResolvedValue(incomplete);
+  renderWithQueryClient();
+  await screen.findByText("Projection unavailable");
+  expect(screen.queryByRole("heading", { name: "Projected balance" })).not.toBeInTheDocument();
+});
+
+it("shows loading and request failures without a financial balance", async () => {
+  vi.mocked(apiClient.getDashboardProjection).mockRejectedValue(new Error("Calculation failed"));
+  renderWithQueryClient();
+  await screen.findByText("Projection unavailable");
+  expect(screen.getByText(/Projection unavailable: Calculation failed/)).toBeInTheDocument();
+});
+
+it("shows a loading state while the projection is pending", async () => {
+  vi.mocked(apiClient.getDashboardProjection).mockReturnValue(new Promise(() => {}));
+  renderWithQueryClient();
+  await screen.findByText("Calculating…");
+  expect(screen.queryByRole("heading", { name: "Projected balance" })).not.toBeInTheDocument();
+});
+
+it("prefers the current year over available future tax tables", async () => {
+  vi.mocked(apiClient.getAvailableYears).mockResolvedValue({
+    available_years: [currentYear, currentYear + 1],
+    latest_year: currentYear + 1,
+    data_directory: "/data",
+  });
+  renderWithQueryClient();
+  await screen.findByText("Projected amount due");
+  expect(apiClient.getDashboardProjection).toHaveBeenCalledWith(currentYear);
+  expect(apiClient.getDashboardProjection).not.toHaveBeenCalledWith(currentYear + 1);
 });

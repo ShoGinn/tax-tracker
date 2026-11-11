@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 
 import { apiClient } from "../lib/api/client";
-import { formatCurrency, parseDecimalString } from "../lib/money";
+import { formatCurrency, isFiniteAmount, parseDecimalString } from "../lib/money";
 
 const currentYear = new Date().getFullYear();
 
@@ -12,7 +12,9 @@ export const DashboardPage = () => {
     queryFn: apiClient.getAvailableYears,
   });
 
-  const selectedYear = yearsData?.latest_year ?? currentYear;
+  const selectedYear = yearsData?.available_years.includes(currentYear)
+    ? currentYear
+    : (yearsData?.latest_year ?? currentYear);
 
   const summaryQuery = useQuery({
     queryKey: ["dashboard-summary", selectedYear],
@@ -86,13 +88,31 @@ export const DashboardPage = () => {
   const summary = summaryQuery.data;
   if (!summary) return <p className="status-message">No data available yet.</p>;
 
-  const projection = projectionQuery.data;
+  const candidate = projectionQuery.data;
+  const validProjection =
+    candidate &&
+    [
+      candidate.projected?.estimated_refund_or_owed,
+      candidate.projected?.estimated_withholding,
+      candidate.projected?.federal_tax_liability,
+      candidate.projected?.fica_liability,
+      candidate.projected?.total_tax_liability,
+      candidate.projected?.w2_gross,
+      candidate.projected?.pension_gross,
+      candidate.projected?.va_income,
+      candidate.projected?.effective_rate,
+      candidate.projected?.marginal_rate,
+      candidate.ytd?.federal_withheld,
+    ].every(isFiniteAmount);
+  const projection = validProjection ? candidate : undefined;
   const projectedIncome = projection
     ? parseDecimalString(projection.projected.w2_gross) +
       parseDecimalString(projection.projected.pension_gross) +
       parseDecimalString(projection.projected.va_income)
     : 0;
-  const projectedBalance = projection ? parseDecimalString(projection.projected.refund_or_owed) : 0;
+  const projectedBalance = projection
+    ? parseDecimalString(projection.projected.estimated_refund_or_owed)
+    : 0;
   const hasRecords =
     summary.counts.paychecks + summary.counts.pensions + summary.counts.nonTaxable > 0;
   const balanceLabel =
@@ -122,12 +142,18 @@ export const DashboardPage = () => {
             {projection ? balanceLabel : "Plan snapshot"}
           </h2>
           <p className="plan-status-value">
-            {projection ? formatCurrency(Math.abs(projectedBalance)) : "Add income to get started"}
+            {projection
+              ? formatCurrency(Math.abs(projectedBalance))
+              : projectionQuery.isLoading
+                ? "Calculating…"
+                : "Projection unavailable"}
           </p>
           <p className="plan-status-detail">
             {projection
-              ? `${parseDecimalString(projection.projected.effective_rate).toFixed(1)}% effective federal rate · ${parseDecimalString(projection.projected.marginal_rate).toFixed(0)}% marginal rate · ${formatCurrency(parseDecimalString(projection.projected.total_withheld))} projected withholding`
-              : "Once records are available, we’ll estimate your full-year income, liability, and withholding balance."}
+              ? `${parseDecimalString(projection.projected.effective_rate).toFixed(1)}% effective federal rate · ${parseDecimalString(projection.projected.marginal_rate).toFixed(0)}% marginal rate · ${formatCurrency(parseDecimalString(projection.projected.estimated_withholding))} projected federal withholding`
+              : projectionQuery.isLoading
+                ? "Estimating your full-year income and federal withholding…"
+                : "A projection could not be calculated yet. Check your records and try again."}
           </p>
         </div>
         <div className="plan-status-action">
@@ -184,8 +210,11 @@ export const DashboardPage = () => {
             <Link to="/projections">Explore scenarios →</Link>
           </div>
           {projectionQuery.isLoading && <p className="loading-text">Calculating projection…</p>}
-          {projectionQuery.isError && (
-            <p className="error-text">Projection unavailable: {projectionQuery.error.message}</p>
+          {!projectionQuery.isLoading && !projection && (
+            <p className="error-text">
+              Projection unavailable:{" "}
+              {projectionQuery.error?.message ?? "Incomplete projection response"}
+            </p>
           )}
           {projection && (
             <div className="projection-list">
@@ -194,9 +223,27 @@ export const DashboardPage = () => {
                 <strong>{formatCurrency(projectedIncome)}</strong>
               </div>
               <div>
-                <span>Total federal tax liability</span>
+                <span>Federal income tax liability</span>
+                <strong>
+                  {formatCurrency(parseDecimalString(projection.projected.federal_tax_liability))}
+                </strong>
+              </div>
+              <div>
+                <span>Projected payroll taxes (FICA)</span>
+                <strong>
+                  {formatCurrency(parseDecimalString(projection.projected.fica_liability))}
+                </strong>
+              </div>
+              <div>
+                <span>Combined federal income and payroll taxes</span>
                 <strong>
                   {formatCurrency(parseDecimalString(projection.projected.total_tax_liability))}
+                </strong>
+              </div>
+              <div>
+                <span>Recorded federal withholding</span>
+                <strong>
+                  {formatCurrency(parseDecimalString(projection.ytd.federal_withheld))}
                 </strong>
               </div>
               <div>
@@ -209,7 +256,7 @@ export const DashboardPage = () => {
               </div>
               <p>
                 {projection.is_current_year
-                  ? `Based on records through ${projection.as_of_date} and remaining pay periods.`
+                  ? `Based on records through ${projection.as_of_date} and remaining pay periods. Income and federal withholding continue at their separate recorded averages, including any bonuses.`
                   : `Based on the complete ${selectedYear} tax year.`}
               </p>
             </div>

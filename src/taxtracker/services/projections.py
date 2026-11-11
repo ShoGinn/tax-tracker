@@ -319,6 +319,14 @@ def project_from_ytd(
     proj_pension_pretax = ytd_pension_pretax + proj_remaining_pension_pretax
     proj_va = ytd_va_income + proj_remaining_va
 
+    projected_withholding = ytd_w2_federal_withheld + ytd_pension_federal_withheld
+    if is_current_year and paycheck_count > 0:
+        projected_withholding += ytd_w2_federal_withheld / Decimal(paycheck_count) * Decimal(remaining_pay_periods)
+    if is_current_year and pension_count > 0:
+        projected_withholding += (
+            ytd_pension_federal_withheld / Decimal(pension_count) * Decimal(remaining_pension_periods)
+        )
+
     projection = project_year(
         tax_calculator=tax_calculator,
         year=year,
@@ -330,7 +338,7 @@ def project_from_ytd(
         pension_gross=proj_pension_gross,
         pension_pretax_deductions=proj_pension_pretax,
         va_disability=proj_va,
-        estimated_federal_withholding=ytd_w2_federal_withheld + ytd_pension_federal_withheld,
+        estimated_federal_withholding=projected_withholding,
         use_standard_deduction=use_standard_deduction,
         itemized_deductions=itemized_deduction_amount,
     )

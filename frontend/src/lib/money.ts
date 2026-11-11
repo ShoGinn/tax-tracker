@@ -19,3 +19,9 @@ export const parseDecimalString = (value: string | number | null | undefined): n
 
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+/** Validate required API amounts before using the permissive input parser. */
+export const isFiniteAmount = (value: unknown): boolean =>
+  (typeof value === "number" || typeof value === "string") &&
+  String(value).trim() !== "" &&
+  Number.isFinite(Number(value));

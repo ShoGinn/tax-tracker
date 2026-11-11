@@ -14,6 +14,7 @@ from taxtracker.models.api_requests import (  # noqa: TC001
     ProjectYearRequest,
 )
 from taxtracker.models.browser_records import BrowserSnapshot  # noqa: TC001
+from taxtracker.models.dashboard import DashboardProjectionResponse
 from taxtracker.models.tax_data import FilingStatus
 from taxtracker.services.midyear_periods import suggest_midyear_periods
 from taxtracker.services.projections import compare_years, project_from_ytd, project_year
@@ -129,6 +130,7 @@ async def compare_tax_years(request: CompareYearsRequest) -> dict[str, Any]:
 
 @router.post(
     "/dashboard/{year}",
+    response_model=DashboardProjectionResponse,
     summary="Project full-year taxes using transient browser records",
     response_description=(
         "YTD actuals plus remaining-period projection with tax liability. "
@@ -150,7 +152,8 @@ async def dashboard_projection(
     """
     try:
         config = snapshot.config
-        current_year = datetime.now(UTC).year
+        as_of_date = datetime.now(UTC).date()
+        current_year = as_of_date.year
         is_current_year = year == current_year
 
         paychecks = [record for record in snapshot.paychecks if record.pay_date.year == year]
@@ -171,12 +174,20 @@ async def dashboard_projection(
                 retirement_1099rs,
                 non_taxable_payments,
                 tax_year=year,
-                as_of_date=None,
+                as_of_date=as_of_date,
                 w2_pay_frequency=config.w2_pay_frequency,
             )
-            remaining_pay_periods = periods.remaining_pay_periods
-            remaining_pension_periods = periods.remaining_pension_periods
-            remaining_non_taxable_periods = periods.remaining_non_taxable_periods
+            # Future-dated entries are already in the recorded totals. Do not
+            # extrapolate another payment for those same remaining periods.
+            remaining_pay_periods = max(
+                0, periods.remaining_pay_periods - sum(p.pay_date > as_of_date for p in paychecks)
+            )
+            remaining_pension_periods = max(
+                0, periods.remaining_pension_periods - sum(p.pay_date > as_of_date for p in retirement_1099rs)
+            )
+            remaining_non_taxable_periods = max(
+                0, periods.remaining_non_taxable_periods - sum(p.pay_date > as_of_date for p in non_taxable_payments)
+            )
         else:
             remaining_pay_periods = 0
             remaining_pension_periods = 0
@@ -207,7 +218,7 @@ async def dashboard_projection(
             remaining_pension_periods=remaining_pension_periods,
             remaining_non_taxable_periods=remaining_non_taxable_periods,
             is_current_year=is_current_year,
-            as_of_date=datetime.now(UTC).date(),
+            as_of_date=as_of_date,
         )
 
     except (ProjectionError, DataLoadError) as e:

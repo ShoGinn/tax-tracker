@@ -1,14 +1,20 @@
 """Contract tests for browser-snapshot tax reconciliation."""
 
-from typing import TYPE_CHECKING
+from decimal import Decimal
 
 import pytest
+from fastapi.testclient import TestClient
 
-if TYPE_CHECKING:
-    from fastapi.testclient import TestClient
-
+from taxtracker.cli.app import create_app
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture
+def actual_client():
+    """Use packaged tax data, without the general client's 2024 data override."""
+    with TestClient(create_app(skip_db_init=True, serve_frontend=False)) as client:
+        yield client
 
 
 def test_reconciles_transient_browser_records(client: TestClient) -> None:
@@ -109,3 +115,44 @@ def test_reconciliation_uses_explicit_age_and_itemized_options(client: TestClien
     assert itemized.status_code == 200
     assert float(standard.json()["deduction_amount"]) > 14600
     assert itemized.json()["deduction_amount"] == "30000"
+
+
+@pytest.mark.parametrize(
+    ("withheld", "expected", "status"), [("7204", "1300", "REFUND"), ("5204", "-700", "OWED"), ("5904", "0", "EVEN")]
+)
+def test_2026_federal_balance_excludes_payroll_taxes(
+    actual_client: TestClient, withheld: str, expected: str, status: str
+) -> None:
+    """IRS RP 2025-32: MFJ $90,000 taxable -> $2,480 + $7,824; less two $2,200 credits."""
+
+    response = actual_client.post(
+        "/taxes/reconcile-records/2026",
+        json={
+            "paychecks": [
+                {
+                    "id": 1,
+                    "employer_id": 1,
+                    "pay_date": "2026-01-15",
+                    "gross_wages": "110000",
+                    "bonus": "12200",
+                    "deduction_401k": "10000",
+                    "federal_withholding": withheld,
+                    "social_security": "1",
+                    "medicare": "1",
+                }
+            ],
+            "pensions": [{"id": 1, "pay_date": "2026-01-01", "gross_amount": "12000", "pretax_deductions": "2000"}],
+            "non_taxable_income": [{"id": 1, "pay_date": "2026-01-01", "amount": "6000"}],
+            "options": {"filing_status": "married_filing_jointly", "num_children": 2},
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    # $122,200 + $12,000 - $10,000 - $2,000 - $32,200 = $90,000.
+    assert Decimal(result["taxable_income"]) == 90000
+    assert Decimal(result["federal_tax_owed"]) == 10304
+    assert Decimal(result["total_tax_liability"]) == 5904
+    assert Decimal(result["refund_or_owed"]) == Decimal(expected)
+    assert result["result_status"] == status
+    assert sum(Decimal(str(b["taxable_amount"])) for b in result["breakdown_by_bracket"]) == 90000
+    assert sum(Decimal(str(b["tax_amount"])) for b in result["breakdown_by_bracket"]) == 10304

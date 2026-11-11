@@ -10,7 +10,7 @@ import type {
 } from "../lib/api/types";
 import { FILING_STATUSES } from "../lib/constants";
 import { useAppConfig } from "../lib/hooks";
-import { formatCurrency, parseDecimalString } from "../lib/money";
+import { formatCurrency, isFiniteAmount, parseDecimalString } from "../lib/money";
 
 const currentYear = new Date().getFullYear();
 
@@ -18,13 +18,40 @@ const currentYear = new Date().getFullYear();
 // Shared result display
 // ---------------------------------------------------------------------------
 
-const TaxResultCard = ({ result }: { result: TaxCalculationResponse }) => {
+const TaxResultCard = ({
+  result,
+  incomeLabel = "Gross income",
+}: {
+  result: TaxCalculationResponse;
+  incomeLabel?: string;
+}) => {
   const [showBrackets, setShowBrackets] = useState(false);
 
-  const totalFica = Object.values(result.fica_taxes).reduce(
-    (s, v) => s + parseDecimalString(v as string),
-    0,
-  );
+  const validAmounts = [
+    result.gross_income,
+    result.retirement_pretax_deductions,
+    result.adjusted_gross_income,
+    result.deduction_amount,
+    result.taxable_income,
+    result.federal_tax_owed,
+    result.child_tax_credits,
+    result.total_tax_liability,
+    result.effective_tax_rate,
+    result.marginal_tax_rate,
+    result.fica_taxes?.total_fica,
+  ].every(isFiniteAmount);
+  const validBrackets =
+    Array.isArray(result.breakdown_by_bracket) &&
+    result.breakdown_by_bracket.every(
+      (b) =>
+        [b.bracket_min, b.rate, b.taxable_amount, b.tax_amount].every(isFiniteAmount) &&
+        (b.bracket_max === null || isFiniteAmount(b.bracket_max)),
+    );
+  if (!validAmounts || !validBrackets) {
+    return <p className="error-text">Tax result unavailable: incomplete calculation response.</p>;
+  }
+
+  const totalFica = parseDecimalString(result.fica_taxes.total_fica);
 
   return (
     <div className="card result-card">
@@ -32,11 +59,25 @@ const TaxResultCard = ({ result }: { result: TaxCalculationResponse }) => {
 
       <div className="result-grid">
         <div className="result-row">
-          <span>Gross income</span>
+          <span>{incomeLabel}</span>
           <strong>{formatCurrency(parseDecimalString(result.gross_income))}</strong>
         </div>
+        {parseDecimalString(result.retirement_pretax_deductions) > 0 && (
+          <>
+            <div className="result-row">
+              <span>Pre-tax deductions</span>
+              <strong>
+                −{formatCurrency(parseDecimalString(result.retirement_pretax_deductions))}
+              </strong>
+            </div>
+            <div className="result-row">
+              <span>Adjusted gross income</span>
+              <strong>{formatCurrency(parseDecimalString(result.adjusted_gross_income))}</strong>
+            </div>
+          </>
+        )}
         <div className="result-row">
-          <span>{result.deduction_type} deduction</span>
+          <span>{result.deduction_type}</span>
           <strong>−{formatCurrency(parseDecimalString(result.deduction_amount))}</strong>
         </div>
         <div className="result-row">
@@ -62,12 +103,12 @@ const TaxResultCard = ({ result }: { result: TaxCalculationResponse }) => {
           <strong>{formatCurrency(totalFica)}</strong>
         </div>
         <div className="result-row result-highlight">
-          <span>Effective rate</span>
-          <strong>{(parseDecimalString(result.effective_tax_rate) * 100).toFixed(2)}%</strong>
+          <span>Effective federal income tax rate</span>
+          <strong>{parseDecimalString(result.effective_tax_rate).toFixed(2)}%</strong>
         </div>
         <div className="result-row">
           <span>Marginal rate</span>
-          <strong>{(parseDecimalString(result.marginal_tax_rate) * 100).toFixed(1)}%</strong>
+          <strong>{parseDecimalString(result.marginal_tax_rate).toFixed(1)}%</strong>
         </div>
       </div>
 
@@ -96,11 +137,14 @@ const TaxResultCard = ({ result }: { result: TaxCalculationResponse }) => {
             </thead>
             <tbody>
               {result.breakdown_by_bracket.map((b) => (
-                <tr key={b.bracket}>
-                  <td>{b.bracket}</td>
+                <tr key={b.bracket_min}>
+                  <td>
+                    {formatCurrency(b.bracket_min)} –{" "}
+                    {b.bracket_max === null ? "and above" : formatCurrency(b.bracket_max)}
+                  </td>
                   <td className="num">{(b.rate * 100).toFixed(0)}%</td>
-                  <td className="num">{formatCurrency(b.taxable_income_in_bracket)}</td>
-                  <td className="num">{formatCurrency(b.tax_in_bracket)}</td>
+                  <td className="num">{formatCurrency(b.taxable_amount)}</td>
+                  <td className="num">{formatCurrency(b.tax_amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -112,13 +156,48 @@ const TaxResultCard = ({ result }: { result: TaxCalculationResponse }) => {
 };
 
 const ReconciliationCard = ({ result }: { result: TaxReconciliationResponse }) => {
+  if (
+    ![
+      result.total_federal_withheld,
+      result.total_fica_withheld,
+      result.total_withheld,
+      result.total_tax_liability,
+      result.refund_or_owed,
+      result.w2_gross,
+      result.pension_gross,
+      result.w2_pretax_deductions,
+      result.pension_pretax_deductions,
+    ].every(isFiniteAmount)
+  ) {
+    return (
+      <p className="error-text">Reconciliation unavailable: incomplete calculation response.</p>
+    );
+  }
   const isRefund = result.result_status === "REFUND";
   const isOwed = result.result_status === "OWED";
   const refundAmt = Math.abs(parseDecimalString(result.refund_or_owed));
 
   return (
     <>
-      <TaxResultCard result={result} />
+      <div className="card mb-4">
+        <h3>Recorded income — {result.tax_year}</h3>
+        <p>
+          W-2 gross: {formatCurrency(parseDecimalString(result.w2_gross))} · Pension gross:{" "}
+          {formatCurrency(parseDecimalString(result.pension_gross))}
+        </p>
+        <p>
+          Pre-tax deductions:{" "}
+          {formatCurrency(
+            parseDecimalString(result.w2_pretax_deductions) +
+              parseDecimalString(result.pension_pretax_deductions),
+          )}
+        </p>
+        <p>
+          This reconciliation uses recorded income and withholding only; it is not a full-year
+          forecast. Payroll taxes are shown separately from the federal refund estimate.
+        </p>
+      </div>
+      <TaxResultCard result={result} incomeLabel="Income after pre-tax deductions" />
 
       <div
         className={`card reconciliation-card mt-2 ${isRefund ? "status-refund" : isOwed ? "status-owed" : "status-even"}`}
@@ -139,13 +218,19 @@ const ReconciliationCard = ({ result }: { result: TaxReconciliationResponse }) =
             <strong>{formatCurrency(parseDecimalString(result.total_withheld))}</strong>
           </div>
           <div className="result-row">
-            <span>Combined tax liability</span>
-            <strong>{formatCurrency(parseDecimalString(result.combined_liability))}</strong>
+            <span>Federal income tax liability</span>
+            <strong>{formatCurrency(parseDecimalString(result.total_tax_liability))}</strong>
           </div>
           <div
             className={`result-row result-highlight ${isRefund ? "text-refund" : isOwed ? "text-owed" : ""}`}
           >
-            <span>{isRefund ? "Estimated refund" : isOwed ? "Amount owed" : "Break even"}</span>
+            <span>
+              {isRefund
+                ? "Estimated federal refund"
+                : isOwed
+                  ? "Federal amount owed"
+                  : "Break even"}
+            </span>
             <strong>{isRefund || isOwed ? formatCurrency(refundAmt) : "—"}</strong>
           </div>
         </div>

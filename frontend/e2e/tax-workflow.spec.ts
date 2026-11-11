@@ -59,3 +59,52 @@ test("import a paycheck CSV using an employer name", async ({ page }) => {
   await expect(importedRow).toContainText(`${taxYear}-01-15`);
   await expect(importedRow).toContainText("$2,500.00");
 });
+
+test("overview and reconciliation show federal balances and valid brackets", async ({ page }) => {
+  const year = new Date().getFullYear();
+  await page.goto("/imports");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "synthetic-paychecks.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      `employer_name,pay_date,gross_wages,federal_withholding,social_security,medicare\nSynthetic Corp,01/15/${year},60000,10000,3720,870`,
+    ),
+  });
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.locator(".csv-result")).toContainText("Imported: 1");
+  await page.goto("/");
+  await expect(page.locator(".plan-status-value")).not.toHaveText("$0.00");
+  await expect(page.locator(".plan-status-detail")).toContainText("projected federal withholding");
+  await expect(page.getByText("Projected payroll taxes (FICA)")).toBeVisible();
+  await page.goto("/taxes");
+  await page.getByRole("button", { name: "Reconciliation from DB" }).click();
+  await page.getByRole("button", { name: "Run reconciliation" }).click();
+  await expect(page.getByText("Estimated federal refund")).toBeVisible();
+  await page.getByRole("button", { name: "Show bracket breakdown" }).click();
+  await expect(page.locator(".data-table")).not.toContainText("NaN");
+  await expect(page.locator(".data-table tbody tr")).toHaveCount(2);
+  await expect(page.getByText("$4,590.00", { exact: true }).first()).toBeVisible();
+});
+
+test("bonus paychecks show consistent gross, deductions, and taxable wages", async ({ page }) => {
+  const year = new Date().getFullYear();
+  await page.goto("/imports");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "synthetic-bonus.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      `employer_name,pay_date,gross_wages,bonus,deduction_401k\nSynthetic Bonus Corp,01/15/${year},5000,2000,700`,
+    ),
+  });
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await expect(page.locator(".csv-result")).toContainText("Imported: 1");
+  await page.goto("/income");
+  await expect(page.getByRole("columnheader", { name: "Gross including bonuses" })).toBeVisible();
+  const row = page.getByRole("row").filter({ hasText: "Synthetic Bonus Corp" });
+  await expect(row).toContainText("$7,000.00");
+  await expect(row).toContainText("$2,000.00");
+  await expect(row).toContainText("$700.00");
+  await expect(row).toContainText("$6,300.00");
+  await expect(page.locator("tfoot")).toContainText("$7,000.00");
+  await expect(page.locator("tfoot")).toContainText("$6,300.00");
+});

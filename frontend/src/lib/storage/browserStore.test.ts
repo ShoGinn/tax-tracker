@@ -128,3 +128,24 @@ describe("browserStore", () => {
     await expect(browserStore.listNonTaxableIncome()).resolves.toEqual([]);
   });
 });
+
+it("includes bonuses exactly once and subtracts pre-tax deductions from taxable wages", async () => {
+  await taxTrackerDatabase.delete();
+  await taxTrackerDatabase.open();
+  const employer = await browserStore.createEmployer({
+    name: "Synthetic Bonus Corp",
+    start_date: "2026-01-01",
+  });
+  const paycheck = await browserStore.createPaycheck({
+    employer_id: employer.id,
+    pay_date: "2026-01-15",
+    gross_wages: "5000",
+    bonus: "2000",
+    deduction_401k: "700",
+    federal_withholding: "900",
+    deduction_roth_401k: "100",
+  });
+  expect(paycheck.taxable_wages).toBe("6300.00");
+  expect(paycheck.total_pretax_deductions).toBe("700.00");
+  expect(paycheck.net_pay).toBe("5300.00");
+});

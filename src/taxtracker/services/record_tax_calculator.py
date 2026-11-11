@@ -56,8 +56,10 @@ def calculate_taxes_from_records(
     fica_result = tax_calculator.calculate_fica(w2_gross, options.filing_status)
     combined_liability = Decimal(str(tax_result.total_tax_liability)) + Decimal(str(fica_result["total_fica"]))
     total_withheld = federal_withheld + fica_withheld
-    refund_or_owed = total_withheld - combined_liability
-    overpayment_pct = (refund_or_owed / combined_liability * 100) if combined_liability > 0 else Decimal(0)
+    refund_or_owed = federal_withheld - tax_result.total_tax_liability
+    overpayment_pct = (
+        (refund_or_owed / tax_result.total_tax_liability * 100) if tax_result.total_tax_liability > 0 else Decimal(0)
+    )
 
     return TaxReconciliationResponse(
         tax_year=year,

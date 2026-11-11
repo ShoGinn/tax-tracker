@@ -152,10 +152,11 @@ export interface TaxCalculationRequest {
 }
 
 export interface BracketBreakdown {
-  bracket: string;
+  bracket_min: number;
+  bracket_max: number | null;
   rate: number;
-  taxable_income_in_bracket: number;
-  tax_in_bracket: number;
+  taxable_amount: number;
+  tax_amount: number;
 }
 
 export interface TaxCalculationResponse {
@@ -448,12 +449,11 @@ export interface AppConfigUpdate {
 
 export interface DashboardProjectionYtd {
   w2_gross: DecimalString;
-  w2_pretax: DecimalString;
-  w2_federal_withheld: DecimalString;
+  w2_pretax_deductions: DecimalString;
   pension_gross: DecimalString;
-  pension_pretax: DecimalString;
-  pension_federal_withheld: DecimalString;
+  pension_pretax_deductions: DecimalString;
   va_income: DecimalString;
+  federal_withheld: DecimalString;
   paycheck_count: number;
   pension_count: number;
   non_taxable_count: number;
@@ -461,17 +461,21 @@ export interface DashboardProjectionYtd {
 
 export interface DashboardProjectionFull {
   w2_gross: DecimalString;
-  w2_pretax: DecimalString;
+  w2_taxable: DecimalString;
   pension_gross: DecimalString;
-  pension_pretax: DecimalString;
+  pension_taxable: DecimalString;
   va_income: DecimalString;
+  total_taxable_income: DecimalString;
+  taxable_income: DecimalString;
   total_tax_liability: DecimalString;
-  federal_income_tax: DecimalString;
-  fica_total: DecimalString;
+  federal_tax_liability: DecimalString;
+  fica_liability: DecimalString;
   effective_rate: DecimalString;
   marginal_rate: DecimalString;
-  total_withheld: DecimalString;
-  refund_or_owed: DecimalString;
+  estimated_withholding: DecimalString;
+  estimated_refund_or_owed: DecimalString;
+  deduction_type: string;
+  deduction_amount: DecimalString;
 }
 
 export interface DashboardRemainingPeriods {

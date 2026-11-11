@@ -275,3 +275,55 @@ Please report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
 ## License
 
 Tax Tracker is available under the [MIT License](LICENSE).
+
+### Understanding tax balances
+
+The overview estimates a full-year **federal income tax** refund or amount due:
+projected federal withholding minus projected federal income tax after credits.
+For the current year, remaining income, pre-tax deductions, and federal withholding
+continue at their recorded per-payment averages, separately for wages and pensions.
+Bonuses are included in the wage average; this is an assumption, not a prediction of
+future bonuses. Recorded withholding is shown separately from projected withholding.
+Future-dated records already entered consume remaining payment periods instead of
+being projected a second time. Completed years use recorded totals without extrapolation. The overview prefers the
+current tax year when tax data for it is available.
+
+Tax-position reconciliation uses only records for the selected year, without
+annualizing them. It shows gross wages and pensions, pre-tax deductions, income before
+the standard/itemized deduction, and the resulting federal taxable income. Bracket
+rows show how portions of taxable income are taxed; their taxes sum to federal tax
+**before** credits. Effective federal rates use income after recorded pre-tax
+deductions and before the standard/itemized deduction as the denominator.
+
+FICA is displayed separately and does not change the primary federal refund estimate.
+Combined income and payroll taxes remain available for cashflow planning. The current
+FICA model estimates tax on aggregate gross W-2 wages with one Social Security wage
+cap; it does not model separate spouses' wage caps or benefit-specific FICA exemptions.
+It is an estimate, not a payroll reconciliation or a complete Form 1040 calculation
+(including excess Social Security credits or Additional Medicare reconciliation).
+
+API dashboard amounts are decimal strings. `projected.estimated_withholding` and
+`projected.estimated_refund_or_owed` are federal-only; `total_tax_liability` includes
+FICA, while `federal_tax_liability` does not. Reconciliation's `refund_or_owed`,
+`result_status`, and `overpayment_percentage` use federal income tax and federal
+withholding only; combined liability and total withholding remain informational.
+Missing dashboard values display an unavailable state rather than a zero balance.
+
+Reference rules: [IRS Publication 505, 2026](https://www.irs.gov/publications/p505),
+[IRS Revenue Procedure 2025-32](https://www.irs.gov/pub/irs-drop/rp-25-32.pdf),
+[SSA contribution and benefit bases](https://www.ssa.gov/oact/cola/cbb.html), and
+[IRS Topic 751](https://www.irs.gov/taxtopics/tc751).
+
+W-2 entry and CSV imports treat `gross_wages` as wages **excluding** the separate
+`bonus` field. Federal taxable wages equal `gross_wages + bonus − pre-tax deductions`;
+federal withholding and Roth contributions do not reduce them. The paycheck table
+shows gross including bonuses consistently for rows and totals, the included bonus,
+and pre-tax deductions. If a pay stub's gross already includes a bonus, either remove
+the bonus from the entered gross or leave the separate bonus field at zero.
+
+A paycheck with a separate bonus is flagged for review when both recorded Social
+Security and Medicare withholding match gross wages alone rather than wages plus
+bonus (within rounding tolerance). This is a hint to check gross wages, bonus, and withholding against the original
+pay stub, not proof of a bonus input error: withholding may be entered incorrectly,
+and payroll adjustments can also change tax bases. No
+stored values are automatically corrected.
